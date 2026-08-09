@@ -6,6 +6,7 @@ internal static class Program
     {
         return await ComposerCli.RunAsync(
             args,
+            Console.In,
             Console.Out,
             Console.Error,
             CancellationToken.None);
