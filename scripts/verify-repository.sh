@@ -17,9 +17,8 @@ done
 unexpected_top_level="$(find . -mindepth 1 -maxdepth 1 \
   ! -name '.git' ! -name '.github' ! -name '.dockerignore' ! -name '.editorconfig' ! -name '.gitignore' \
   ! -name 'CHANGELOG.md' ! -name 'CONTRIBUTING.md' ! -name 'Directory.Build.props' \
-  ! -name 'Directory.Packages.props' ! -name 'EXPOSE-ATHAR.cmd' ! -name 'FoundationKit.sln' \
-  ! -name 'LICENSE' ! -name 'README.md' ! -name 'SECURITY.md' ! -name 'START-ATHAR.cmd' \
-  ! -name 'STOP-ATHAR.cmd' ! -name 'apps' ! -name 'catalog' ! -name 'deploy' ! -name 'docs' \
+  ! -name 'Directory.Packages.props' ! -name 'FoundationKit.sln' ! -name 'LICENSE' ! -name 'README.md' \
+  ! -name 'SECURITY.md' ! -name 'apps' ! -name 'catalog' ! -name 'deploy' ! -name 'docs' \
   ! -name 'examples' ! -name 'foundationkit.ps1' ! -name 'global.json' ! -name 'postman' \
   ! -name 'samples' ! -name 'scripts' ! -name 'site' ! -name 'src' ! -name 'tests' ! -name 'tools' -print)"
 if [[ -n "$unexpected_top_level" ]]; then
@@ -43,7 +42,7 @@ if [[ -n "$migration_leaks" ]]; then
 fi
 
 required_files=(
-  "README.md" "CHANGELOG.md" "foundationkit.ps1" "FoundationKit.sln"
+  "README.md" "CHANGELOG.md" "CONTRIBUTING.md" "SECURITY.md" "foundationkit.ps1" "FoundationKit.sln"
   ".github/CODEOWNERS" ".github/pull_request_template.md"
   ".github/workflows/ci.yml" ".github/workflows/codeql.yml" ".github/workflows/security-scan.yml"
   ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml"
@@ -56,6 +55,9 @@ required_files=(
   "docs/MADAR-NOTIFICATIONS-AR.md" "docs/MADAR-DEPARTMENT-ROUTING-AR.md"
   "docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md" "docs/MADAR-CASE-TRANSFER-AR.md"
   "docs/MADAR-ATTACHMENTS-AR.md" "docs/MADAR-SEARCH-REPORTING-AR.md"
+  "docs/capabilities/AUDITING.md" "docs/capabilities/SECURITY.md" "docs/capabilities/IDENTITY.md"
+  "docs/capabilities/AUTHORIZATION.md" "docs/capabilities/WORKFLOW.md" "docs/capabilities/APPROVALS.md"
+  "docs/capabilities/NOTIFICATIONS.md" "docs/capabilities/SMTP-PROVIDER.md"
   "docs/security/CURRENT-SECURITY-STATUS.md" "docs/security/POLICY-IMPLEMENTATION-REGISTER.md"
   "docs/security/RISK-REGISTER.md" "docs/security/THREAT-MODEL.md" "docs/security/SECURITY-DECISIONS.md"
   "docs/security/PRODUCTION-GOVERNANCE-CHECKLIST.md" "docs/security/VULNERABILITY-MANAGEMENT.md"
@@ -70,6 +72,7 @@ required_files=(
   "postman/FoundationKit.Workbench.postman_collection.json" "postman/Athar.Api.postman_collection.json"
   "deploy/docker-compose.yml" "deploy/athar-compose.yml" "deploy/madar-compose.yml" "deploy/athar-production.example.yml"
   "scripts/athar-product.ps1" "scripts/madar-product.ps1" "scripts/expose-athar-tunnel.ps1"
+  "scripts/run-workbench.ps1" "scripts/run-workbench.sh" "scripts/stop-workbench.ps1" "scripts/stop-workbench.sh"
   "scripts/pack.ps1" "scripts/pack.sh" "scripts/repository-hygiene.py" "scripts/verify-pages.py"
   "scripts/verify-athar-restore.sh" "scripts/security/scan-repository.py" "scripts/security/generate-sbom.py"
   "scripts/security/check-container-hardening.py" "scripts/security/negative-athar.sh"
@@ -81,6 +84,28 @@ required_files=(
 for required_file in "${required_files[@]}"; do
   if [[ ! -f "$required_file" ]]; then
     echo "Required repository file is missing: $required_file" >&2
+    exit 1
+  fi
+done
+
+# Keep the public/current-state descriptions synchronized with repository reality.
+truth_files=(
+  "README.md" "CONTRIBUTING.md" "SECURITY.md"
+  "docs/ARCHITECTURE.md" "docs/PACKAGES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
+  "docs/CORE-V0.1-BASELINE.md" "docs/ADDING-A-PROJECT-AR.md" "docs/PRODUCTION-READINESS-AR.md"
+  "docs/security/CURRENT-SECURITY-STATUS.md" "examples/Athar/README.md" "apps/Madar/README.md"
+)
+stale_truth_patterns=(
+  "current feature branch"
+  "يمكن إضافة مجلد apps/ مستقبلًا"
+  "سيتم تنفيذ التجربة المحلية بعد اكتمال"
+  "v0.10 remains in verification"
+)
+for pattern in "${stale_truth_patterns[@]}"; do
+  matches="$(grep -FIl -- "$pattern" "${truth_files[@]}" || true)"
+  if [[ -n "$matches" ]]; then
+    echo "Stale current-state wording '$pattern' found in:" >&2
+    echo "$matches" >&2
     exit 1
   fi
 done
@@ -97,6 +122,10 @@ if grep -q 'src/FoundationKit.Domain/FoundationKit.Domain.csproj' foundationkit.
 fi
 if ! grep -Fq 'Protect-LocalFile $WorkbenchEnvironmentFile' foundationkit.ps1; then
   echo "Workbench local credentials must be protected with a user-only Windows ACL." >&2
+  exit 1
+fi
+if ! grep -Fq '$ErrorActionPreference = "SilentlyContinue"' foundationkit.ps1; then
+  echo "Unified Docker readiness probing must tolerate an installed but stopped Docker daemon." >&2
   exit 1
 fi
 
@@ -190,4 +219,4 @@ fi
 python3 scripts/verify-pages.py
 python3 scripts/security/check-container-hardening.py
 
-echo "FoundationKit Core, Workbench, Athar, Madar, repository hygiene, metadata, security evidence, and Atlas verification passed."
+echo "FoundationKit Core, Workbench, Athar, Madar, repository hygiene, current-state descriptions, metadata, security evidence, and Atlas verification passed."
