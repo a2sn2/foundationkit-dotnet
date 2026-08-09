@@ -91,8 +91,8 @@ public sealed class ComposerInteractiveTests
             """
             Cancel.Product
             minimal
-
-
+            none
+            none
             no
             """);
         using var output = new StringWriter();
@@ -118,8 +118,8 @@ public sealed class ComposerInteractiveTests
             """
             Stable.Product
             minimal
-
-
+            none
+            none
             """);
         using var output = new StringWriter();
         using var error = new StringWriter();
