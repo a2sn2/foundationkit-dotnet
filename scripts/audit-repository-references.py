@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Report tracked support/documentation files with no textual repository references.
+"""Report tracked support/documentation files with no active textual repository references.
 
 This is an audit aid, not an automatic deletion policy. Source/test/tool project files are
 excluded because SDK/MSBuild conventions discover them without textual path references.
 Historical security evidence is also excluded because its value is evidentiary, not current
-navigation. Every reported path must still be reviewed before deletion.
+navigation. The repository required-file verifier is ignored as a reference source so a file
+is not considered active merely because a check asserts that it must exist.
 """
 
 from __future__ import annotations
@@ -20,6 +21,9 @@ EXCLUDED_PREFIXES = (
 EXCLUDED_EXACT = {
     "site/index.html",
     "scripts/audit-repository-references.py",
+}
+IGNORED_REFERENCE_SOURCES = {
+    "scripts/verify-repository.sh",
 }
 TEXT_SUFFIXES = {
     ".cmd", ".css", ".csproj", ".html", ".js", ".json", ".md", ".props",
@@ -64,11 +68,13 @@ def main() -> int:
     files = tracked_files()
     corpus: dict[str, str] = {}
     for path in files:
+        if path in IGNORED_REFERENCE_SOURCES:
+            continue
         text = read_text(path)
         if text is not None:
             corpus[path] = text
 
-    candidates: list[tuple[str, int]] = []
+    candidates: list[str] = []
     for path in files:
         if not is_candidate(path):
             continue
@@ -82,13 +88,19 @@ def main() -> int:
                 references += 1
 
         if references == 0:
-            candidates.append((path, references))
+            candidates.append(path)
 
-    print(f"Repository reference audit: {len(files)} tracked files; {len(candidates)} support/document candidates with zero textual references.")
-    for path, _ in candidates:
+    print(
+        f"Repository reference audit: {len(files)} tracked files; "
+        f"{len(candidates)} support/document candidates with zero active textual references."
+    )
+    for path in candidates:
         print(f"ORPHAN-CANDIDATE {path}")
 
-    print("Audit note: candidates are review-only; SDK-discovered source and historical security evidence are intentionally excluded.")
+    print(
+        "Audit note: candidates are review-only; SDK-discovered source, historical security "
+        "evidence, and circular required-file assertions are intentionally excluded."
+    )
     return 0
 
 
