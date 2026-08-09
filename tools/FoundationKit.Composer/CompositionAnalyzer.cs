@@ -34,7 +34,7 @@ public static class CompositionAnalyzer
         var resolved = manifest.ToProjectManifest().Resolve(resolver);
         var compatibility = CapabilityCompatibility.Evaluate(
             resolved,
-            manifest.CapabilityContracts);
+            manifest.ContractRequirements);
         var reasons = BuildReasons(manifest, profile, resolved, catalog);
         var entries = resolved
             .Select(capability => new CompositionEntry(
@@ -92,7 +92,7 @@ public static class CompositionAnalyzer
             }
         }
 
-        foreach (var requirement in manifest.CapabilityContracts)
+        foreach (var requirement in manifest.ContractRequirements)
         {
             if (!catalog.ContainsKey(requirement.CapabilityId))
             {
