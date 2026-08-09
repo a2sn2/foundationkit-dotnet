@@ -72,10 +72,10 @@ dotnet run --project tools/FoundationKit.Composer -- \
 Optional generation flags:
 
 - `--require-stable` — refuse generation when any resolved capability is not `Stable`;
-- `--force` — regenerate only an unchanged directory that was previously created by Composer and still contains exactly the recorded generation file set;
+- `--force` — regenerate only a directory previously created by Composer whose recorded file set and generated-file SHA-256 hashes are still unchanged;
 - `--foundation-root <directory>` — use known FoundationKit source projects for repository-local verification.
 
-Unknown options, duplicate options, incompatible contracts, invalid manifests, unsafe destinations, non-empty unowned directories, and altered generated directories fail closed.
+Unknown options, duplicate options, incompatible contracts, invalid manifests, unsafe destinations, non-empty unowned directories, user-added files, and edited generated files fail closed.
 
 ## What is generated
 
@@ -129,6 +129,8 @@ For the same manifest, generator contract, reference mode, and FoundationKit bas
 - line endings and UTF-8 output are normalized.
 
 The dedicated `FoundationKit Composer Generation` workflow proves this by generating a golden project, hashing every generated file, force-regenerating it, comparing hashes, then restoring/building/testing the generated solution.
+
+The ownership marker also stores SHA-256 for every generated file except the marker itself. `--force` validates both the exact owned file list and those hashes before deleting/recreating anything. This means a user-added file **or an edit to a generated file** blocks destructive regeneration rather than being silently overwritten.
 
 ## Manifest v1
 
@@ -218,7 +220,7 @@ Composer:
 - bounds capability contract versions to positive integers from 1 through 9999;
 - refuses filesystem-root generation;
 - refuses to overwrite non-empty destinations by default;
-- `--force` requires a valid Composer marker **and** an unchanged known file set, so user-added files block deletion;
+- `--force` requires a valid Composer marker, the exact recorded file set, and matching SHA-256 for every generated file; user-added or edited files block deletion;
 - generated content contains no secrets;
 - project-reference mode verifies the supplied FoundationKit source-tree marker before generation.
 
