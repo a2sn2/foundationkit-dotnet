@@ -4,41 +4,43 @@
 
 As of 2026-08-09, the repository is intentionally operating in an **experimental / pre-production development mode**.
 
-The repository owner has explicitly decided that **independent pull-request approval is not a blocking requirement during this experimental phase**. This is a temporary workflow decision intended to keep rapid iteration possible while the architecture, products, CI, security controls, and operating model are still being developed.
+The repository owner has explicitly decided that **formal GitHub branch/ruleset enforcement and independent pull-request approval are not blocking requirements during this experimental phase**. A temporary `Protect main` ruleset was created and then intentionally removed because this is not yet the real Production governance stage.
+
+Current development may continue to use pull requests and the existing CI/security workflows as the preferred working process, but no active protected-branch/ruleset control is claimed.
 
 This decision does **not** claim that Segregation of Duties (SoD) is satisfied in the experimental phase, and it must not be used as Production Approval, compliance certification, or evidence of independent review.
 
-## Controls that should remain enabled during experimentation
+## Recommended experimental workflow
 
-The `main` branch should continue to retain the non-review protection baseline where supported:
+Even without an active ruleset, prefer:
 
-- pull request required before merge;
-- required CI/security/status checks must pass;
-- branch must be up to date before merge;
-- review conversations must be resolved;
-- branch deletion restricted;
-- force pushes blocked;
-- no routine bypass entries;
-- secret scanning, dependency audit, CodeQL, Trivy, tests, publish, pack, and SQL/E2E verification remain part of the repository gate.
+- changes through pull requests rather than direct `main` edits;
+- successful CI/security checks before merge;
+- exact-head verification for significant changes;
+- resolved review conversations when reviews exist;
+- no routine force pushes or branch deletion that destroys useful history;
+- secret scanning, dependency audit, CodeQL, Trivy, tests, publish, pack, and SQL/E2E verification for repository changes that trigger those workflows.
 
-Independent approval is the only governance gate intentionally deferred for the current experimental phase.
+These are current engineering practices, not externally enforced Production controls.
 
 ## Mandatory activation before real Production
 
-Before the first real Production deployment, production release, or formal production-governed change process, the owner must explicitly re-enable and verify all of the following:
+Before the first real Production deployment, production release, or formal production-governed change process, the owner must explicitly enable and verify all of the following:
 
-1. Require at least **1 independent approving reviewer** for pull requests targeting `main` or the production release branch.
-2. The approving reviewer must be someone other than the PR author / latest pusher where GitHub supports that distinction.
-3. Enable stale-approval dismissal when new reviewable commits are pushed.
-4. Require approval of the most recent reviewable push by someone other than its pusher where supported.
-5. Keep conversation resolution required before merge.
-6. Keep required CI/security/status checks mandatory and verify the exact required check names.
-7. Keep branch-up-to-date enforcement before merge.
-8. Keep force-push blocking and deletion restriction.
-9. Define the allowed emergency/break-glass bypass path, named authority, scope, expiry, and audit evidence before any production exception is used.
-10. Record the effective GitHub ruleset/branch-protection evidence and date in the security/governance register.
-11. Re-check CODEOWNERS / reviewer ownership if production ownership has been established.
-12. Verify that Production-specific external controls are ready: secrets/KMS or equivalent, production SQL identities and TLS, central logging/SIEM, backup/restore, incident ownership, SMTP/provider requirements where applicable, and product-specific PII/legal requirements.
+1. Create and activate a protected-branch/ruleset policy for `main` or the designated Production release branch.
+2. Require pull requests before merge.
+3. Require at least **1 independent approving reviewer**.
+4. The approving reviewer must be someone other than the PR author / latest pusher where GitHub supports that distinction.
+5. Enable stale-approval dismissal when new reviewable commits are pushed.
+6. Require approval of the most recent reviewable push by someone other than its pusher where supported.
+7. Require conversation resolution before merge.
+8. Require the exact CI/security/status checks used by the release process and verify their current names.
+9. Require the branch to be up to date before merge.
+10. Block force pushes and restrict deletion of the protected branch.
+11. Define the allowed emergency/break-glass bypass path, named authority, scope, expiry, and audit evidence before any Production exception is used.
+12. Record the effective GitHub ruleset/branch-protection evidence and activation date in the security/governance register.
+13. Re-check CODEOWNERS / reviewer ownership if Production ownership has been established.
+14. Verify that Production-specific external controls are ready: secrets/KMS or equivalent, Production SQL identities and TLS, central logging/SIEM, backup/restore, incident ownership, SMTP/provider requirements where applicable, and product-specific PII/legal requirements.
 
 ## Required evidence before Production Approved can be considered
 
