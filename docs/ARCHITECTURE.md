@@ -17,6 +17,8 @@ Consumers
 
 The goal is not to move every useful behavior into `src/`. Reusable contracts are extracted only when a provider-neutral boundary is independently useful and supported by real consumer/provider evidence.
 
+The active framework baseline is **.NET 10 LTS / `net10.0`**. See [`NET10-LTS-BASELINE.md`](NET10-LTS-BASELINE.md) for the coordinated SDK/runtime/dependency/container decision and its compatibility boundary.
+
 ## Reusable foundation
 
 The five architectural packages are:
@@ -81,7 +83,9 @@ catalog/foundationkit.capabilities.json
 catalog/foundationkit.maturity-evidence.json
 ```
 
-`FoundationKit.Composer` currently supports discovery, strict manifest validation, dependency explanation, exact contract compatibility, and fail-closed maturity validation. It **does not generate projects yet**; `foundationkit new` remains future tooling.
+`FoundationKit.Composer` uses this same graph for discovery, strict manifest validation, dependency explanation, exact contract compatibility, maturity validation, deterministic project generation, and the interactive questionnaire. Both manifest-driven and interactive generation delegate to the same `CompositionAnalyzer` and `ComposerProjectGenerator`; the tooling does not maintain a second package/capability model.
+
+The generated scaffold is intentionally bounded to structural Domain/Application/Infrastructure/API/Client/Test layers and real FoundationKit bindings that exist today. Planned or product-owned semantics stay explicit in `ARCHITECTURE.md` instead of being converted into fake reusable packages.
 
 ## Consumer 1 — Workbench
 
@@ -160,11 +164,13 @@ Pull-request verification treats the repository as one system:
 - Release build with analyzers;
 - generated capability/evidence drift checks;
 - FoundationKit, Workbench, Athar, and Madar tests;
+- Composer deterministic generated-project restore/build/test;
 - Workbench/Athar/Madar publish;
 - exact 17+17 reusable-package output + SHA-256 evidence;
 - Workbench/Athar/Madar SQL Server integration/E2E;
 - Athar backup/restore and negative-security flows;
 - Madar operational/privacy regressions;
+- Windows PowerShell launcher checks;
 - Trivy and CodeQL.
 
 Exact evidence belongs to the exact head that produced it.
@@ -173,4 +179,4 @@ Exact evidence belongs to the exact head that produced it.
 
 Repository automation can prove code/test/package behavior; it cannot create deployment or organizational controls. Production approval still requires product-specific ingress/TLS, secrets/KMS, SQL principals, backup operations, observability/SIEM, legal/privacy decisions, performance/penetration acceptance, and the protected-branch/independent-review governance tracked by Issue #35.
 
-The supported framework baseline is currently .NET 8 with current servicing packages. Migration to .NET 10 LTS is tracked separately in Issue #104 and must not be represented as already complete.
+Targeting .NET 10 LTS removes the prior .NET 8 support-lifecycle deadline from the active baseline; it does not by itself satisfy any Production Approval or organizational control.
