@@ -7,7 +7,7 @@ RUN dotnet publish apps/Madar/Madar.Api/Madar.Api.csproj \
     --no-restore \
     --output /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 RUN mkdir -p /app/data/attachments && chown -R app:app /app/data
