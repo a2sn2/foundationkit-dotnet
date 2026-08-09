@@ -45,6 +45,11 @@ public static class CaseAttachmentEndpoints
                             CaseAttachmentRoutes.Download(caseId, value.Id),
                             value));
                 })
+            // IFormFile adds ASP.NET Core's automatic antiforgery metadata. Madar
+            // already validates the same antiforgery service explicitly through
+            // AntiforgeryEndpointFilter so the endpoint disables only the automatic
+            // middleware requirement, not antiforgery validation itself.
+            .DisableAntiforgery()
             .AddEndpointFilter<AntiforgeryEndpointFilter>()
             .RequireAuthorization()
             .RequireRateLimiting("write")
