@@ -15,7 +15,7 @@ Consumers
 └── Madar — operational case product under apps/ with product depth through v0.10
 ```
 
-The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model.
+The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model. Every capability identity also publishes a machine-readable contract version for composition compatibility; contract version is distinct from both package version and maturity.
 
 > FoundationKit has a verified automated repository baseline for the documented scope. Production approval, organizational compliance, provider operations, and formal certification remain deployment- and organization-specific.
 
@@ -71,7 +71,7 @@ The five base packages remain the architectural foundation. The remaining packag
 
 Canonical package contracts are documented in [`docs/PACKAGES.md`](docs/PACKAGES.md). The human-readable implemented surface is generated into [`docs/FEATURES.md`](docs/FEATURES.md).
 
-### Capability maturity
+### Capability maturity and contract compatibility
 
 Capability maturity is not inferred from the presence of a project or class. The machine contract uses:
 
@@ -80,10 +80,13 @@ Capability maturity is not inferred from the presence of a project or class. The
 - `ReferenceOnly`
 - `Planned`
 
+Separately, every current capability/provider/tooling identity publishes **contract version `1`**. A project manifest may optionally require exact versions through `capabilityContracts`; Composer fails closed if an explicit requirement is unknown, unresolved, or incompatible. Existing manifests that omit contract requirements continue to work as before.
+
 The source of truth is:
 
 ```text
 src/FoundationKit.Application/Capabilities/CapabilityModel.cs
+src/FoundationKit.Application/Capabilities/CapabilityCompatibility.cs
 ```
 
 and its generated machine-readable form:
@@ -92,7 +95,7 @@ and its generated machine-readable form:
 catalog/foundationkit.capabilities.json
 ```
 
-The lifecycle and stop rules are documented in:
+The lifecycle, compatibility, and stop rules are documented in:
 
 - [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
 - [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
@@ -256,11 +259,31 @@ dotnet run --project tools/FoundationKit.Composer -- explain path/to/manifest.js
 
 Current responsibilities:
 
-- capability/profile discovery;
+- capability/profile discovery, including current contract versions;
 - strict project-manifest parsing;
 - composition validation;
+- exact fail-closed capability-contract compatibility validation when requirements are declared;
 - fail-closed maturity validation with `--require-stable`;
-- dependency explanation.
+- dependency and compatibility explanation.
+
+A schema-v1 manifest can optionally constrain resolved capability contracts:
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "ApprovalSystem",
+  "profile": "minimal",
+  "includeCapabilities": ["approvals"],
+  "excludeCapabilities": [],
+  "providers": [],
+  "capabilityContracts": {
+    "approvals": 1,
+    "authorization": 1
+  }
+}
+```
+
+The v1 compatibility language is intentionally exact-match only. It does not negotiate runtime versions, install packages, or implement SemVer ranges.
 
 Not implemented yet:
 
@@ -417,9 +440,10 @@ It is generated from the compiled Capability Model and carries:
 - dependencies;
 - kinds;
 - maturity;
+- capability contract versions;
 - composition profiles.
 
-Do not infer `Stable` from the human catalog; maturity belongs to the composition capability graph.
+Do not infer `Stable` from the human catalog; maturity belongs to the composition capability graph. Do not infer a capability contract version from the NuGet package version; they are separate versioning concerns.
 
 ---
 
@@ -435,7 +459,7 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - NuGet vulnerability audit;
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
-- generated capability/catalog drift checks;
+- generated capability/catalog drift checks, including contract metadata;
 - unit and architecture tests, including Madar Domain/Application behavior and database-startup retry logic;
 - Workbench, Athar, and Madar publish;
 - all reusable NuGet + symbol packages;
@@ -479,7 +503,7 @@ Start with:
 
 ## Current autonomous stop boundary
 
-The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. New packages are **not** created merely to reduce roadmap checkboxes.
+The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. Capability contract/version metadata now closes the composition-compatibility gap without adding another runtime package. New packages are **not** created merely to reduce roadmap checkboxes.
 
 The following areas need a real product/provider decision or stronger consumer evidence before reusable runtime extraction:
 
@@ -487,8 +511,8 @@ The following areas need a real product/provider decision or stronger consumer e
 - Background Jobs and a real delayed/scheduled work consumer;
 - Messaging / outbox / inbox / broker semantics;
 - reusable Idempotency beyond Athar's product-specific behavior;
-- reusable Concurrency beyond Athar's SQL Server `rowversion` behavior;
-- Organization / Multi-Tenancy hierarchy and isolation topology;
+- reusable Concurrency beyond product-specific SQL Server behavior;
+- Organization / Multi-Tenancy hierarchy and isolation topology beyond Madar's department model;
 - reusable Search / Reporting beyond Madar v0.10's first product-owned evidence;
 - Privacy / Retention and legal/product semantics;
 - Money / Numbering and finance semantics;
@@ -497,7 +521,7 @@ The following areas need a real product/provider decision or stronger consumer e
 - project generation and visual composition;
 - AI abstractions after real provider-neutral consumer requirements exist.
 
-That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is now a concrete second product-domain consumer that can provide evidence for future extraction decisions.
+That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is a concrete second product-domain consumer that can provide evidence for future extraction decisions.
 
 ---
 
@@ -539,6 +563,6 @@ Current package version:
 0.1.0
 ```
 
-The current repository is still evolving. Capability maturity and compatibility expectations should be read from the capability model and changelog rather than inferred from semantic version alone.
+The current repository is still evolving. NuGet package version, capability maturity, and capability contract version are separate signals. Compatibility requirements should be read from the capability model/Composer contract metadata, while behavioral changes remain documented in the changelog.
 
 See [`CHANGELOG.md`](CHANGELOG.md).
