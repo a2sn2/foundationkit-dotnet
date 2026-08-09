@@ -45,7 +45,7 @@ required_files=(
   "README.md" "CHANGELOG.md" "CONTRIBUTING.md" "SECURITY.md" "foundationkit.ps1" "FoundationKit.sln"
   ".github/CODEOWNERS" ".github/pull_request_template.md"
   ".github/workflows/ci.yml" ".github/workflows/codeql.yml" ".github/workflows/security-scan.yml"
-  ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml"
+  ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml" ".github/workflows/composer-generation.yml"
   "catalog/foundationkit.catalog.json" "catalog/foundationkit.capabilities.json" "catalog/foundationkit.maturity-evidence.json"
   "docs/ARCHITECTURE.md" "docs/PACKAGES.md" "docs/FEATURES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
   "docs/CORE-V0.1-BASELINE.md" "docs/CAPABILITY-MODEL-V1.md" "docs/CAPABILITY-ROADMAP-V1.md"
@@ -78,6 +78,7 @@ required_files=(
   "scripts/security/check-container-hardening.py" "scripts/security/negative-athar.sh"
   "site/index.html" "site/styles.css" "site/app.js" "site/portal-manifest.json" "site/favicon.svg"
   "tools/FoundationKit.Composer/FoundationKit.Composer.csproj" "tools/FoundationKit.Composer/ComposerCli.cs"
+  "tools/FoundationKit.Composer/ComposerProjectGenerator.cs" "tests/FoundationKit.Tests/ComposerGenerationTests.cs"
   "tools/FoundationKit.CatalogGenerator/FoundationKit.CatalogGenerator.csproj"
 )
 
@@ -92,7 +93,8 @@ done
 truth_files=(
   "README.md" "CONTRIBUTING.md" "SECURITY.md"
   "docs/ARCHITECTURE.md" "docs/PACKAGES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
-  "docs/CORE-V0.1-BASELINE.md" "docs/ADDING-A-PROJECT-AR.md" "docs/PRODUCTION-READINESS-AR.md"
+  "docs/CORE-V0.1-BASELINE.md" "docs/CAPABILITY-MODEL-V1.md" "docs/CAPABILITY-ROADMAP-V1.md"
+  "docs/COMPOSER-CLI-V1.md" "docs/ADDING-A-PROJECT-AR.md" "docs/PRODUCTION-READINESS-AR.md"
   "docs/security/CURRENT-SECURITY-STATUS.md" "examples/Athar/README.md" "apps/Madar/README.md"
 )
 stale_truth_patterns=(
@@ -100,6 +102,8 @@ stale_truth_patterns=(
   "يمكن إضافة مجلد apps/ مستقبلًا"
   "سيتم تنفيذ التجربة المحلية بعد اكتمال"
   "v0.10 remains in verification"
+  "does **not** generate a project yet"
+  "deterministic project scaffolding"
 )
 for pattern in "${stale_truth_patterns[@]}"; do
   matches="$(grep -FIl -- "$pattern" "${truth_files[@]}" || true)"
@@ -126,6 +130,27 @@ if ! grep -Fq 'Protect-LocalFile $WorkbenchEnvironmentFile' foundationkit.ps1; t
 fi
 if ! grep -Fq '$ErrorActionPreference = "SilentlyContinue"' foundationkit.ps1; then
   echo "Unified Docker readiness probing must tolerate an installed but stopped Docker daemon." >&2
+  exit 1
+fi
+
+if ! grep -Fq '"new" => await NewAsync' tools/FoundationKit.Composer/ComposerCli.cs; then
+  echo "Composer must expose deterministic new-project generation." >&2
+  exit 1
+fi
+if ! grep -Fq 'ComposerProjectGenerator.GenerateAsync' tools/FoundationKit.Composer/ComposerCli.cs; then
+  echo "Composer CLI must delegate generation to the deterministic generator." >&2
+  exit 1
+fi
+if ! grep -Fq '.foundationkit-generated.json' tools/FoundationKit.Composer/ComposerProjectGenerator.cs; then
+  echo "Composer regeneration must retain an explicit ownership marker." >&2
+  exit 1
+fi
+if ! grep -Fq -- '--foundation-root "$GITHUB_WORKSPACE"' .github/workflows/composer-generation.yml; then
+  echo "Composer golden CI must build against the exact repository FoundationKit source." >&2
+  exit 1
+fi
+if ! grep -Fq 'diff -u /tmp/composer-before.sha256 /tmp/composer-after.sha256' .github/workflows/composer-generation.yml; then
+  echo "Composer golden CI must prove deterministic regeneration." >&2
   exit 1
 fi
 
@@ -219,4 +244,4 @@ fi
 python3 scripts/verify-pages.py
 python3 scripts/security/check-container-hardening.py
 
-echo "FoundationKit Core, Workbench, Athar, Madar, repository hygiene, current-state descriptions, metadata, security evidence, and Atlas verification passed."
+echo "FoundationKit Core, Composer generation, Workbench, Athar, Madar, repository hygiene, current-state descriptions, metadata, security evidence, and Atlas verification passed."
