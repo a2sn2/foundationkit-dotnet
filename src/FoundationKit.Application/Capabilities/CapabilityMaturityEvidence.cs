@@ -260,7 +260,7 @@ public static class CapabilityMaturityEvidencePolicy
         return result;
     }
 
-    private static void Require(bool condition, string evidenceName, ICollection<string> missing)
+    private static void Require(bool condition, string evidenceName, List<string> missing)
     {
         if (!condition)
         {
