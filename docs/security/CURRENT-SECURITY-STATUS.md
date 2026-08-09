@@ -8,6 +8,7 @@
 - Post-review technical closure source: `c3f7754441a3f39956836aef48377cda5119c7f4`.
 - Post-review closure evidence: `docs/security/evidence/STEP-06-PR34-REVIEW-CLOSURE.md`.
 - Owner-approved Foundation defaults: `docs/security/SECURITY-DECISIONS.md`.
+- Experimental/Production governance reminder: `docs/security/PRODUCTION-GOVERNANCE-CHECKLIST.md` and issue #35.
 - This file is not an ISO/IEC 27001 certificate, Statement of Applicability, legal opinion, residual-risk acceptance for a future deployment, or Production Approval.
 
 ## Current verdict
@@ -25,11 +26,19 @@ The Security Scan black-box suite explicitly passed authorization, CSRF, BOLA, a
 
 Documentation/evidence-only commits after that technical source do not invalidate the runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
 
+The repository is currently operating in **experimental / pre-production mode**. A temporary `Protect main` ruleset was created and then intentionally removed by the owner on 2026-08-09 because formal GitHub branch/review governance is not a current development blocker. There is therefore **no active protected-main ruleset currently claimed**.
+
+Current development may still use pull requests and CI/security workflows as the preferred working process, but this is a convention rather than enforced branch protection. Independent approval is also intentionally not a current merge blocker. This does not satisfy Segregation of Duties and is not Production Approval or compliance evidence.
+
+Before the first real Production deployment/release, protected-branch/ruleset enforcement and at least one independent reviewer must be enabled and proven. The mandatory activation checklist is `PRODUCTION-GOVERNANCE-CHECKLIST.md`, and issue #35 is retained as the Production go-live reminder.
+
+Historical PR #34 had already been merged before this governance decision. No retroactive independent-approval claim is made.
+
 ## PR #34 review-closure status
 
 | Review finding | Current state | Repository closure |
 |---|---|---|
-| PR34-REV-01 independent approval | **External governance blocker remains** | Owner baseline requires at least one independent reviewer. PR #34 still needs a GitHub `APPROVE` from an account other than `a2sn2`; self-approval is not accepted. |
+| PR34-REV-01 independent approval | **Historical exception retained / Production activation deferred** | PR #34 predates the current governance decision. Experimental work does not require independent approval or active branch protection. Real Production/release-governed changes must restore and prove both. |
 | PR34-APP-01 reverse proxy / forwarded headers | **Verified** | Explicit reverse-proxy decision; exact trusted proxy IP allow-list; no trust-all behavior; middleware runs before HTTPS/rate limiting; trusted/untrusted tests passed. |
 | PR34-AUTH-01 MFA full re-authentication | **Verified** | MFA disable and recovery-code rotation require current password + fresh TOTP/recovery factor; black-box negative/positive paths passed. |
 | PR34-AUTH-02 independent security notifications | **Repository capability verified / provider external** | Notifications exist for password reset/change, MFA enable/disable and recovery-code regeneration; real Production delivery provider remains external configuration. |
@@ -45,7 +54,7 @@ Documentation/evidence-only commits after that technical source do not invalidat
 
 | Area | Current state | Notes |
 |---|---|---|
-| Independent review / protected `main` | **External Configuration Required** | Independent approval still required. Protected-branch/required-check evidence depends on GitHub repository settings and plan support. |
+| Independent review / protected `main` | **Deferred to Production** | No active GitHub ruleset is currently claimed. PR/CI remains the preferred experimental workflow. Protected-main enforcement and independent review become mandatory before Production. |
 | Risk/threat model | **Verified baseline** | Risk register, threat model, decision register and tracked residual technical risks exist. |
 | Secure SDLC / malware gates | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, baseline SBOM, integrity evidence, build/test/publish/pack passed at post-review technical closure. |
 | Dependency/supply-chain baseline | **Verified baseline / partial provenance** | Dependabot + vulnerability gates + SHA-pinned security-sensitive Actions. Full artifact signing/provenance remains external/next hardening. |
@@ -70,9 +79,10 @@ Documentation/evidence-only commits after that technical source do not invalidat
 
 ## Owner-approved Foundation baseline
 
-The repository owner authorized closing the Foundation stage with these defaults:
+The repository owner authorized the following current/future baseline:
 
-- independent reviewers required: `1`;
+- independent reviewers: `0` required during experimental/pre-production iteration; at least `1` independent reviewer required before real Production/release-governed changes;
+- protected-main/ruleset enforcement: intentionally deferred during current experimentation; mandatory before real Production/release governance;
 - administrator MFA in Production: required;
 - normal-user MFA: supported, not globally mandatory by Foundation;
 - password minimum: `15` for the default password-only baseline;
@@ -84,17 +94,19 @@ The repository owner authorized closing the Foundation stage with these defaults
 - security log retention: `365d`;
 - backup retention: `35 daily + 12 monthly` restore points;
 - vulnerability SLA: Critical `24h`, High `7d`, Medium `30d`, Low `90d`;
-- security exception maximum duration: `30d`;
+- security exception maximum: `30d`;
 - concrete cloud/hosting/KMS/SIEM/SMTP/production-SQL/backup provider: deferred until a specific product deployment.
 
 PII/user-data retention remains product/legal-purpose-specific rather than being assigned a fabricated universal duration.
 
 ## Production boundary
 
-Current decision: **close Foundation hardening now and defer concrete Production infrastructure until a product is selected for deployment.**
+Current decision: **continue experimental Foundation/product development and defer concrete Production infrastructure and repository/release governance until a product is selected for real deployment.**
 
-Therefore the following remain external by design and are not repository blockers for closing the Foundation stage:
+Therefore the following remain external by design and are not repository blockers for current experimental development:
 
+- protected-main/ruleset enforcement;
+- independent approving reviewer enforcement;
 - production domain/TLS ingress/network topology;
 - Vault/KMS/CA and key/certificate lifecycle;
 - central SIEM/log sink/alerts/on-call;
@@ -104,12 +116,16 @@ Therefore the following remain external by design and are not repository blocker
 - final PII notices/legal retention/deletion schedule;
 - product-specific ASVS applicability, penetration/load acceptance and residual-risk approval.
 
+Before real Production, the controls in `PRODUCTION-GOVERNANCE-CHECKLIST.md` must be activated and evidenced.
+
 ## Final classification
 
-**FoundationKit has a verified global production-grade technical security baseline for the documented repository/automated scope.**
+**FoundationKit has a verified global-ready technical security baseline for the documented repository/automated scope.**
 
-**PR #34 technical review blockers are closed in repository scope.**
+**Current repository operation is experimental/pre-production. No active GitHub branch ruleset is currently claimed, and independent approval is intentionally not a current merge blocker.**
 
-**PR #34 still requires independent GitHub approval before merge because the authenticated account is the author and must not self-approve.**
+**Production governance requires protected-branch/ruleset enforcement and independent approval to be restored and proven before real Production/release-governed changes.**
+
+**Historical PR #34 predates the current governance decision; no retroactive independent-approval claim is made.**
 
 **Production Approved: not asserted. ISO/IEC 27001 Certified: not asserted.**

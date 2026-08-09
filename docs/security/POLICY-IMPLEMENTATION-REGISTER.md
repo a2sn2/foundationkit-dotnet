@@ -43,8 +43,8 @@ A green build is not production approval. `Verified` always names its scope; org
 
 | ID | Sev. | Finding / risk | Policies | Current status | Implemented control / evidence / residual action |
 |---|---:|---|---|---|---|
-| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **External Configuration Required** | Owner baseline requires one independent reviewer. PR #34 still requires a real GitHub `APPROVE` from an account other than `a2sn2`; self-approval is not accepted. |
-| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **External Configuration Required** | Repository workflows exist; GitHub branch/ruleset configuration must be evidenced externally where repository plan/settings support it. |
+| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **Owner Decision Recorded / Production activation required** | On 2026-08-09 the owner explicitly deferred independent PR approval during the experimental/pre-production phase. No current SoD claim is made. Before real Production/release-governed changes, at least 1 independent approval plus latest-push separation and stale-approval dismissal must be enabled and proven by a real governed PR. See `PRODUCTION-GOVERNANCE-CHECKLIST.md` and issue #35. |
+| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **Deferred to Production / currently not enforced by a GitHub ruleset** | A `Protect main` ruleset was briefly configured and then intentionally removed by the owner on 2026-08-09 because the repository is still experimental. Current development may continue using PRs and CI/security checks as workflow convention, but no active branch/ruleset enforcement is claimed. Before real Production, protected-branch/ruleset controls, required checks, force-push/deletion restrictions, and reviewer governance must be re-enabled and evidenced. Issue #35 is the persistent go-live reminder. |
 | FK-RISK-001 | High | Repository risk/threat model absent | Risk, SDLC, AppSec | **Verified baseline** | `RISK-REGISTER.md`, `THREAT-MODEL.md`, `SECURITY-DECISIONS.md`; residual/external risks remain explicitly tracked. |
 | FK-SDLC-001 | High | Security CI gates absent | SDLC, Malware, AppSec | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, negative suite, SBOM/integrity evidence, build/test/publish/pack. STEP-06 records successful post-review runs at `c3f7754...`. |
 | FK-SUP-001 | High | Dependency governance weak | Malware, SDLC | **Verified baseline / further hardening available** | Central package floors, NuGet audit, Trivy, baseline CycloneDX inventory, Dependabot. Lock files/source mapping remain optional next-hardening items or registry decisions. |
@@ -79,7 +79,7 @@ A green build is not production approval. `Verified` always names its scope; org
 | FK-SUP-003 | High where applicable | Upstream unfixed image CVEs | Malware, Risk | **Residual Risk Tracked** | Fixable HIGH/CRITICAL findings block CI; unfixed findings remain visible in SARIF and `R-FK-016`; no implicit acceptance. |
 | FK-TUN-001 | High if public | Development Quick Tunnel exposed publicly | Data Transfer, AppSec, PII | **Accepted demo-only boundary** | Temporary random tunnel is synthetic-demo only; not a production ingress and must not carry real/sensitive data. |
 | FK-WB-001 | High if exposed | Workbench intentionally lacks auth | AppSec, Password | **Sample-only boundary** | Controlled/local reference only; not a production/public-data service. |
-| FK-CHG-001 / PR34-EVID-01 | High | Change/evidence chain inconsistent | Change, Risk, SDLC | **Verified repository evidence chain** | Canonical register and executive status are synchronized; STEP-05 preserves prior integrated evidence and STEP-06 records post-review closure evidence. External independent approval remains separately tracked. |
+| FK-CHG-001 / PR34-EVID-01 | High | Change/evidence chain inconsistent | Change, Risk, SDLC | **Verified repository evidence chain** | Canonical register and executive status are synchronized; STEP-05 preserves prior integrated evidence and STEP-06 records post-review closure evidence. Current experimental governance and Production activation requirement are tracked in `SECURITY-DECISIONS.md`, `PRODUCTION-GOVERNANCE-CHECKLIST.md`, and issue #35. |
 | FK-INC-001 | Medium | Vulnerability reporting channel/SLA | Risk, Malware, Logging | **Owner Decision Recorded / channel external** | SLA baseline: Critical 24h, High 7d, Medium 30d, Low 90d. Private reporting channel/response ownership still require repository/org configuration. |
 | FK-OPS-001 | High | Incident/rollback/recovery operations incomplete | Logging, Backup, Risk | **Owner Decision Recorded / external ownership pending** | Incident/rollback/recovery/PIR runbook exists. Baseline RPO 4h / RTO 8h and max security exception 30d are approved; named production responders/platform proof remain external. |
 
@@ -87,7 +87,7 @@ A green build is not production approval. `Verified` always names its scope; org
 
 | Review ID | Repository action | Current state |
 |---|---|---|
-| PR34-REV-01 | Independent GitHub review + protected branch evidence | **External governance blocker remains** |
+| PR34-REV-01 | Independent GitHub review + protected branch evidence | **Historical PR #34 exception retained. Independent approval and protected-branch enforcement are intentionally deferred during current experimentation and become mandatory before real Production/release governance.** |
 | PR34-APP-01 | Trusted forwarded headers, explicit proxy IP allow-list, ordering before HTTPS/rate limiting, trusted/untrusted proxy tests | **Verified at STEP-06 technical closure source** |
 | PR34-AUTH-01 | Password + fresh TOTP/recovery proof for MFA disable/recovery rotation | **Verified by black-box security suite** |
 | PR34-AUTH-02 | Independent email security notifications for password/MFA lifecycle | **Repository capability verified; delivery provider external** |
@@ -103,7 +103,8 @@ A green build is not production approval. `Verified` always names its scope; org
 
 See `SECURITY-DECISIONS.md` for the canonical decision record. Current baseline includes:
 
-- independent reviewers required: `1`;
+- independent reviewers: `0` required during experimental/pre-production iteration; at least `1` independent reviewer required before real Production/release-governed changes;
+- protected-main/ruleset enforcement: intentionally deferred during current experimentation; mandatory before real Production/release governance;
 - administrator MFA in Production: `required`;
 - normal-user MFA: available, not globally mandatory by Foundation;
 - password baseline: minimum `15`, default no mandatory composition rules; compromised/common-password screening required before Production Approved where passwords are used;
@@ -122,4 +123,4 @@ PII retention remains product/legal-purpose-specific by design; Foundation does 
 
 A finding moves to `Verified` only when this register points to reproducible evidence for the affected security-relevant source head. Documentation-only evidence/status commits after `c3f7754...` do not invalidate runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
 
-External/governance status is never converted to Verified merely because CI is green. PR #34 still requires an independent account to approve before merge; the authenticated author account must not self-approve.
+External/governance configuration is recorded independently from runtime CI. As of 2026-08-09 there is no active `Protect main` ruleset; the owner intentionally deferred branch/ruleset enforcement and independent approval until real Production/release governance. This experimental choice is not SoD evidence and does not imply Production Approval.
