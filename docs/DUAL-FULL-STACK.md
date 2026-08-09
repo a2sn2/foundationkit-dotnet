@@ -1,10 +1,12 @@
-# Dual Full-Stack Reference Architecture
+# Workbench Dual Full-Stack Reference Architecture
 
-## The repository in one sentence
+## The Workbench in one sentence
 
-FoundationKit is a reusable .NET core demonstrated through two complete vertical slices: a **User Full Stack** and an **Admin Full Stack**, connected by one explicit workflow boundary.
+`FoundationKit.Workbench` is the executable architecture/reference consumer that demonstrates two complete vertical slices—User and Admin—connected through one explicit SQL-backed workflow boundary.
 
-## First-minute mental model
+> This document describes **Workbench**, not the entire repository. The repository also contains Athar as the complete Arabic reference product and Madar as the operational product under `apps/`.
+
+## Mental model
 
 ```text
                          FOUNDATIONKIT REUSABLE CORE
@@ -19,9 +21,8 @@ FoundationKit is a reusable .NET core demonstrated through two complete vertical
           WorkbenchApiClient                  WorkbenchApiClient
                     │                                   │
         CreateUserRequest contract            AdminReviewRequest contract
-                    │                                   │
-        POST /api/user/requests       GET /api/admin/requests
-                    │                 POST /api/admin/requests/{id}/review
+                    │                 GET/POST admin request APIs
+        POST /api/user/requests                         │
                     │                                   │
        CreateUserRequestUseCase          ReviewUserRequestUseCase
                     │                                   │
@@ -34,9 +35,7 @@ FoundationKit is a reusable .NET core demonstrated through two complete vertical
                    submitted → approved or rejected
 ```
 
-## Section 1 — User Full Stack
-
-The user side owns the experience of creating a request and reading its current status.
+## User slice
 
 ```text
 SQL Server
@@ -56,14 +55,12 @@ WorkbenchApiClient
 Pages/UserPortal.razor
 ```
 
-### User routes
+Routes:
 
-| Method | Route | Responsibility |
-|---|---|---|
-| `POST` | `/api/user/requests` | Validate and create a request in `submitted` state |
-| `GET` | `/api/user/requests/{id}` | Read the latest status visible to the user |
+- `POST /api/user/requests` — create a request in `submitted` state.
+- `GET /api/user/requests/{id}` — read the latest request state.
 
-### User code map
+Code map:
 
 ```text
 samples/FoundationKit.Workbench.Contracts/User/
@@ -72,20 +69,18 @@ samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs
 samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor
 ```
 
-## Section 2 — Admin Full Stack
-
-The admin side owns the work queue, request review, decision, and review audit record.
+## Admin slice
 
 ```text
 SQL Server
   ↓
 BuildBriefs + AdminReviews
   ↓
-EfAdminQueueReader / AdminReview aggregate
+EfAdminQueueReader / AdminReview
   ↓
 ReviewUserRequestUseCase
   ↓
-AdminQueueItemResponse / AdminReviewRequest / AdminReviewResponse
+Admin contracts
   ↓
 /api/admin/requests
   ↓
@@ -94,124 +89,83 @@ WorkbenchApiClient
 Pages/AdminPortal.razor
 ```
 
-### Admin routes
+Routes:
 
-| Method | Route | Responsibility |
-|---|---|---|
-| `GET` | `/api/admin/requests?status=submitted` | Read the SQL-backed admin queue |
-| `POST` | `/api/admin/requests/{id}/review` | Approve or reject a user request |
+- `GET /api/admin/requests?status=submitted` — SQL-backed review queue.
+- `POST /api/admin/requests/{id}/review` — approve or reject a request.
 
-### Admin code map
+## Integration boundary
 
-```text
-samples/FoundationKit.Workbench.Contracts/Admin/
-samples/FoundationKit.Workbench/Application/Admin/
-samples/FoundationKit.Workbench/Endpoints/AdminPortalEndpoints.cs
-samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor
-```
-
-## Where the two sections connect
-
-The sections connect at the request lifecycle, not by directly calling each other's UI code.
+The portals do not call each other. They meet through domain state and persistence:
 
 ```text
 User creates request
         ↓
 BuildBrief.Status = Submitted
         ↓
-Admin queue reads Submitted requests
+Admin reads submitted queue
         ↓
-Admin submits approve or reject decision
+Admin records approve/reject decision
         ↓
-AdminReview is inserted
-        +
-BuildBrief.Status changes to Approved or Rejected
+AdminReview inserted + BuildBrief status changed
         ↓
-User GET returns the new status
+User reads updated status
 ```
 
-`ReviewUserRequestUseCase` performs the review insert and the user-request state transition through the same `IUnitOfWork`. The database migration adds:
+The review record and request transition are committed through the same `IUnitOfWork`.
 
-- `BuildBriefs.Status`;
-- `BuildBriefs.UpdatedUtc`;
-- `AdminReviews` with a foreign key to `BuildBriefs`.
+## Shared vs separate concerns
 
-This is the current integration boundary. Future products may replace the in-process transition with an outbox and asynchronous integration events without changing the portal contracts.
+Shared intentionally:
 
-## What is shared
+- FoundationKit packages;
+- Workbench SQL Server/EF unit-of-work composition;
+- runtime/health/catalog/platform-reference endpoints;
+- request workflow vocabulary;
+- typed HTTP infrastructure.
 
-The following are shared intentionally:
+Separate intentionally:
 
-- FoundationKit packages under `src/`;
-- SQL Server connection and EF Core unit of work in the reference application;
-- runtime, health, and capability-catalog endpoints;
-- workflow status vocabulary;
-- typed HTTP transport infrastructure;
-- one ASP.NET Core host for local simplicity.
+- user/admin DTOs;
+- use cases;
+- route groups;
+- UI/UX;
+- admin queue/review behavior;
+- user create/status behavior.
 
-## What remains separate
+A UI component is never the integration boundary.
 
-The following must remain separated by portal:
+## Reading order
 
-- request DTOs;
-- application use cases;
-- API route groups;
-- UI pages and UX decisions;
-- admin queue and review behavior;
-- user create and status behavior.
+1. `README.md` — repository-wide purpose.
+2. `docs/ARCHITECTURE.md` — current repository architecture.
+3. `docs/WORKBENCH.md` — Workbench operation and surfaces.
+4. this document — dual vertical slices.
+5. Workbench contracts/application/endpoints/client pages.
+6. Workbench migrations and Postman collection.
 
-A UI component must never become the integration boundary. The connection belongs in contracts, use cases, domain state, and persistence.
+## Complete vertical-slice rule
 
-## Repository reading order
-
-A new developer should read in this order:
-
-1. `README.md` — repository purpose and launch instructions.
-2. `docs/DUAL-FULL-STACK.md` — the two complete stacks and their connection.
-3. `src/FoundationKit.*` — reusable technical core.
-4. `samples/FoundationKit.Workbench.Contracts/User` and `Admin` — transport boundaries.
-5. `samples/FoundationKit.Workbench/Application/User` and `Admin` — business use cases.
-6. `samples/FoundationKit.Workbench/Endpoints` — HTTP composition.
-7. `samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor` and `AdminPortal.razor` — UI/UX endpoints.
-8. `Infrastructure/Migrations` — persisted workflow shape.
-9. `postman/FoundationKit.Workbench.postman_collection.json` — executable API tour.
-
-## Definition of a complete future vertical slice
-
-A feature is not considered complete until its path is visible end to end:
+A Workbench feature is complete when the relevant path is visible end-to-end:
 
 ```text
-Database or external source
+Database/external source
         ↓
 Infrastructure adapter
         ↓
-Domain and application use case
+Domain/application use case
         ↓
-Request and response contracts
+Contracts
         ↓
-Documented API endpoint
+API
         ↓
-Typed frontend client
+Typed client
         ↓
-Blazor page or component
+Blazor UI states
         ↓
-UI states: loading, empty, success, validation, and failure
-        ↓
-Automated test or smoke verification
+Automated test/smoke evidence
 ```
 
-Use this definition for both admin-facing and user-facing features.
+## Boundary
 
-## Local demonstration
-
-1. Open `/user` and create a request.
-2. Copy or keep the generated identifier.
-3. Open `/admin`, select the submitted request, and approve or reject it.
-4. Return to `/user` and refresh the request status.
-5. Inspect `BuildBriefs` and `AdminReviews` in SQL Server.
-
-The Postman collection executes the same sequence without the UI.
-
-## Boundaries not implemented yet
-
-The reference intentionally does not claim production completeness. Authentication, authorization, per-user ownership, admin roles, audit identity, rate limiting, outbox delivery, secrets management, and production deployment policy remain product decisions.
+Workbench is deliberately a reference consumer, not a Production product. Authentication, product authorization, tenant/user ownership, hardened public ingress, durable integration messaging, and deployment governance are demonstrated more deeply by product consumers or remain product/deployment decisions.
