@@ -1,24 +1,54 @@
-# Technical Architecture
+# FoundationKit Technical Architecture
 
 ## Repository purpose
 
-FoundationKit provides reusable technical building blocks and a reference application that proves two complete vertical slices:
+FoundationKit is a composable .NET foundation plus three deliberately different consumers:
 
 ```text
-Reusable FoundationKit packages
-        ↓ consumed by
-User Full Stack + Admin Full Stack
-        ↓ connected through
-Shared request lifecycle and unit of work
-        ↓ persisted by
-EF Core + SQL Server + Workbench-owned migrations
+FoundationKit reusable packages (17)
+        ↓
+Capability graph + profiles + compatibility + maturity evidence
+        ↓
+Consumers
+├── Workbench — executable architecture/reference consumer
+├── Athar     — complete Arabic reference product
+└── Madar     — operational case-management product through v0.10
 ```
 
-The reference application is not a sixth core package. It demonstrates how a product consumes the core without leaking product behavior into `src/`.
+The goal is not to move every useful behavior into `src/`. Reusable contracts are extracted only when a provider-neutral boundary is independently useful and supported by real consumer/provider evidence.
 
-For the functional walkthrough, read [Dual Full-Stack Architecture](DUAL-FULL-STACK.md).
+## Reusable foundation
 
-## Reusable dependency rules
+The five architectural packages are:
+
+```text
+FoundationKit.Domain
+FoundationKit.Application
+FoundationKit.Infrastructure
+FoundationKit.WebApi
+FoundationKit.Blazor
+```
+
+Optional/reference packages currently justified by evidence are:
+
+```text
+Auditing
+Security
+Identity
+Authorization
+Workflow
+Approvals
+Notifications
+Notifications.Smtp
+Settings
+FeatureManagement
+Localization
+Caching
+```
+
+Together they produce exactly **17 `.nupkg` + 17 `.snupkg`**. Package existence does not imply `Stable` maturity or Production Approval.
+
+## Dependency rules
 
 ```text
 Domain <- Application <- Infrastructure
@@ -26,281 +56,121 @@ Domain <- Application <- Infrastructure
              |
            WebApi
 
-Blazor is independent from server-side packages.
+Blazor remains client-oriented and does not depend on server persistence.
 ```
 
-### FoundationKit.Domain
+Optional capabilities compose around these boundaries. A lower layer must not gain a dependency merely because a higher-level feature wants convenience.
 
-May depend only on the .NET base class library. It provides entities, aggregate roots, value objects, and domain events.
+`FoundationKit.Infrastructure` may use provider-neutral EF Core abstractions, but products own their `DbContext`, relational provider, mappings, migrations, transactions, concurrency policy, and deployment migration process.
 
-### FoundationKit.Application
+## Composition model
 
-May depend on Domain. It provides results, commands, queries, repository ports, pagination, validation abstractions, and application contracts.
+The canonical capability model lives in `FoundationKit.Application` and publishes:
 
-### FoundationKit.Infrastructure
+- capability identity/kind/category;
+- dependencies;
+- maturity;
+- contract version;
+- maturity-evidence assessment;
+- seven composition profiles.
 
-May depend on Application, Domain, and provider-neutral EF Core abstractions. It must not select SQL Server or own migrations.
-
-### FoundationKit.WebApi
-
-May depend on Application and the ASP.NET Core shared framework. It maps classified results to HTTP, Problem Details, correlation IDs, and baseline response headers.
-
-### FoundationKit.Blazor
-
-Owns browser-side typed API results, response parsing, network classification, and asynchronous UI state. It must not reference EF Core, SQL Server, or server hosting.
-
-Architecture tests and `scripts/verify-repository.sh` enforce these boundaries.
-
-## Reference application composition
+Generated machine documents:
 
 ```text
-samples/FoundationKit.Workbench/
-    ASP.NET Core host
-    product domain aggregates
-    user and admin application use cases
-    endpoint route groups
-    WorkbenchDbContext
-    SQL Server provider
-    EF Core migrations
-    Swagger/OpenAPI
-
-samples/FoundationKit.Workbench.Contracts/
-    Shared platform contracts
-    User contracts
-    Admin contracts
-    Workflow vocabulary
-    API route constants
-
-samples/FoundationKit.Workbench.Client/
-    Blazor WebAssembly shell
-    MudBlazor
-    architecture landing page
-    user portal UI/UX
-    admin portal UI/UX
-    typed WorkbenchApiClient
+catalog/foundationkit.capabilities.json
+catalog/foundationkit.maturity-evidence.json
 ```
 
-One ASP.NET Core host serves the Blazor application and all API groups from one origin. This keeps local startup simple without merging the user and admin use cases.
+`FoundationKit.Composer` currently supports discovery, strict manifest validation, dependency explanation, exact contract compatibility, and fail-closed maturity validation. It **does not generate projects yet**; `foundationkit new` remains future tooling.
 
-## Vertical slice 1 — User
+## Consumer 1 — Workbench
+
+`FoundationKit.Workbench` is the executable architecture/reference consumer. It proves two connected SQL-backed vertical slices:
 
 ```text
-Pages/UserPortal.razor
-        ↓
-WorkbenchApiClient.CreateUserRequestAsync
-        ↓
-CreateUserRequest contract
-        ↓
-POST /api/user/requests
-        ↓
-CreateUserRequestUseCase
-        ↓
-BuildBrief.Create
-        ↓
-IRepository<BuildBrief, Guid>
-        ↓
-IUnitOfWork
-        ↓
-BuildBriefs
+User:  database → domain → use case → contract → API → Blazor
+Admin: database → domain → use case → contract → API → Blazor
 ```
 
-The user reads the latest workflow state through:
-
-```text
-GET /api/user/requests/{id}
-```
-
-Transport contracts are not EF entities. The API maps the aggregate to `UserRequestResponse`.
-
-## Vertical slice 2 — Admin
-
-```text
-Pages/AdminPortal.razor
-        ↓
-WorkbenchApiClient.GetAdminQueueAsync
-        ↓
-GET /api/admin/requests?status=submitted
-        ↓
-IAdminQueueReader
-        ↓
-EfAdminQueueReader
-        ↓
-BuildBriefs
-```
-
-A review follows:
-
-```text
-AdminReviewRequest
-        ↓
-POST /api/admin/requests/{id}/review
-        ↓
-ReviewUserRequestUseCase
-        ↓
-AdminReview.Create
-        +
-BuildBrief.ApplyReview
-        ↓
-AdminReviews insert + BuildBriefs status update
-        ↓
-IUnitOfWork.SaveChangesAsync
-```
-
-The admin write path does not call the user UI. It changes shared domain state and persistence, which the user API then exposes.
-
-## Integration boundary
-
-The current connection is a synchronous workflow transition:
+The slices meet at the request lifecycle:
 
 ```text
 submitted → approved | rejected
 ```
 
-`ReviewUserRequestUseCase` creates the audit record and changes the user request status before one unit-of-work save. The domain emits `BuildBriefReviewed` after the transition.
+Workbench also provides runtime proof for Settings, Feature Management, Localization, and Caching. It is a controlled reference surface, not a public Production product.
 
-For a distributed product, this boundary may evolve into:
+Detailed walkthrough: [`DUAL-FULL-STACK.md`](DUAL-FULL-STACK.md) and [`WORKBENCH.md`](WORKBENCH.md).
 
-```text
-Admin transaction
-        ↓
-Outbox message
-        ↓
-Integration event
-        ↓
-User read model update
-```
+## Consumer 2 — Athar
 
-The UI and transport contracts do not need to become coupled when that evolution happens.
+Athar is the complete Arabic reference product under `examples/Athar`. It owns its business rules, SQL schema/migrations, ASP.NET Core Identity, product permissions, Arabic copy, deployment configuration, and user/admin UX.
+
+It proves end-to-end composition of FoundationKit with authentication/account lifecycle, security boundaries, authorization, workflow, approvals, auditing, notifications/SMTP, idempotency/concurrency reference behavior, SQL Server, Docker, E2E, and backup/restore verification.
+
+Athar is not a reusable layer and its product rules must not migrate into FoundationKit merely because they are useful.
+
+## Consumer 3 — Madar
+
+Madar is the operational product under `apps/Madar`, implemented through v0.10. It owns case lifecycle semantics, departments/routing, SLA policy, comments, sensitive-case approvals, notifications, transfers/reassignments, attachments, authorized search/reporting, SQL schema/migrations, Identity composition, Arabic UI, and operational topology.
+
+Madar reuses FoundationKit contracts where they fit, but its product behavior does not automatically justify new `FoundationKit.Files`, `Organization`, `Jobs`, `Search`, or `Reporting` packages.
+
+See [`../apps/Madar/README.md`](../apps/Madar/README.md).
 
 ## Database ownership
 
-The reference application owns:
-
-- `Microsoft.EntityFrameworkCore.SqlServer`;
-- `WorkbenchDbContext`;
-- `BuildBriefConfiguration`;
-- `AdminReviewConfiguration`;
-- connection strings;
-- startup migration behavior;
-- migrations under `samples/FoundationKit.Workbench/Infrastructure/Migrations/`.
-
-Current tables:
-
-| Table | Owner | Responsibility |
-|---|---|---|
-| `BuildBriefs` | User workflow | Request data, current status, created and updated timestamps |
-| `AdminReviews` | Admin workflow | Decision, reviewer, notes, timestamp, foreign key to request |
-
-No reusable package owns a relational provider or schema.
-
-## Contracts and HTTP
-
-Contracts are divided by audience:
+Each executable consumer owns its schema:
 
 ```text
-Contracts/User/CreateUserRequest
-Contracts/User/UserRequestResponse
-Contracts/Admin/AdminReviewRequest
-Contracts/Admin/AdminQueueItemResponse
-Contracts/Admin/AdminReviewResponse
-Contracts/Workflow/WorkflowStatuses
-Contracts/Workflow/ReviewDecisions
+Workbench → samples/FoundationKit.Workbench/Infrastructure/Migrations/
+Athar     → examples/Athar/Athar.Infrastructure/Migrations/
+Madar     → apps/Madar/Madar.Infrastructure/Migrations/
 ```
 
-The same types and JSON shapes are used by:
+EF migrations are the schema source of truth. Reusable packages do not own product migrations or select SQL Server globally.
 
-- Blazor serialization;
-- minimal API binding;
-- Swagger/OpenAPI;
-- Postman;
-- smoke tests.
+## HTTP/UI boundary
 
-Swagger groups endpoints as:
+Transport contracts are not EF entities. Product endpoints map application/domain results into product DTOs. `FoundationKit.WebApi` supplies reusable result/Problem Details/correlation/security-header behavior; `FoundationKit.Blazor` supplies typed API/error/state primitives.
 
-- Shared platform;
-- User full stack;
-- Admin full stack.
+Authentication, product authorization, CORS, route ownership, UX, and deployment security remain product responsibilities.
 
-`FoundationKit.WebApi` maps classified failures to RFC 7807 Problem Details. `FoundationKit.Blazor` classifies successful responses, API failures, network errors, timeouts, empty payloads, and invalid JSON.
+## Domain events vs integration messaging
 
-## Canonical capability catalog
-
-`catalog/foundationkit.catalog.json` remains the hand-maintained source for implemented reusable capabilities, packages, ideas, adoption steps, and contact metadata.
-
-It feeds:
-
-- `GET /api/catalog`;
-- the user portal capability selector;
-- the architecture landing page;
-- the GitHub Pages demo;
-- generated `docs/FEATURES.md`.
-
-The API embeds the catalog as an assembly resource for reliable local and container execution. The client receives a static copy for GitHub Pages fallback.
-
-## GitHub Pages boundary
-
-GitHub Pages publishes the same Blazor WebAssembly client. It cannot execute ASP.NET Core or SQL Server.
-
-In demo mode:
-
-- the architecture landing page remains active;
-- the user form and JSON preview remain visible;
-- database submission is disabled;
-- the admin page shows explicit demo queue data;
-- approve and reject actions are disabled;
-- no persistence is claimed.
-
-The local API-hosted path is authoritative.
-
-## Domain events
-
-`DomainEventsSaveChangesInterceptor` dispatches in-process events only after a successful database save.
+FoundationKit currently provides in-process domain-event dispatch after successful persistence. This is not a durable broker/outbox/inbox guarantee.
 
 ```text
-Capture events
-        ↓
 Database save succeeds
         ↓
-Clear aggregate queues
+clear aggregate event queue
         ↓
-Dispatch registered handlers
+dispatch in-process handlers
 ```
 
-A database failure dispatches nothing. In-process events are not durable; use an outbox for production delivery guarantees.
+A product requiring cross-process durability must implement/choose the appropriate outbox, messaging, retry, and operational semantics; no generic messaging package is inferred from the in-process dispatcher.
 
-## CI verification
+## Repository verification
 
-CI performs:
+Pull-request verification treats the repository as one system:
 
-1. repository-boundary verification;
-2. catalog and Postman JSON validation;
-3. restore and Release build;
-4. generated capability documentation drift detection;
-5. core and Workbench tests;
-6. Blazor-hosted API publish;
-7. package creation;
-8. Dockerized Blazor + API + SQL Server startup;
-9. user request creation;
-10. admin queue retrieval;
-11. admin approval;
-12. user status retrieval;
-13. approved queue verification.
+- tracked-source secret/hygiene/boundary checks;
+- JSON/Atlas/container-policy verification;
+- NuGet vulnerability audit + CycloneDX dependency inventory;
+- Release build with analyzers;
+- generated capability/evidence drift checks;
+- FoundationKit, Workbench, Athar, and Madar tests;
+- Workbench/Athar/Madar publish;
+- exact 17+17 reusable-package output + SHA-256 evidence;
+- Workbench/Athar/Madar SQL Server integration/E2E;
+- Athar backup/restore and negative-security flows;
+- Madar operational/privacy regressions;
+- Trivy and CodeQL.
 
-## Security and production boundary
+Exact evidence belongs to the exact head that produced it.
 
-The reference application intentionally does not implement production identity or authorization. A consuming product must decide:
+## Production boundary
 
-- user authentication and ownership;
-- admin authentication and roles;
-- authorization policies for each route group;
-- audit identity guarantees;
-- rate limiting;
-- private-data handling;
-- secret management;
-- outbox and queue strategy;
-- telemetry and alerting;
-- backup and recovery;
-- controlled deployment migrations;
-- ingress and TLS.
+Repository automation can prove code/test/package behavior; it cannot create deployment or organizational controls. Production approval still requires product-specific ingress/TLS, secrets/KMS, SQL principals, backup operations, observability/SIEM, legal/privacy decisions, performance/penetration acceptance, and the protected-branch/independent-review governance tracked by Issue #35.
 
-The two vertical slices make those decisions easy to place: user-facing concerns stay in the user slice, admin-facing concerns stay in the admin slice, and cross-slice behavior stays at the integration boundary.
+The supported framework baseline is currently .NET 8 with current servicing packages. Migration to .NET 10 LTS is tracked separately in Issue #104 and must not be represented as already complete.
