@@ -22,11 +22,11 @@ public static class ComposerProjectGenerator
     public const string GeneratorContractVersion = "1";
     public const string FoundationKitPackageVersion = "0.1.0";
 
-    private const string TargetFramework = "net8.0";
+    private const string TargetFramework = "net10.0";
     private const string TestSdkVersion = "17.8.0";
     private const string XunitVersion = "2.6.1";
     private const string XunitRunnerVersion = "2.5.3";
-    private const string AspNetCoreVersion = "8.0.29";
+    private const string AspNetCoreVersion = "10.0.10";
     private const string GeneratedMarkerFile = ".foundationkit-generated.json";
     private const string CSharpProjectTypeGuid = "{9A19103F-16F7-4668-BE54-9A1E7A4F7556}";
 
@@ -427,7 +427,7 @@ public static class ComposerProjectGenerator
             <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
             <Deterministic>true</Deterministic>
             <EnableNETAnalyzers>true</EnableNETAnalyzers>
-            <AnalysisLevel>8.0-recommended</AnalysisLevel>
+            <AnalysisLevel>10.0-recommended</AnalysisLevel>
             <RootNamespace>{{XmlEscape(projectPrefix)}}</RootNamespace>
           </PropertyGroup>
         </Project>
