@@ -61,7 +61,7 @@ public sealed class SecurityCapabilityTests
 
         Assert.Equal(ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto, options.ForwardedHeaders);
         Assert.Equal(1, options.ForwardLimit);
-        Assert.Empty(options.KnownNetworks);
+        Assert.Empty(options.KnownIPNetworks);
         Assert.Single(options.KnownProxies);
         Assert.Equal(IPAddress.Parse("10.0.0.2"), options.KnownProxies[0]);
     }
