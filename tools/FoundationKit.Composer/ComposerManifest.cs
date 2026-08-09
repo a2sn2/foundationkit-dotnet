@@ -11,10 +11,13 @@ public sealed record ComposerManifest(
     IReadOnlyList<string> IncludeCapabilities,
     IReadOnlyList<string> ExcludeCapabilities,
     IReadOnlyList<string> Providers,
-    IReadOnlyList<CapabilityContractRequirement> CapabilityContracts)
+    IReadOnlyList<CapabilityContractRequirement>? CapabilityContracts = null)
 {
+    public IReadOnlyList<CapabilityContractRequirement> ContractRequirements =>
+        CapabilityContracts ?? Array.Empty<CapabilityContractRequirement>();
+
     public FoundationKitProjectManifest ToProjectManifest() =>
-        new(Name, Profile, IncludeCapabilities, ExcludeCapabilities, Providers, CapabilityContracts);
+        new(Name, Profile, IncludeCapabilities, ExcludeCapabilities, Providers, ContractRequirements);
 }
 
 public static class ComposerManifestParser
