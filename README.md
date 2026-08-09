@@ -17,7 +17,7 @@ Consumers
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model. Every capability identity also publishes a machine-readable contract version for composition compatibility; contract version is distinct from both package version and maturity.
 
-FoundationKit Composer consumes that same model and can now generate a deterministic product skeleton plus an architecture decision report without adding another runtime package or inventing product semantics.
+FoundationKit Composer consumes that same model and can generate a deterministic product skeleton plus an architecture decision report either from a strict manifest or through the interactive questionnaire, without adding another runtime package or inventing product semantics.
 
 > FoundationKit has a verified automated repository baseline for the documented scope. Production approval, organizational compliance, provider operations, and formal certification remain deployment- and organization-specific.
 
@@ -247,7 +247,7 @@ Read:
 
 ## FoundationKit Composer v1
 
-Composer now supports **strict composition analysis plus deterministic project generation** from the same manifest/capability graph.
+Composer supports **strict composition analysis, deterministic project generation, and an interactive questionnaire** over the same manifest/capability graph.
 
 Supported commands:
 
@@ -258,6 +258,7 @@ dotnet run --project tools/FoundationKit.Composer -- validate path/to/manifest.j
 dotnet run --project tools/FoundationKit.Composer -- validate path/to/manifest.json --require-stable
 dotnet run --project tools/FoundationKit.Composer -- explain path/to/manifest.json
 dotnet run --project tools/FoundationKit.Composer -- new path/to/manifest.json --output path/to/new-system
+dotnet run --project tools/FoundationKit.Composer -- new --interactive --output path/to/new-system
 ```
 
 Current responsibilities:
@@ -267,13 +268,25 @@ Current responsibilities:
 - dependency and compatibility explanation;
 - exact fail-closed capability-contract validation;
 - optional stable-only maturity gate;
+- interactive collection of project name, canonical profile, extra capabilities, and providers;
+- dependency-first preview and explicit confirmation before interactive writes;
 - deterministic Domain/Application/Infrastructure/API/Client/Test scaffolding from the resolved graph;
 - generated normalized manifest and `ARCHITECTURE.md` decision report;
 - package-reference mode for portable dependency declarations;
 - repository-local `--foundation-root` project-reference mode for exact-head build/test proof;
-- guarded `--force` regeneration that refuses unknown/user-added files.
+- guarded `--force` regeneration that refuses unknown/user-added or edited generated files.
 
-Example:
+Interactive example:
+
+```powershell
+dotnet run --project tools/FoundationKit.Composer -- `
+  new --interactive `
+  --output artifacts/MySystem
+```
+
+The questionnaire accepts only canonical IDs, can be cancelled before writes, shows the resolved composition with maturity/contract information, and delegates to the same `CompositionAnalyzer` and `ComposerProjectGenerator` used by manifest-driven generation. Explicit `excludeCapabilities` and `capabilityContracts` remain available through the manifest path in interactive v1 rather than being inferred.
+
+Repository-local deterministic proof remains available with:
 
 ```powershell
 dotnet run --project tools/FoundationKit.Composer -- `
@@ -284,12 +297,11 @@ dotnet run --project tools/FoundationKit.Composer -- `
 
 The generator does not equate catalog presence with runtime implementation. If a resolved capability is planned/preview/reference-only or has no reusable package binding, that remains explicit in maturity warnings and the generated architecture report. No fake `FoundationKit.Files`, `FoundationKit.Search`, `FoundationKit.Organization`, or other speculative package is produced.
 
-A dedicated Composer Generation workflow proves determinism by hashing generated files before/after guarded regeneration and then restoring, building, and testing the generated solution.
+A dedicated Composer Generation workflow proves determinism by hashing generated files before/after guarded regeneration and then restoring, building, and testing the generated solution. Interactive session behavior is covered by the repository test suite.
 
 Still future tooling:
 
 ```text
-interactive foundationkit new questionnaire
 visual Workbench composer
 richer provider-specific wiring where reusable provider contracts exist
 ```
@@ -307,7 +319,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
 ```
 
 Useful commands:
-
 ```powershell
 .\foundationkit.ps1 start -Target Athar -Mode Auto
 .\foundationkit.ps1 start -Target Workbench -Mode Auto
@@ -459,7 +470,7 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
 - generated capability/catalog drift checks, including contract metadata;
-- unit and architecture tests, including Composer generation safety/determinism tests;
+- unit and architecture tests, including Composer generation safety/determinism and interactive-session tests;
 - Workbench, Athar, and Madar publish;
 - all reusable NuGet + symbol packages;
 - artifact SHA-256 evidence including Madar publish output;
@@ -503,7 +514,7 @@ Start with:
 
 ## Current autonomous stop boundary
 
-The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. Capability contract/version metadata and deterministic Composer generation close composition/tooling gaps without adding another runtime package. New packages are **not** created merely to reduce roadmap checkboxes.
+The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. Capability contract/version metadata, deterministic Composer generation, and the interactive questionnaire close the current CLI composition/tooling gap without adding another runtime package. New packages are **not** created merely to reduce roadmap checkboxes.
 
 The following areas need a real product/provider decision or stronger consumer evidence before reusable runtime extraction:
 
@@ -518,7 +529,7 @@ The following areas need a real product/provider decision or stronger consumer e
 - Money / Numbering and finance semantics;
 - Redis/object storage/messaging/search/observability provider families;
 - advanced approval routing;
-- interactive/visual composition UX beyond the deterministic generator;
+- visual composition UX beyond the current CLI questionnaire;
 - AI abstractions after real provider-neutral consumer requirements exist.
 
 That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is a concrete product-domain consumer that can provide evidence for future extraction decisions.

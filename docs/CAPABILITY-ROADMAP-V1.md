@@ -113,15 +113,15 @@ Providers remain outside business capabilities and are selected explicitly.
 - [x] Dependency explanation/current composition diagnostics.
 - [x] Exact capability-contract compatibility requirements and diagnostics.
 - [x] Machine-readable capability maturity and evidence metadata aligned with human documentation.
-- [ ] `foundationkit new` interactive composer.
+- [x] `foundationkit new` interactive composer questionnaire.
 - [x] Deterministic manifest-driven project generation engine.
 - [x] Generated architecture/decision report.
 - [ ] Workbench visual composer using the same capability graph.
 - [x] Golden generated-project tests proving deterministic output plus restore/build/test.
 
-The completed generation slice is intentionally non-interactive. `FoundationKit.Composer new` consumes the existing strict manifest and writes a bounded Domain/Application/Infrastructure/API/Client/Test skeleton. Repository-local project-reference mode is verified by a dedicated CI workflow; portable package-reference mode is emitted for environments that provide the FoundationKit packages through a NuGet source. The generator does not synthesize product semantics or packages for catalog identities that lack a reusable runtime package.
+The deterministic generation engine remains the only project-writing path. Manifest mode feeds a strict `ComposerManifest` directly into the analyzer/generator. Interactive mode is a thin `TextReader`/`TextWriter` questionnaire that collects project name, one canonical profile, optional extra capability IDs, optional provider IDs, shows the resolved dependency-first preview, and requires explicit confirmation before it delegates to that same analyzer/generator.
 
-Interactive prompts and the visual Workbench composer remain future UX layers over this same deterministic engine, not parallel composition models.
+Interactive v1 deliberately leaves `excludeCapabilities` and explicit `capabilityContracts` as manifest-driven controls instead of inferring those policy choices. The visual Workbench composer remains a future UX layer and must consume the same deterministic engine rather than introduce a parallel composition model.
 
 ## Phase J — AI as an optional capability
 
@@ -178,7 +178,7 @@ Together with the five base packages, the current reusable output remains sevent
 
 The composition model publishes an explicit contract version and one maturity-evidence assessment for every capability identity. Contract metadata is separate from NuGet version and maturity. Catalog generation fails when a capability's declared maturity lacks the minimum repository evidence required by `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
 
-The Composer now adds deterministic project generation on top of this composition baseline without changing the 17-package runtime surface or capability maturity. Generation is tooling behavior: it references only reusable packages that actually exist and reports unresolved/planned capability semantics instead of manufacturing runtime implementations.
+The Composer now adds deterministic project generation plus a first interactive questionnaire on top of this composition baseline without changing the 17-package runtime surface or capability maturity. Both modes reference only reusable packages that actually exist and report unresolved/planned capability semantics instead of manufacturing runtime implementations.
 
 ## Core v0.1 baseline closure
 
@@ -186,7 +186,7 @@ As of 2026-08-09, the current **FoundationKit Core v0.1 composable baseline is c
 
 Closure means the current 17-package reusable baseline, capability graph, seven profiles, strict manifests, contract compatibility, maturity-evidence enforcement, Composer reference tooling, generated metadata, and repository verification form a coherent starting point for future work.
 
-Composer deterministic generation is a subsequent tooling extension over that closed baseline; it is not a new runtime package and does not reopen the Core extraction cycle.
+Composer deterministic and interactive generation are subsequent tooling extensions over that closed baseline; they are not new runtime packages and do not reopen the Core extraction cycle.
 
 Unchecked roadmap items remain future evidence-driven capabilities and tooling objectives. They are **not blockers** to the v0.1 baseline closure and must not be implemented or extracted merely to make this roadmap visually complete.
 
