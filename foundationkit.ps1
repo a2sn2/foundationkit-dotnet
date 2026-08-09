@@ -871,12 +871,12 @@ function Invoke-Doctor {
         Write-Host "dotnet SDK: $activeSdk"
 
         $sdkLines = @(& dotnet --list-sdks)
-        $hasDotNet8 = @($sdkLines | Where-Object { $_ -match '^8\.' }).Count -gt 0
-        if ($hasDotNet8) {
-            Write-Host "[PASS] .NET 8 SDK is installed for global.json." -ForegroundColor Green
+        $hasDotNet10 = @($sdkLines | Where-Object { $_ -match '^10\.' }).Count -gt 0
+        if ($hasDotNet10) {
+            Write-Host "[PASS] .NET 10 SDK is installed for global.json." -ForegroundColor Green
         }
         else {
-            Write-Host "[FAIL] .NET 8 SDK is required by global.json but was not found." -ForegroundColor Red
+            Write-Host "[FAIL] .NET 10 SDK is required by global.json but was not found." -ForegroundColor Red
             $failed = $true
         }
     }
@@ -1032,7 +1032,7 @@ Product lifecycle actions:
   reset              Remove supported runtime data; requires -Force
 
 Repository actions:
-  doctor             Check tools, .NET 8, SQL services, ports, Git state, and running applications
+  doctor             Check tools, .NET 10, SQL services, ports, Git state, and running applications
   restore            Restore NuGet dependencies
   build              Restore and build the full solution
   test               Restore, build, and test the full solution
