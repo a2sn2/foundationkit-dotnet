@@ -35,3 +35,12 @@ updates:
     labels:
       - "dependencies"
       - "security"
+
+  - package-ecosystem: "docker"
+    directory: "/apps/Madar/Madar.Api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
