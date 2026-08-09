@@ -10,6 +10,7 @@ RUN dotnet publish apps/Madar/Madar.Api/Madar.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+RUN mkdir -p /app/data/attachments && chown -R app:app /app/data
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 USER app
