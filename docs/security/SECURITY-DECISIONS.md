@@ -2,13 +2,13 @@
 
 This register separates **owner-approved Foundation defaults** from decisions that must remain product/deployment-specific. Repository code may enforce an explicit decision or fail closed, but it must not pretend that a generic Foundation repository can certify a future production environment.
 
-Owner authorization for the Foundation-stage baseline was granted on 2026-08-07. On 2026-08-09 the owner explicitly refined repository governance for the current experimental phase: independent PR approval is intentionally deferred until real Production/release governance begins. A future product may tighten these values, but must not silently weaken Production requirements without an explicit reviewed exception.
+Owner authorization for the Foundation-stage baseline was granted on 2026-08-07. On 2026-08-09 the owner explicitly refined repository governance for the current experimental phase: GitHub branch/ruleset enforcement and independent PR approval are intentionally deferred until real Production/release governance begins. A future product may tighten these values, but must not silently weaken Production requirements without an explicit reviewed exception.
 
 ## Approved Foundation baseline
 
 | Decision ID | Decision | Approved value / scope | Status / evidence expectation |
 |---|---|---|---|
-| D-001 | Required independent PR reviewer count | **Experimental/pre-production: 0 required independent approvals. Production/release-governed changes: 1 independent reviewer minimum.** | Experimental work remains protected by PR + CI/security/status checks, conversation resolution, branch freshness, deletion restriction and force-push blocking. Before real Production, independent approval must be re-enabled and demonstrated by a real governed PR. |
+| D-001 | Required independent PR reviewer count | **Experimental/pre-production: 0 required independent approvals. Production/release-governed changes: 1 independent reviewer minimum.** | No current SoD claim is made. Before real Production, independent approval must be enabled and demonstrated by a real governed PR. |
 | D-002 | MFA scope | **Administrators: required in Production. Normal users: capability available; not globally mandatory by Foundation.** | Product risk may require MFA for additional populations. Production must explicitly configure the decision. |
 | D-003 | Password baseline | **Minimum 15 characters for the default password-only baseline; no mandatory composition rules; compromised/common-password blocking required before Production Approved where password authentication is used.** | Repository keeps values configurable. A product may adopt a stronger passphrase/IdP standard. Compromised-password provider/source remains product/platform work and is not falsely claimed as complete. |
 | D-004 | Application security verification target | **OWASP ASVS Level 2 target baseline** | Applicability must be mapped per product; this is a target, not certification. |
@@ -27,20 +27,13 @@ Owner authorization for the Foundation-stage baseline was granted on 2026-08-07.
 
 ## Experimental governance interpretation
 
-Current repository mode is **experimental / pre-production**. During this phase:
+Current repository mode is **experimental / pre-production**. As of 2026-08-09 there is **no active GitHub branch ruleset**. The owner intentionally removed the temporary `Protect main` ruleset because formal repository governance is not a current development blocker.
 
-- pull requests remain required before merge;
-- required CI/security/status checks remain mandatory;
-- branch-up-to-date enforcement remains mandatory;
-- conversation resolution remains mandatory;
-- force pushes remain blocked;
-- branch deletion remains restricted;
-- routine bypass entries should remain absent;
-- independent approval is intentionally **not** a blocking gate.
+During this phase, PRs and the existing CI/security workflows remain the preferred development process, but they are a working convention rather than an externally enforced protected-branch control. Independent approval is also intentionally **not** a blocking gate.
 
 This temporary workflow choice does not satisfy Segregation of Duties and must not be used as Production Approval or compliance evidence.
 
-The mandatory reactivation checklist for Production is `PRODUCTION-GOVERNANCE-CHECKLIST.md`.
+The mandatory activation checklist for Production is `PRODUCTION-GOVERNANCE-CHECKLIST.md`.
 
 ## Authentication configuration interpretation
 
@@ -67,11 +60,11 @@ These are engineering/governance defaults for future product planning. They do n
 
 ## Production boundary decision
 
-**Current stage decision:** continue experimental Foundation/product development and defer concrete Production infrastructure and independent-release governance until a specific product is selected for real deployment.
+**Current stage decision:** continue experimental Foundation/product development and defer concrete Production infrastructure and repository/release governance until a specific product is selected for real deployment.
 
 Therefore no cloud vendor, domain, KMS/Vault, SIEM, SMTP provider, production SQL service, backup provider, legal PII schedule or ingress topology is fabricated in this repository. Those become a deployment change with its own evidence, load/security acceptance, independent approval and residual-risk decision.
 
-Before the first real Production deployment/release, `D-001` and `D-012` require independent approval enforcement to be restored and proven.
+Before the first real Production deployment/release, `D-001` and `D-012` require independent approval enforcement to be restored and proven, and the protected-branch/ruleset controls in `PRODUCTION-GOVERNANCE-CHECKLIST.md` must be activated.
 
 ## Decision record rule
 
