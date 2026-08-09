@@ -37,7 +37,7 @@ public sealed class ComposerGenerationTests
 
             Assert.Equal("package", firstResult.ReferenceMode);
             Assert.Equal("package", secondResult.ReferenceMode);
-            Assert.Equal(ReadSnapshot(first), ReadSnapshot(second));
+            AssertSnapshotsEqual(ReadSnapshot(first), ReadSnapshot(second));
             Assert.Contains("src/Golden.Product.Api/Golden.Product.Api.csproj", firstResult.GeneratedFiles);
             Assert.Contains("src/Golden.Product.Client/Golden.Product.Client.csproj", firstResult.GeneratedFiles);
             Assert.Contains("tests/Golden.Product.Tests/GeneratedScaffoldTests.cs", firstResult.GeneratedFiles);
@@ -101,17 +101,7 @@ public sealed class ComposerGenerationTests
     [Fact]
     public async Task Generator_force_refuses_unknown_nonempty_destination()
     {
-        var manifest = ComposerManifestParser.Parse(
-            """
-            {
-              "schemaVersion": 1,
-              "name": "Safe.Product",
-              "profile": "minimal",
-              "includeCapabilities": [],
-              "excludeCapabilities": [],
-              "providers": []
-            }
-            """);
+        var manifest = MinimalManifest("Safe.Product");
         var destination = NewTempDirectory();
         await File.WriteAllTextAsync(Path.Combine(destination, "keep.txt"), "owner data");
 
@@ -132,19 +122,9 @@ public sealed class ComposerGenerationTests
     }
 
     [Fact]
-    public async Task Generator_force_can_replace_its_own_previous_output()
+    public async Task Generator_force_refuses_extra_files_added_after_generation()
     {
-        var manifest = ComposerManifestParser.Parse(
-            """
-            {
-              "schemaVersion": 1,
-              "name": "Repeatable.Product",
-              "profile": "minimal",
-              "includeCapabilities": [],
-              "excludeCapabilities": [],
-              "providers": []
-            }
-            """);
+        var manifest = MinimalManifest("Protected.Product");
         var destination = NewTempDirectory();
 
         try
@@ -152,13 +132,41 @@ public sealed class ComposerGenerationTests
             await ComposerProjectGenerator.GenerateAsync(
                 manifest,
                 new ProjectGenerationOptions(destination));
-            await File.WriteAllTextAsync(Path.Combine(destination, "stale.tmp"), "stale");
+            var userFile = Path.Combine(destination, "keep-user-file.txt");
+            await File.WriteAllTextAsync(userFile, "user data");
+
+            var exception = await Assert.ThrowsAsync<ComposerGenerationException>(() =>
+                ComposerProjectGenerator.GenerateAsync(
+                    manifest,
+                    new ProjectGenerationOptions(destination, Force: true)));
+
+            Assert.Contains("not part of the previous FoundationKit generation set", exception.Message, StringComparison.Ordinal);
+            Assert.Equal("user data", await File.ReadAllTextAsync(userFile));
+        }
+        finally
+        {
+            DeleteDirectory(destination);
+        }
+    }
+
+    [Fact]
+    public async Task Generator_force_can_replace_its_own_unchanged_previous_output()
+    {
+        var manifest = MinimalManifest("Repeatable.Product");
+        var destination = NewTempDirectory();
+
+        try
+        {
+            await ComposerProjectGenerator.GenerateAsync(
+                manifest,
+                new ProjectGenerationOptions(destination));
+            var before = ReadSnapshot(destination);
 
             await ComposerProjectGenerator.GenerateAsync(
                 manifest,
                 new ProjectGenerationOptions(destination, Force: true));
 
-            Assert.False(File.Exists(Path.Combine(destination, "stale.tmp")));
+            AssertSnapshotsEqual(before, ReadSnapshot(destination));
             Assert.True(File.Exists(Path.Combine(destination, ".foundationkit-generated.json")));
         }
         finally
@@ -243,6 +251,19 @@ public sealed class ComposerGenerationTests
         }
     }
 
+    private static ComposerManifest MinimalManifest(string name) =>
+        ComposerManifestParser.Parse(
+            $$"""
+            {
+              "schemaVersion": 1,
+              "name": "{{name}}",
+              "profile": "minimal",
+              "includeCapabilities": [],
+              "excludeCapabilities": [],
+              "providers": []
+            }
+            """);
+
     private static Dictionary<string, string> ReadSnapshot(string root)
     {
         return Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
@@ -251,6 +272,17 @@ public sealed class ComposerGenerationTests
                 path => Path.GetRelativePath(root, path).Replace('\\', '/'),
                 File.ReadAllText,
                 StringComparer.Ordinal);
+    }
+
+    private static void AssertSnapshotsEqual(
+        IReadOnlyDictionary<string, string> expected,
+        IReadOnlyDictionary<string, string> actual)
+    {
+        Assert.Equal(expected.Keys.Order(StringComparer.Ordinal), actual.Keys.Order(StringComparer.Ordinal));
+        foreach (var key in expected.Keys)
+        {
+            Assert.Equal(expected[key], actual[key]);
+        }
     }
 
     private static string FindRepositoryRoot()
