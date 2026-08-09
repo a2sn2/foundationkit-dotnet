@@ -18,6 +18,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+
       - name: Generate temporary credentials
         shell: bash
         run: |
@@ -32,31 +37,44 @@ jobs:
       - name: Start Athar stack
         run: docker compose -f deploy/athar-compose.yml up --build -d
 
-      - name: Probe readiness
-        id: readiness
+      - name: Install EF Core 10 tool
+        run: dotnet tool install --global dotnet-ef --version 10.0.10
+
+      - name: Restore and build Athar for migration diff
+        run: |
+          dotnet restore examples/Athar/Athar.Api/Athar.Api.csproj
+          dotnet build examples/Athar/Athar.Api/Athar.Api.csproj --configuration Release --no-restore
+
+      - name: Generate EF Core 10 compatibility migration
+        id: migration
         continue-on-error: true
         shell: bash
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          DOTNET_ENVIRONMENT: Development
+          ConnectionStrings__Athar: Server=localhost,14334;Database=Athar;User Id=sa;Password=${{ env.ATHAR_SQL_PASSWORD }};Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True
+          AdminSeed__Enabled: "false"
+          DatabaseStartup__ApplyMigrationsOnStartup: "false"
+          DatabaseStartup__SeedRolesOnStartup: "false"
         run: |
-          for attempt in {1..90}; do
-            if curl --fail --silent http://localhost:8090/health/ready > /tmp/readiness.json; then
-              cat /tmp/readiness.json
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose -f deploy/athar-compose.yml ps
-          exit 1
+          dotnet ef migrations add Net10Compatibility \
+            --project examples/Athar/Athar.Infrastructure/Athar.Infrastructure.csproj \
+            --startup-project examples/Athar/Athar.Api/Athar.Api.csproj \
+            --configuration Release \
+            --output-dir Migrations
 
-      - name: Capture Athar diagnostics
+      - name: Capture migration diff and startup diagnostics
         if: always()
         shell: bash
         run: |
-          mkdir -p artifacts/athar-net10-diagnostic
+          mkdir -p artifacts/athar-net10-diagnostic/migration
+          git status --short > artifacts/athar-net10-diagnostic/git-status.txt
+          git diff -- examples/Athar/Athar.Infrastructure/Migrations > artifacts/athar-net10-diagnostic/migration.diff
+          find examples/Athar/Athar.Infrastructure/Migrations -maxdepth 1 -type f -name '*Net10Compatibility*' -exec cp {} artifacts/athar-net10-diagnostic/migration/ \; || true
+          cp examples/Athar/Athar.Infrastructure/Migrations/AtharDbContextModelSnapshot.cs artifacts/athar-net10-diagnostic/migration/ModelSnapshot.cs || true
           docker compose -f deploy/athar-compose.yml ps -a > artifacts/athar-net10-diagnostic/compose-ps.txt 2>&1 || true
           docker compose -f deploy/athar-compose.yml logs --no-color --tail=800 athar-api > artifacts/athar-net10-diagnostic/athar-api.log 2>&1 || true
           docker compose -f deploy/athar-compose.yml logs --no-color --tail=400 athar-sqlserver > artifacts/athar-net10-diagnostic/athar-sqlserver.log 2>&1 || true
-          docker inspect "$(docker compose -f deploy/athar-compose.yml ps -q athar-api)" > artifacts/athar-net10-diagnostic/athar-api-inspect.json 2>&1 || true
-          if [ -f /tmp/readiness.json ]; then cp /tmp/readiness.json artifacts/athar-net10-diagnostic/readiness.json; fi
 
       - name: Upload Athar diagnostics
         if: always()
@@ -67,8 +85,8 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-      - name: Fail when readiness failed
-        if: steps.readiness.outcome != 'success'
+      - name: Fail when migration generation failed
+        if: steps.migration.outcome != 'success'
         shell: bash
         run: exit 1
 
