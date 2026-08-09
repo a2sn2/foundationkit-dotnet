@@ -12,11 +12,13 @@ The canonical evidence model lives in:
 src/FoundationKit.Application/Capabilities/CapabilityMaturityEvidence.cs
 ```
 
-and is exported with the capability graph to:
+and is exported as a dedicated generated machine document:
 
 ```text
-catalog/foundationkit.capabilities.json
+catalog/foundationkit.maturity-evidence.json
 ```
+
+The existing `catalog/foundationkit.capabilities.json` remains focused on capability identities, dependencies, contract versions, maturity declarations, and profiles. Keeping evidence separate avoids coupling graph consumers to evidence-policy evolution while both files remain generated from the same compiled model.
 
 ## Evidence signals
 
@@ -52,7 +54,7 @@ The policy also requires:
 - non-empty rationale no longer than 500 characters;
 - no duplicate capability/evidence IDs.
 
-`FoundationKit.CatalogGenerator` evaluates the entire catalog before generating or checking `catalog/foundationkit.capabilities.json`. Therefore a maturity change that no longer satisfies the evidence policy fails the normal generated-metadata/CI gate.
+`FoundationKit.CatalogGenerator` evaluates the entire catalog before generating or checking both machine documents. Therefore a maturity change that no longer satisfies the evidence policy fails the normal generated-metadata/CI gate.
 
 ## What the gate prevents
 
