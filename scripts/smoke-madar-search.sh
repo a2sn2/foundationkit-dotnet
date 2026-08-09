@@ -71,7 +71,7 @@ owned_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< 
 
 assigned_json="$(create_case "$admin_cookie" "$admin_token" "$marker assigned operator case" "internal-service-request" "medium")"
 assigned_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$assigned_json")"
-assign_payload="$(python3 -c 'import json,sys; print(json.dumps({"assignedToUserId":sys.argv[1]}))' "$operator_id")"
+assign_payload="$(python3 -c 'import json,sys; print(json.dumps({"assigneeUserId":sys.argv[1]}))' "$operator_id")"
 curl --fail --silent --show-error \
   -c "$admin_cookie" \
   -b "$admin_cookie" \
