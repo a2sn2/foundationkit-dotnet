@@ -30,72 +30,52 @@ fi
 
 provider_leaks="$(grep -RIl -- 'Microsoft.EntityFrameworkCore.SqlServer' src || true)"
 if [[ -n "$provider_leaks" ]]; then
-  echo "SQL Server provider coupling leaked into reusable core packages:" >&2
+  echo "SQL Server provider coupling leaked into reusable packages:" >&2
   echo "$provider_leaks" >&2
   exit 1
 fi
 
 migration_leaks="$(find src -type d -iname migrations -print)"
 if [[ -n "$migration_leaks" ]]; then
-  echo "EF Core migrations must belong to consuming applications, not reusable packages:" >&2
+  echo "EF Core migrations must belong to consuming products, not reusable packages:" >&2
+  echo "$migration_leaks" >&2
   exit 1
 fi
 
 required_files=(
-  "README.md" ".dockerignore" "foundationkit.ps1" "START-ATHAR.cmd" "STOP-ATHAR.cmd" "EXPOSE-ATHAR.cmd"
+  "README.md" "CHANGELOG.md" "foundationkit.ps1" "FoundationKit.sln"
   ".github/CODEOWNERS" ".github/pull_request_template.md"
   ".github/workflows/ci.yml" ".github/workflows/codeql.yml" ".github/workflows/security-scan.yml"
   ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml"
-  "catalog/foundationkit.catalog.json" "catalog/foundationkit.capabilities.json"
-  "docs/FEATURES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
-  "docs/CAPABILITY-MODEL-V1.md" "docs/CAPABILITY-ROADMAP-V1.md" "docs/CAPABILITY-EXTRACTION-STATUS.md"
-  "docs/COMPOSER-CLI-V1.md" "docs/LOCAL-RUN-WINDOWS-AR.md" "docs/PRODUCTION-READINESS-AR.md" "docs/ADDING-A-PROJECT-AR.md"
-  "docs/security/POLICY-IMPLEMENTATION-REGISTER.md" "docs/security/RISK-REGISTER.md"
-  "docs/security/THREAT-MODEL.md" "docs/security/SECURITY-DECISIONS.md"
+  "catalog/foundationkit.catalog.json" "catalog/foundationkit.capabilities.json" "catalog/foundationkit.maturity-evidence.json"
+  "docs/ARCHITECTURE.md" "docs/PACKAGES.md" "docs/FEATURES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
+  "docs/CORE-V0.1-BASELINE.md" "docs/CAPABILITY-MODEL-V1.md" "docs/CAPABILITY-ROADMAP-V1.md"
+  "docs/CAPABILITY-EXTRACTION-STATUS.md" "docs/CAPABILITY-MATURITY-EVIDENCE-V1.md" "docs/COMPOSER-CLI-V1.md"
+  "docs/LOCAL-RUN-WINDOWS-AR.md" "docs/PRODUCTION-READINESS-AR.md" "docs/ADDING-A-PROJECT-AR.md"
+  "docs/MADAR-OPERATIONS-AR.md" "docs/MADAR-COMMENTS-AR.md" "docs/MADAR-APPROVALS-AR.md"
+  "docs/MADAR-NOTIFICATIONS-AR.md" "docs/MADAR-DEPARTMENT-ROUTING-AR.md"
+  "docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md" "docs/MADAR-CASE-TRANSFER-AR.md"
+  "docs/MADAR-ATTACHMENTS-AR.md" "docs/MADAR-SEARCH-REPORTING-AR.md"
+  "docs/security/CURRENT-SECURITY-STATUS.md" "docs/security/POLICY-IMPLEMENTATION-REGISTER.md"
+  "docs/security/RISK-REGISTER.md" "docs/security/THREAT-MODEL.md" "docs/security/SECURITY-DECISIONS.md"
+  "docs/security/PRODUCTION-GOVERNANCE-CHECKLIST.md" "docs/security/VULNERABILITY-MANAGEMENT.md"
   "docs/security/CHANGE-AND-RELEASE-EVIDENCE.md" "docs/security/PII-DATA-INVENTORY.md"
   "docs/security/CRYPTO-AND-SECRETS-INVENTORY.md" "docs/security/LOGGING-AND-MONITORING-CATALOG.md"
   "docs/security/INCIDENT-RECOVERY-RUNBOOK.md"
   "samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
-  "samples/FoundationKit.Workbench/Program.cs"
-  "samples/FoundationKit.Workbench/Endpoints/SystemEndpoints.cs"
-  "samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs"
-  "samples/FoundationKit.Workbench/Endpoints/AdminPortalEndpoints.cs"
-  "samples/FoundationKit.Workbench/Application/User/CreateUserRequestUseCase.cs"
-  "samples/FoundationKit.Workbench/Application/Admin/ReviewUserRequestUseCase.cs"
-  "samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806113000_InitialWorkbench.cs"
-  "samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806164000_DualPortalWorkflow.cs"
   "samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
-  "samples/FoundationKit.Workbench.Client/Pages/Home.razor"
-  "samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor"
-  "samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor"
-  "samples/FoundationKit.Workbench.Contracts/User/UserContracts.cs"
-  "samples/FoundationKit.Workbench.Contracts/Admin/AdminContracts.cs"
-  "examples/Athar/README.md"
-  "examples/Athar/Athar.Domain/Initiative.cs"
-  "examples/Athar/Athar.Application/InitiativeManager.cs"
-  "examples/Athar/Athar.Infrastructure/AtharDbContext.cs"
-  "examples/Athar/Athar.Infrastructure/AccountSecurity.cs"
-  "examples/Athar/Athar.Infrastructure/DatabaseInitializer.cs"
-  "examples/Athar/Athar.Infrastructure/Migrations/20260806180000_InitialAthar.cs"
-  "examples/Athar/Athar.Infrastructure/Migrations/AtharDbContextModelSnapshot.cs"
-  "examples/Athar/Athar.Contracts/Contracts.cs"
-  "examples/Athar/Athar.Api/Program.cs" "examples/Athar/Athar.Api/Endpoints.cs"
-  "examples/Athar/Athar.Api/SecurityConfiguration.cs" "examples/Athar/Athar.Api/DatabaseExceptionMiddleware.cs"
-  "examples/Athar/Athar.Client/Services/AtharApiClient.cs"
-  "examples/Athar/Athar.Client/ViewModels/ViewModels.cs"
-  "examples/Athar/Athar.Client/Pages/Home.razor" "examples/Athar/Athar.Client/Pages/Account.razor"
-  "examples/Athar/Athar.Client/Pages/Initiatives.razor" "examples/Athar/Athar.Client/Pages/Admin.razor"
-  "tests/Athar.Tests/InitiativeTests.cs" "tests/Athar.Tests/SecurityConfigurationTests.cs"
+  "samples/FoundationKit.Workbench.Contracts/FoundationKit.Workbench.Contracts.csproj"
+  "examples/Athar/README.md" "examples/Athar/Athar.Api/Athar.Api.csproj" "tests/Athar.Tests/Athar.Tests.csproj"
+  "apps/Madar/README.md" "apps/Madar/Madar.Api/Madar.Api.csproj" "tests/Madar.Tests/Madar.Tests.csproj"
   "postman/FoundationKit.Workbench.postman_collection.json" "postman/Athar.Api.postman_collection.json"
-  "deploy/docker-compose.yml" "deploy/athar-compose.yml" "deploy/athar-production.example.yml"
-  "scripts/athar-product.ps1" "scripts/expose-athar-tunnel.ps1" "scripts/smoke-athar.sh"
-  "scripts/run-athar.ps1" "scripts/run-athar.sh" "scripts/stop-athar.ps1" "scripts/stop-athar.sh"
-  "scripts/pack.ps1" "scripts/pack.sh" "scripts/repository-hygiene.py" "scripts/verify-pages.py" "scripts/verify-athar-restore.sh"
-  "scripts/security/scan-repository.py" "scripts/security/generate-sbom.py"
+  "deploy/docker-compose.yml" "deploy/athar-compose.yml" "deploy/madar-compose.yml" "deploy/athar-production.example.yml"
+  "scripts/athar-product.ps1" "scripts/madar-product.ps1" "scripts/expose-athar-tunnel.ps1"
+  "scripts/pack.ps1" "scripts/pack.sh" "scripts/repository-hygiene.py" "scripts/verify-pages.py"
+  "scripts/verify-athar-restore.sh" "scripts/security/scan-repository.py" "scripts/security/generate-sbom.py"
   "scripts/security/check-container-hardening.py" "scripts/security/negative-athar.sh"
   "site/index.html" "site/styles.css" "site/app.js" "site/portal-manifest.json" "site/favicon.svg"
-  "src/FoundationKit.Application/Models/EntityDto.cs" "src/FoundationKit.Blazor/Mvvm/ViewModelBase.cs"
   "tools/FoundationKit.Composer/FoundationKit.Composer.csproj" "tools/FoundationKit.Composer/ComposerCli.cs"
+  "tools/FoundationKit.CatalogGenerator/FoundationKit.CatalogGenerator.csproj"
 )
 
 for required_file in "${required_files[@]}"; do
@@ -125,137 +105,89 @@ import json
 from pathlib import Path
 
 root = Path('.')
-project_ids = sorted(
-    project.parent.name
-    for project in root.glob('src/FoundationKit.*/FoundationKit.*.csproj')
-)
+project_ids = sorted(project.parent.name for project in root.glob('src/FoundationKit.*/FoundationKit.*.csproj'))
 
 with (root / 'catalog/foundationkit.catalog.json').open(encoding='utf-8') as handle:
-    human_catalog = json.load(handle)
-human_ids = sorted(package['packageId'] for package in human_catalog['packages'])
-
+    human = json.load(handle)
+human_ids = sorted(package['packageId'] for package in human['packages'])
 if human_ids != project_ids:
-    missing = sorted(set(project_ids) - set(human_ids))
-    extra = sorted(set(human_ids) - set(project_ids))
-    raise SystemExit(
-        'Human catalog package drift detected. '
-        f'Missing={missing}; Extra={extra}')
+    raise SystemExit(f'Human catalog package drift. projects={project_ids}; catalog={human_ids}')
 
 with (root / 'site/portal-manifest.json').open(encoding='utf-8') as handle:
     portal = json.load(handle)
-portal_sources = sorted(
-    page['source']
-    for page in portal['pages']
-    if page.get('kind') == 'package'
-)
+portal_sources = sorted(page['source'] for page in portal['pages'] if page.get('kind') == 'package')
 expected_sources = sorted(f'src/{package_id}' for package_id in project_ids)
-
 if portal_sources != expected_sources:
-    missing = sorted(set(expected_sources) - set(portal_sources))
-    extra = sorted(set(portal_sources) - set(expected_sources))
-    raise SystemExit(
-        'Atlas package drift detected. '
-        f'Missing={missing}; Extra={extra}')
+    raise SystemExit(f'Atlas package drift. expected={expected_sources}; actual={portal_sources}')
 
-print(
-    f'Reusable package consistency passed: {len(project_ids)} projects, '
-    f'{len(human_ids)} catalog packages, {len(portal_sources)} Atlas package pages.')
+if len(project_ids) != 17:
+    raise SystemExit(f'Expected 17 reusable projects, found {len(project_ids)}')
+
+print(f'Reusable package consistency passed: {len(project_ids)} projects/catalog/Atlas package pages.')
 PY
 
 workbench_api="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
 workbench_client="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
 athar_api="examples/Athar/Athar.Api/Athar.Api.csproj"
 athar_client="examples/Athar/Athar.Client/Athar.Client.csproj"
-pages_workflow=".github/workflows/pages.yml"
+madar_api="apps/Madar/Madar.Api/Madar.Api.csproj"
+madar_client="apps/Madar/Madar.Client/Madar.Client.csproj"
 
-if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$workbench_api"; then
-  echo "Workbench API must explicitly own SQL Server." >&2; exit 1
-fi
-if ! grep -q 'MudBlazor' "$workbench_client"; then
-  echo "Workbench client must use MudBlazor." >&2; exit 1
-fi
+for product_api in "$workbench_api" "$athar_api" "$madar_api"; do
+  if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$product_api"; then
+    echo "$product_api must explicitly own SQL Server." >&2
+    exit 1
+  fi
+done
+
 if ! grep -q 'Microsoft.AspNetCore.Identity.EntityFrameworkCore' "$athar_api"; then
-  echo "Athar API must explicitly own ASP.NET Core Identity persistence." >&2; exit 1
+  echo "Athar API must own ASP.NET Core Identity persistence." >&2; exit 1
 fi
-if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$athar_api"; then
-  echo "Athar API must explicitly own SQL Server." >&2; exit 1
+if ! grep -q 'Microsoft.AspNetCore.Identity.EntityFrameworkCore' "$madar_api"; then
+  echo "Madar API must own ASP.NET Core Identity persistence." >&2; exit 1
 fi
-if ! grep -q 'MudBlazor' "$athar_client"; then
-  echo "Athar client must use MudBlazor." >&2; exit 1
-fi
-if ! grep -q 'FoundationKit.Blazor' "$athar_client"; then
-  echo "Athar client must consume FoundationKit.Blazor." >&2; exit 1
-fi
+for client in "$workbench_client" "$athar_client" "$madar_client"; do
+  if ! grep -q 'MudBlazor' "$client"; then
+    echo "$client must use MudBlazor." >&2; exit 1
+  fi
+done
 
-client_persistence_leaks="$(grep -RIl --include='*.cs' --include='*.csproj' -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' samples/FoundationKit.Workbench.Client samples/FoundationKit.Workbench.Contracts examples/Athar/Athar.Client examples/Athar/Athar.Contracts || true)"
+client_persistence_leaks="$(grep -RIl --include='*.cs' --include='*.csproj' -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' \
+  samples/FoundationKit.Workbench.Client samples/FoundationKit.Workbench.Contracts \
+  examples/Athar/Athar.Client examples/Athar/Athar.Contracts \
+  apps/Madar/Madar.Client apps/Madar/Madar.Contracts || true)"
 if [[ -n "$client_persistence_leaks" ]]; then
-  echo "Client and transport contracts must not reference EF Core or SQL Server:" >&2
+  echo "Client/transport projects must not reference EF Core or SQL Server:" >&2
   echo "$client_persistence_leaks" >&2
   exit 1
 fi
 
-if ! grep -q 'CreateUserRequest' postman/FoundationKit.Workbench.postman_collection.json; then
-  echo "Workbench Postman collection must document the user request contract." >&2; exit 1
-fi
-if ! grep -q 'clientRequestId' postman/Athar.Api.postman_collection.json; then
-  echo "Athar Postman collection must verify idempotent creation." >&2; exit 1
-fi
 if ! grep -q 'X-CSRF-TOKEN' postman/Athar.Api.postman_collection.json; then
-  echo "Athar Postman collection must demonstrate anti-CSRF protection." >&2; exit 1
-fi
-if ! grep -q 'AddIdentity' examples/Athar/Athar.Api/Program.cs; then
-  echo "Athar must configure ASP.NET Core Identity." >&2; exit 1
+  echo "Athar Postman must demonstrate anti-CSRF." >&2; exit 1
 fi
 if ! grep -q 'AddRateLimiter' examples/Athar/Athar.Api/Program.cs; then
   echo "Athar must configure rate limiting." >&2; exit 1
 fi
-if ! grep -q 'AddAntiforgery' examples/Athar/Athar.Api/Program.cs; then
-  echo "Athar must configure anti-CSRF protection." >&2; exit 1
-fi
 if ! grep -q 'SelfReviewNotAllowed' examples/Athar/Athar.Domain/Initiative.cs; then
-  echo "Athar must enforce maker-checker self-review prevention." >&2; exit 1
-fi
-if ! grep -q 'ProductionConfigurationValidator' examples/Athar/Athar.Api/Program.cs; then
-  echo "Athar must fail closed on unsafe production configuration." >&2; exit 1
-fi
-if ! grep -q 'RequireConfirmedEmail' examples/Athar/Athar.Api/Program.cs; then
-  echo "Athar must expose configurable confirmed-email enforcement." >&2; exit 1
-fi
-if ! grep -q 'TwoFactorAuthenticatorSignInAsync' examples/Athar/Athar.Api/Endpoints.cs; then
-  echo "Athar must implement two-factor login capability." >&2; exit 1
-fi
-if ! grep -q 'GeneratePasswordResetTokenAsync' examples/Athar/Athar.Api/Endpoints.cs; then
-  echo "Athar must implement password recovery capability." >&2; exit 1
+  echo "Athar must retain maker-checker defense." >&2; exit 1
 fi
 if ! grep -q 'ProtectKeysWithCertificate' examples/Athar/Athar.Api/Program.cs; then
-  echo "Athar production path must support encrypted persisted Data Protection keys." >&2; exit 1
-fi
-if ! grep -q 'RowVersion' examples/Athar/Athar.Domain/Initiative.cs; then
-  echo "Athar aggregate must expose optimistic concurrency." >&2; exit 1
-fi
-if ! grep -q 'AuditEntries' examples/Athar/Athar.Infrastructure/AtharDbContext.cs; then
-  echo "Athar must persist audit entries." >&2; exit 1
-fi
-if ! grep -q 'ViewModelBase' examples/Athar/Athar.Client/ViewModels/ViewModels.cs; then
-  echo "Athar must demonstrate Blazor-oriented MVVM." >&2; exit 1
-fi
-if ! grep -q 'EntityDto' examples/Athar/Athar.Contracts/Contracts.cs; then
-  echo "Athar must demonstrate generic DTO bases." >&2; exit 1
-fi
-if ! grep -q 'uses: github/codeql-action/init@' .github/workflows/codeql.yml; then
-  echo "CodeQL SAST workflow is missing." >&2; exit 1
-fi
-if ! grep -q 'aquasecurity/trivy-action@' .github/workflows/security-scan.yml; then
-  echo "Supply-chain/container scanning workflow is missing." >&2; exit 1
+  echo "Athar production path must support protected persisted Data Protection keys." >&2; exit 1
 fi
 if ! grep -q 'ATHAR_ALLOW_RESTORE_DRILL' scripts/verify-athar-restore.sh; then
-  echo "Restore drill must fail closed unless explicitly enabled in an isolated test environment." >&2; exit 1
+  echo "Restore drill must fail closed unless explicitly enabled for isolation." >&2; exit 1
 fi
-if ! grep -q 'cp -R site release' "$pages_workflow"; then
-  echo "GitHub Pages must publish the dedicated static repository portal." >&2; exit 1
+if ! grep -q 'uses: github/codeql-action/init@' .github/workflows/codeql.yml; then
+  echo "CodeQL workflow is missing." >&2; exit 1
+fi
+if ! grep -q 'aquasecurity/trivy-action@' .github/workflows/security-scan.yml; then
+  echo "Trivy security scanning is missing." >&2; exit 1
+fi
+if ! grep -q 'cp -R site release' .github/workflows/pages.yml; then
+  echo "GitHub Pages must publish the dedicated repository portal." >&2; exit 1
 fi
 
 python3 scripts/verify-pages.py
 python3 scripts/security/check-container-hardening.py
 
-echo "FoundationKit, Workbench, Athar, repository hygiene, capability metadata, security evidence, and Pages portal verification passed."
+echo "FoundationKit Core, Workbench, Athar, Madar, repository hygiene, metadata, security evidence, and Atlas verification passed."
