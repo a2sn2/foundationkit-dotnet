@@ -9,8 +9,17 @@ All notable repository and package changes are documented here.
 - Expanded the reusable output from the original five architectural packages to the current **17 NuGet packages + 17 symbol packages** through evidence-driven optional/reference capabilities.
 - Added Auditing, Security, Identity, Authorization, Workflow, Approvals, Notifications, SMTP, Settings, Feature Management, Localization, and Caching without moving product schemas/policies into the reusable foundation.
 - Added Capability Model v1, seven composition profiles, strict project manifests, dependency resolution, exact capability contract-version compatibility, and machine-readable maturity evidence.
-- Added `FoundationKit.Composer` commands for `capabilities`, `profiles`, `validate`, `validate --require-stable`, and `explain`.
+- Added `FoundationKit.Composer` composition discovery, validation, explanation, and deterministic manifest-driven project generation.
 - Closed **FoundationKit Core v0.1 Composable Baseline** without creating a speculative eighteenth runtime package.
+
+### Composer
+
+- Added `new <manifest.json> --output <directory>` as the deterministic project-generation engine over the existing strict capability graph.
+- Added package-reference output for portable dependency declarations and `--foundation-root` project-reference mode for repository-local exact-head verification.
+- Added bounded Domain/Application/Infrastructure/API/Client/Test scaffolding, a normalized manifest, generated ownership marker, README, and architecture/decision report.
+- Added guarded `--force` regeneration that refuses unowned or user-added files instead of deleting arbitrary non-empty directories.
+- Added golden generation tests and a dedicated CI workflow that proves byte-stable regeneration, then restores, builds, and tests the generated solution.
+- Kept interactive composition, visual Workbench composition, business-domain templates, and speculative runtime package generation outside this slice.
 
 ### Workbench
 

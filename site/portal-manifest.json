@@ -45,7 +45,7 @@
       "id": "operations",
       "title": "التشغيل والتحقق",
       "icon": "✓",
-      "summary": "الأدوات التي تثبت أن الحل يُبنى ويُختبر ويعمل مع SQL Server، مع Composer مرجعي للتحقق من تراكيب القدرات وشرحها."
+      "summary": "الأدوات التي تثبت أن الحل يُبنى ويُختبر ويعمل مع SQL Server، مع Composer للتحقق والشرح والتوليد الحتمي من نفس Capability Graph."
     }
   ],
   "pages": [
@@ -758,9 +758,9 @@
       "source": "docs/ADDING-A-PROJECT-AR.md",
       "kind": "document",
       "runtime": "static",
-      "benefit": "قالب عربي يوضح أين تضع Domain وApplication وInfrastructure وContracts وAPI وClient والاختبارات.",
-      "details": ["Project template", "References", "Database ownership", "CI checklist"],
-      "flow": ["New App", "Reference Core", "Own Product Rules"],
+      "benefit": "يشرح البدء بالـComposer لتوليد الهيكل الحتمي، ثم أين تبقى Domain والسياسات والتخزين والاختبارات مملوكة للمنتج.",
+      "details": ["Composer new", "Project skeleton", "Product ownership", "Database ownership", "CI checklist"],
+      "flow": ["Manifest", "Generate", "Own Product Rules", "Verify"],
       "preview": "document"
     },
     {
@@ -786,9 +786,9 @@
       "source": "tools/FoundationKit.Composer",
       "kind": "tool",
       "runtime": "local-and-ci",
-      "benefit": "يسرد القدرات والملفات الشخصية ويتحقق من manifest ويشرح الاعتمادات دون الادعاء بتوليد مشروع جديد.",
-      "details": ["capabilities", "profiles", "validate", "validate --require-stable", "explain", "Project generation: not implemented"],
-      "flow": ["Manifest", "Validate", "Resolve Dependencies", "Explain"],
+      "benefit": "يسرد القدرات والملفات الشخصية ويتحقق من manifest ويشرح الاعتمادات ويولد هيكل مشروع حتميًا من نفس Capability Graph دون اختراع قدرات غير منفذة.",
+      "details": ["capabilities", "profiles", "validate", "validate --require-stable", "explain", "new", "Deterministic generation", "Architecture report"],
+      "flow": ["Manifest", "Validate", "Resolve Dependencies", "Generate", "Build/Test"],
       "preview": "tool"
     },
     {
@@ -800,9 +800,9 @@
       "source": ".github/workflows/ci.yml",
       "kind": "automation",
       "runtime": "github",
-      "benefit": "يبني الحل ويشغّل الاختبارات وينشر Workbench وأثَر ومدار مؤقتًا ثم يختبرها مع SQL Server حقيقي ويغلف الحزم العامة.",
-      "details": ["Restore", "Build", "Tests", "Publish three consumers", "17+17 Pack", "SQL integration"],
-      "flow": ["Commit", "Build", "Tests", "Docker SQL", "Result"],
+      "benefit": "يبني الحل ويشغّل الاختبارات وينشر Workbench وأثَر ومدار مؤقتًا ثم يختبرها مع SQL Server حقيقي ويغلف الحزم العامة، مع بوابة مستقلة لتوليد مشروع Composer وإعادة بنائه واختباره.",
+      "details": ["Restore", "Build", "Tests", "Composer golden generation", "Publish three consumers", "17+17 Pack", "SQL integration"],
+      "flow": ["Commit", "Build", "Generate", "Tests", "Docker SQL", "Result"],
       "preview": "pipeline"
     },
     {
@@ -856,9 +856,9 @@
       "source": "tests/",
       "kind": "tool",
       "runtime": "local-and-ci",
-      "benefit": "تثبت قواعد الكور ودورة Workbench وقواعد مبادرة أثَر ودورة حالات مدار ومنطق الجاهزية بدل الاعتماد على الفحص اليدوي فقط.",
-      "details": ["FoundationKit.Tests", "Workbench.Tests", "Athar.Tests", "Madar.Tests", "Smoke scripts"],
-      "flow": ["Rule", "Test", "Regression Gate"],
+      "benefit": "تثبت قواعد الكور ودورة Workbench وقواعد مبادرة أثَر ودورة حالات مدار ومنطق الجاهزية وتوليد Composer الحتمي بدل الاعتماد على الفحص اليدوي فقط.",
+      "details": ["FoundationKit.Tests", "Composer generation tests", "Workbench.Tests", "Athar.Tests", "Madar.Tests", "Smoke scripts"],
+      "flow": ["Rule", "Generate", "Test", "Regression Gate"],
       "preview": "tool"
     }
   ]

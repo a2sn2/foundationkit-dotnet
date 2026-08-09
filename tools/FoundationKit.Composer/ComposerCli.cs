@@ -28,12 +28,18 @@ public static class ComposerCli
                 "profiles" => await ListProfilesAsync(args, output),
                 "validate" => await ValidateAsync(args, output, cancellationToken),
                 "explain" => await ExplainAsync(args, output, cancellationToken),
+                "new" => await NewAsync(args, output, cancellationToken),
                 _ => await UnknownCommandAsync(args[0], error)
             };
         }
         catch (ComposerManifestException exception)
         {
             await error.WriteLineAsync($"Manifest error: {exception.Message}");
+            return 2;
+        }
+        catch (ComposerGenerationException exception)
+        {
+            await error.WriteLineAsync($"Generation error: {exception.Message}");
             return 2;
         }
         catch (KeyNotFoundException exception)
@@ -183,6 +189,120 @@ public static class ComposerCli
         return 0;
     }
 
+    private static async Task<int> NewAsync(
+        IReadOnlyList<string> args,
+        TextWriter output,
+        CancellationToken cancellationToken)
+    {
+        if (args.Count < 4)
+        {
+            throw new ComposerManifestException(
+                "Usage: new <manifest.json> --output <directory> [--foundation-root <directory>] [--force] [--require-stable]");
+        }
+
+        var manifestPath = args[1];
+        string? outputDirectory = null;
+        string? foundationRoot = null;
+        var force = false;
+        var requireStable = false;
+
+        for (var index = 2; index < args.Count; index++)
+        {
+            var option = args[index];
+            if (option.Equals("--output", StringComparison.OrdinalIgnoreCase))
+            {
+                if (outputDirectory is not null)
+                {
+                    throw new ComposerManifestException("Option '--output' can be specified only once.");
+                }
+
+                outputDirectory = ReadOptionValue(args, ref index, "--output");
+            }
+            else if (option.Equals("--foundation-root", StringComparison.OrdinalIgnoreCase))
+            {
+                if (foundationRoot is not null)
+                {
+                    throw new ComposerManifestException("Option '--foundation-root' can be specified only once.");
+                }
+
+                foundationRoot = ReadOptionValue(args, ref index, "--foundation-root");
+            }
+            else if (option.Equals("--force", StringComparison.OrdinalIgnoreCase))
+            {
+                if (force)
+                {
+                    throw new ComposerManifestException("Option '--force' can be specified only once.");
+                }
+
+                force = true;
+            }
+            else if (option.Equals("--require-stable", StringComparison.OrdinalIgnoreCase))
+            {
+                if (requireStable)
+                {
+                    throw new ComposerManifestException("Option '--require-stable' can be specified only once.");
+                }
+
+                requireStable = true;
+            }
+            else
+            {
+                throw new ComposerManifestException($"Unknown new option '{option}'.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            throw new ComposerManifestException("The new command requires '--output <directory>'.");
+        }
+
+        var manifest = await ComposerManifestParser.ParseFileAsync(manifestPath, cancellationToken);
+        var analysis = CompositionAnalyzer.Analyze(manifest);
+
+        foreach (var warning in analysis.Warnings)
+        {
+            await output.WriteLineAsync($"WARNING: {warning}");
+        }
+
+        if (requireStable && !analysis.IsStableOnly)
+        {
+            await output.WriteLineAsync(
+                "NOT GENERATED: this composition includes capabilities that are not Stable.");
+            return 3;
+        }
+
+        var result = await ComposerProjectGenerator.GenerateAsync(
+            analysis,
+            new ProjectGenerationOptions(outputDirectory, foundationRoot, force),
+            cancellationToken);
+
+        await output.WriteLineAsync($"Generated project: {manifest.Name}");
+        await output.WriteLineAsync($"Output: {result.OutputDirectory}");
+        await output.WriteLineAsync($"Solution: {result.SolutionPath}");
+        await output.WriteLineAsync($"Foundation references: {result.ReferenceMode}");
+        await output.WriteLineAsync($"Generated files: {result.GeneratedFiles.Count}");
+        return 0;
+    }
+
+    private static string ReadOptionValue(
+        IReadOnlyList<string> args,
+        ref int index,
+        string optionName)
+    {
+        if (index + 1 >= args.Count)
+        {
+            throw new ComposerManifestException($"Option '{optionName}' requires a value.");
+        }
+
+        var value = args[++index];
+        if (string.IsNullOrWhiteSpace(value) || value.StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new ComposerManifestException($"Option '{optionName}' requires a value.");
+        }
+
+        return value;
+    }
+
     private static async Task<int> UnknownCommandAsync(string command, TextWriter error)
     {
         await error.WriteLineAsync($"Unknown command '{command}'. Use --help.");
@@ -203,8 +323,10 @@ public static class ComposerCli
         await output.WriteLineAsync("  profiles");
         await output.WriteLineAsync("  validate <manifest.json> [--require-stable]");
         await output.WriteLineAsync("  explain <manifest.json>");
+        await output.WriteLineAsync(
+            "  new <manifest.json> --output <directory> [--foundation-root <directory>] [--force] [--require-stable]");
         await output.WriteLineAsync();
         await output.WriteLineAsync(
-            "The v1 composer validates capability selection, contract compatibility, and maturity; it does not generate projects yet.");
+            "The v1 composer validates the canonical capability graph and can generate a deterministic product skeleton. Interactive composition remains future work.");
     }
 }

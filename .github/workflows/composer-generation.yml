@@ -1,0 +1,93 @@
+name: FoundationKit Composer Generation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-composer-generation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generated-project:
+    name: Generate, reproduce, build, and test Composer scaffold
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Restore Composer
+        run: dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+
+      - name: Build Composer
+        run: >-
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Generate repository-local golden project
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.golden.json
+          --output artifacts/composer-golden
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.golden.json \
+            --output artifacts/composer-golden \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-after.sha256
+          diff -u /tmp/composer-before.sha256 /tmp/composer-after.sha256
+
+      - name: Verify full generated layer set
+        shell: bash
+        run: |
+          test -f artifacts/composer-golden/src/ComposerGolden.Domain/ComposerGolden.Domain.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Application/ComposerGolden.Application.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Infrastructure/ComposerGolden.Infrastructure.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Api/ComposerGolden.Api.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Client/ComposerGolden.Client.csproj
+          test -f artifacts/composer-golden/tests/ComposerGolden.Tests/ComposerGolden.Tests.csproj
+          grep -Fq 'FoundationKit.Notifications.Smtp.csproj' artifacts/composer-golden/src/ComposerGolden.Infrastructure/ComposerGolden.Infrastructure.csproj
+          grep -Fq 'FoundationKit.Auditing.csproj' artifacts/composer-golden/src/ComposerGolden.Application/ComposerGolden.Application.csproj
+
+      - name: Restore generated solution
+        run: dotnet restore artifacts/composer-golden/ComposerGolden.sln
+
+      - name: Build generated solution
+        run: >-
+          dotnet build artifacts/composer-golden/ComposerGolden.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test generated solution
+        run: >-
+          dotnet test artifacts/composer-golden/ComposerGolden.sln
+          --configuration Release
+          --no-build

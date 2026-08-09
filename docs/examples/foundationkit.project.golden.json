@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "ComposerGolden",
+  "profile": "minimal",
+  "includeCapabilities": [
+    "blazor",
+    "auditing"
+  ],
+  "excludeCapabilities": [],
+  "providers": [
+    "provider-smtp"
+  ],
+  "capabilityContracts": {
+    "auditing": 1,
+    "provider-smtp": 1
+  }
+}

@@ -12,12 +12,13 @@ The model in this document is the machine-oriented contract for that direction.
 2. **Everything beyond the kernel is opt-in.** A project should be able to use FoundationKit without taking identity, workflow, files, multi-tenancy, AI, or another unrelated concern.
 3. **Capabilities declare dependencies.** Selecting `approvals`, for example, can pull the workflow/audit/authorization contracts it requires.
 4. **Providers are separate from capabilities.** SQL Server, Redis, SMTP, cloud services, search engines, message brokers, and AI vendors are adapters rather than business-core dependencies.
-5. **Tooling consumes the same graph.** CLI and future visual composition must use the same capability IDs, contract metadata, maturity evidence, and dependency rules instead of maintaining a second hidden model.
+5. **Tooling consumes the same graph.** CLI, deterministic generation, and future visual composition must use the same capability IDs, contract metadata, maturity evidence, and dependency rules instead of maintaining a second hidden model.
 6. **Maturity is explicit.** A capability listed in the catalog is not automatically implemented or production-ready.
 7. **Profiles are starting points, not frameworks inside the framework.** A project can start from a profile, include more capabilities, and remove independent capabilities.
 8. **A required dependency cannot be excluded.** Composition must fail rather than silently generate an invalid project.
 9. **Contract compatibility fails closed.** A manifest that explicitly requires a capability contract version FoundationKit does not provide is invalid even if dependency resolution succeeds.
 10. **Maturity requires evidence.** A maturity promotion must satisfy the canonical machine-readable evidence policy; changing the maturity enum alone must not be sufficient.
+11. **Generation cannot invent implementation.** A resolved capability without a reusable package remains an explicit product/composition concern; the generator must report that boundary rather than synthesize a fake package or business rule.
 
 ## Capability kinds
 
@@ -37,7 +38,7 @@ The model in this document is the machine-oriented contract for that direction.
 | `ReferenceOnly` | A real reusable boundary, package, provider adapter, tooling surface, or product/reference proof is implemented, but adoption, compatibility, provider, or support evidence remains too limited for `Preview` or `Stable`. |
 | `Planned` | Defined in the capability graph so dependencies and future composition remain coherent; reusable implementation must not be claimed yet. |
 
-This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated. `ReferenceOnly` likewise does not mean production approval; it means the stated reference-level surface or proof is real and must be described without implying broader unimplemented behavior.
+This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated as a completed runtime capability. `ReferenceOnly` likewise does not mean production approval; it means the stated reference-level surface or proof is real and must be described without implying broader unimplemented behavior.
 
 ## Maturity Evidence v1
 
@@ -59,7 +60,7 @@ The v1 policy is intentionally conservative:
 
 Catalog validation also requires exactly one assessment for every capability identity and requires the assessment's declared maturity to match the canonical descriptor.
 
-This gate does **not** auto-promote a capability. It only prevents the repository from declaring a maturity level whose minimum evidence is absent. Adoption is deliberately not reduced to a fixed consumer-count formula, and repository maturity evidence is not Production Approval, Segregation-of-Duties evidence, ISO certification, or operational attestation.
+This gate does **not** auto-promote a capability. It only prevents the repository from declaring a maturity level whose minimum evidence is absent. Adoption is deliberately not reduced to a fixed consumer-count formula.
 
 See `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md` for the detailed policy and boundaries.
 
@@ -247,7 +248,7 @@ The resolver returns dependencies before dependants and rejects unknown IDs or c
 
 ## Project manifest direction
 
-The current Composer consumes a manifest shaped like this for validation/explanation:
+Composer consumes the same manifest for validation, explanation, and deterministic project generation:
 
 ```json
 {
@@ -266,15 +267,28 @@ The current Composer consumes a manifest shaped like this for validation/explana
 
 `capabilityContracts` is optional. Existing schema-v1 manifests that omit it remain valid.
 
-Today that manifest drives capability/profile resolution, strict validation, exact contract compatibility checks, maturity checks, and dependency explanation. Catalog generation separately verifies that each declared maturity is backed by the canonical evidence assessment. The Composer does **not** generate projects yet.
+That manifest now drives:
 
-Future generation may use the same model for:
+- capability/profile resolution;
+- strict validation;
+- exact contract compatibility checks;
+- maturity diagnostics and optional stable-only gating;
+- dependency explanation;
+- deterministic project/layer selection;
+- reusable package/project-reference bindings that actually exist;
+- normalized generated manifest metadata;
+- generated architecture/decision documentation.
 
-- project/package selection;
-- provider wiring;
-- compatibility- and maturity-aware generated architecture documentation;
+The current non-interactive `new` command writes a bounded Domain/Application/Infrastructure/API/Client/Test skeleton. It does **not** translate every selected catalog identity into generated implementation. Planned or unbound identities stay visible in the generated architecture report with no fake runtime package or product semantic attached.
+
+Package-reference mode expresses portable FoundationKit dependencies; repository-local `--foundation-root` mode uses source `ProjectReference`s and is the CI-proven build/test path.
+
+Future composition work may add:
+
+- interactive questionnaire UX over the same deterministic engine;
+- richer provider wiring templates where provider contracts actually exist;
 - visual Workbench composition;
-- golden-template tests proving generated projects build/test.
+- additional generated topology only when it can be produced without inventing business policy.
 
 ## Implementation sequence
 
@@ -297,7 +311,7 @@ Current sequence status:
 13. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until cross-product evidence and/or required provider semantics justify extraction**.
 14. Idempotency and Concurrency — **retain current product/reference behavior, but no separate reusable package is claimed yet**.
 15. Provider-family expansion — **planned beyond current SQL Server reference behavior and SMTP provider v1**.
-16. Composer generation expansion — **interactive `foundationkit new`, project generation, provider wiring generation, and visual composition remain planned**.
+16. Composer deterministic generation — **implemented as a manifest-driven, architecture-reporting, golden-build-tested tooling slice; interactive `foundationkit new` UX, richer provider wiring, and visual composition remain future work**.
 17. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
 Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary.
@@ -312,4 +326,4 @@ See `docs/CAPABILITY-EXTRACTION-STATUS.md` for current extraction evidence and p
 
 ## Non-goals of v1
 
-The catalog does **not** claim that every item is implemented, production-ready, or available as a NuGet package. It establishes shared vocabulary, dependency rules, contract compatibility metadata, machine-enforced maturity evidence, and maturity signals, while each capability's dedicated documentation states what is actually implemented.
+The catalog does **not** claim that every item is implemented, production-ready, or available as a NuGet package. It establishes shared vocabulary, dependency rules, contract compatibility metadata, machine-enforced maturity evidence, and maturity signals. Composer may generate a structural product scaffold from that composition, but it must keep unimplemented capability semantics explicit rather than treating catalog presence as runtime implementation.
