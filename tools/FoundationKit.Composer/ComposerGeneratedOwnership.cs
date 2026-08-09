@@ -21,13 +21,18 @@ internal static class ComposerGeneratedOwnership
     {
         ArgumentNullException.ThrowIfNull(files);
 
-        var generatedFiles = files.Keys
+        var ownedFiles = files
+            .Where(file => !file.Key.Equals(MarkerFile, StringComparison.Ordinal))
+            .OrderBy(file => file.Key, StringComparer.Ordinal)
+            .ToArray();
+        var generatedFiles = ownedFiles
+            .Select(file => file.Key)
             .Append(MarkerFile)
             .Order(StringComparer.Ordinal)
             .ToArray();
         var contentSha256 = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var file in files)
+        foreach (var file in ownedFiles)
         {
             contentSha256[file.Key] = HashText(file.Value);
         }
