@@ -1,0 +1,77 @@
+name: Athar .NET 10 Startup Diagnostic
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: athar-net10-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate temporary credentials
+        shell: bash
+        run: |
+          sql_password="AtharDiagSql!$(openssl rand -hex 12)Aa1"
+          admin_password="AtharDiagAdmin!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$sql_password"
+          echo "::add-mask::$admin_password"
+          echo "ATHAR_SQL_PASSWORD=$sql_password" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+
+      - name: Start Athar stack
+        run: docker compose -f deploy/athar-compose.yml up --build -d
+
+      - name: Probe readiness
+        id: readiness
+        continue-on-error: true
+        shell: bash
+        run: |
+          for attempt in {1..90}; do
+            if curl --fail --silent http://localhost:8090/health/ready > /tmp/readiness.json; then
+              cat /tmp/readiness.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f deploy/athar-compose.yml ps
+          exit 1
+
+      - name: Capture Athar diagnostics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts/athar-net10-diagnostic
+          docker compose -f deploy/athar-compose.yml ps -a > artifacts/athar-net10-diagnostic/compose-ps.txt 2>&1 || true
+          docker compose -f deploy/athar-compose.yml logs --no-color --tail=800 athar-api > artifacts/athar-net10-diagnostic/athar-api.log 2>&1 || true
+          docker compose -f deploy/athar-compose.yml logs --no-color --tail=400 athar-sqlserver > artifacts/athar-net10-diagnostic/athar-sqlserver.log 2>&1 || true
+          docker inspect "$(docker compose -f deploy/athar-compose.yml ps -q athar-api)" > artifacts/athar-net10-diagnostic/athar-api-inspect.json 2>&1 || true
+          if [ -f /tmp/readiness.json ]; then cp /tmp/readiness.json artifacts/athar-net10-diagnostic/readiness.json; fi
+
+      - name: Upload Athar diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: athar-net10-startup-diagnostic
+          path: artifacts/athar-net10-diagnostic
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Fail when readiness failed
+        if: steps.readiness.outcome != 'success'
+        shell: bash
+        run: exit 1
+
+      - name: Stop Athar stack
+        if: always()
+        run: docker compose -f deploy/athar-compose.yml down --volumes --remove-orphans
