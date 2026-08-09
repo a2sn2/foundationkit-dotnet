@@ -145,13 +145,21 @@ Approvals and Notifications have two independent product consumers, Athar and Ma
 
 The new evidence gate records this explicitly. It does not automatically promote them because a consumer-count threshold was reached.
 
-## Current continuation boundary
+## Core v0.1 closure state
 
-Capability compatibility/version metadata and the Maturity Evidence v1 gate close the current machine-composition/maturity integrity gaps without adding an eighteenth package.
+The current consumer-driven extraction cycle is **closed for the FoundationKit Core v0.1 composable baseline** documented in `docs/CORE-V0.1-BASELINE.md`.
+
+Compatibility/version metadata and Maturity Evidence v1 close the remaining machine-integrity gaps in the current composition model without adding an eighteenth reusable package. The present 17-package baseline is therefore the intentional reference starting point for future work.
+
+This closure does not promote Planned capabilities, does not make unchecked roadmap items defects, and does not reinterpret Madar product behavior as reusable FoundationKit implementation.
+
+A future runtime extraction cycle should begin only when new independent consumer/provider evidence demonstrates a reusable boundary. Without that evidence, the next legitimate FoundationKit direction is tooling evolution such as deterministic project-generation planning rather than speculative package creation.
+
+## Current continuation boundary
 
 There is still no justified eighteenth reusable runtime package. Further Core runtime extraction should wait for another independent consumer/provider shape or a clearly reusable contract rather than generalizing Madar-specific behavior prematurely.
 
-The next FoundationKit work, if continuing without new product evidence, should focus on repository/composer closure or deterministic project-generation planning rather than fabricating Files, Organization, Search, Reporting, Jobs, or another runtime package.
+The next FoundationKit work, if continuing without new product evidence, should focus on deterministic Composer/project-generation planning rather than fabricating Files, Organization, Search, Reporting, Jobs, or another runtime package.
 
 ## Governance boundary
 
