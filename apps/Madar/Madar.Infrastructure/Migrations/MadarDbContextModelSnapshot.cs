@@ -202,6 +202,44 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.ToTable("CaseApprovals", "madar");
         });
 
+        modelBuilder.Entity("Madar.Domain.Cases.CaseAttachment", entity =>
+        {
+            entity.Property<Guid>("Id")
+                .ValueGeneratedNever()
+                .HasColumnType("uniqueidentifier");
+            entity.Property<Guid>("CaseId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<string>("ContentType")
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasColumnType("nvarchar(100)");
+            entity.Property<DateTimeOffset>("CreatedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<string>("OriginalFileName")
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasColumnType("nvarchar(255)");
+            entity.Property<byte[]>("RowVersion")
+                .IsConcurrencyToken()
+                .IsRequired()
+                .ValueGeneratedOnAddOrUpdate()
+                .HasColumnType("rowversion");
+            entity.Property<long>("SizeBytes")
+                .HasColumnType("bigint");
+            entity.Property<string>("StorageKey")
+                .IsRequired()
+                .HasMaxLength(100)
+                .HasColumnType("nvarchar(100)");
+            entity.Property<Guid>("UploadedByUserId")
+                .HasColumnType("uniqueidentifier");
+            entity.HasKey("Id");
+            entity.HasIndex("CaseId", "CreatedUtc", "Id");
+            entity.HasIndex("StorageKey")
+                .IsUnique();
+            entity.HasIndex("UploadedByUserId");
+            entity.ToTable("CaseAttachments", "madar");
+        });
+
         modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>
         {
             entity.Property<Guid>("Id")
@@ -397,6 +435,21 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .WithMany()
                 .HasForeignKey("ReviewedByUserId")
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity("Madar.Domain.Cases.CaseAttachment", entity =>
+        {
+            entity.HasOne("Madar.Domain.Cases.Case", null)
+                .WithMany()
+                .HasForeignKey("CaseId")
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            entity.HasOne("Madar.Infrastructure.Identity.MadarUser", null)
+                .WithMany()
+                .HasForeignKey("UploadedByUserId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
         });
 
         modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>

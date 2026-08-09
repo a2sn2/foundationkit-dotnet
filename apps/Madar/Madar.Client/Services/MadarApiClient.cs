@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FoundationKit.Blazor.Api;
@@ -225,6 +226,65 @@ public sealed class MadarApiClient(HttpClient httpClient)
             CaseCommentRoutes.ForCase(caseId),
             request,
             cancellationToken);
+
+    public Task<ApiResult<CaseAttachmentDto[]>> ListCaseAttachmentsAsync(
+        Guid caseId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<CaseAttachmentDto[]>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                CaseAttachmentRoutes.ForCase(caseId)),
+            cancellationToken);
+
+    public async Task<ApiResult<CaseAttachmentDto>> UploadCaseAttachmentAsync(
+        Guid caseId,
+        Stream content,
+        string fileName,
+        string contentType,
+        long sizeBytes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        var tokenResult = await EnsureAntiforgeryTokenAsync(cancellationToken);
+        if (tokenResult.IsFailure || tokenResult.Value is null)
+        {
+            return ApiResult<CaseAttachmentDto>.Failure(
+                tokenResult.ErrorDetails
+                ?? new ApiError(
+                    "Security.TokenUnavailable",
+                    "تعذر إنشاء رمز حماية الطلب.",
+                    tokenResult.StatusCode));
+        }
+
+        using var multipart = new MultipartFormDataContent();
+        using var fileContent = new StreamContent(content);
+        if (MediaTypeHeaderValue.TryParse(contentType, out var parsedContentType))
+            fileContent.Headers.ContentType = parsedContentType;
+        else
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+        fileContent.Headers.ContentLength = sizeBytes;
+        multipart.Add(fileContent, "file", fileName);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            CaseAttachmentRoutes.ForCase(caseId))
+        {
+            Content = multipart
+        };
+        request.Headers.TryAddWithoutValidation(
+            "X-CSRF-TOKEN",
+            tokenResult.Value);
+
+        var response = await SendAsync<CaseAttachmentDto>(
+            request,
+            cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            _antiforgeryToken = null;
+
+        return response;
+    }
 
     public Task<ApiResult<CaseApprovalDto[]>> ListCaseApprovalsAsync(
         Guid caseId,

@@ -20,6 +20,7 @@ using Madar.Infrastructure.Auditing;
 using Madar.Infrastructure.Cases;
 using Madar.Infrastructure.Identity;
 using Madar.Infrastructure.Organization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +46,7 @@ builder.Services.AddScoped<ICaseManager, CaseManager>();
 builder.Services.AddScoped<ICaseRoutingManager, CaseRoutingManager>();
 builder.Services.AddScoped<ICaseSlaManager, CaseSlaManager>();
 builder.Services.AddScoped<ICaseCommentManager, CaseCommentManager>();
+builder.Services.AddScoped<ICaseAttachmentManager, CaseAttachmentManager>();
 builder.Services.AddScoped<CaseApprovalManager>();
 builder.Services.AddScoped<ICaseApprovalManager, NotifyingCaseApprovalManager>();
 builder.Services.AddScoped<CaseQueryService>();
@@ -57,6 +59,11 @@ builder.Services.AddScoped<ICaseCommentStore>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseCommentStore>());
 builder.Services.AddScoped<ICaseCommentQueryService>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseCommentStore>());
+builder.Services.AddScoped<CaseAttachmentStore>();
+builder.Services.AddScoped<ICaseAttachmentStore>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseAttachmentStore>());
+builder.Services.AddScoped<ICaseAttachmentQueryService>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseAttachmentStore>());
 builder.Services.AddScoped<CaseApprovalStore>();
 builder.Services.AddScoped<ICaseApprovalRepository>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseApprovalStore>());
@@ -73,6 +80,29 @@ builder.Services.AddScoped<IRepository<Case, Guid>, EfRepository<Case, Guid, Mad
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<MadarDbContext>>();
 builder.Services.AddScoped<IMadarReadinessProbe, MadarReadinessProbe>();
 builder.Services.AddSingleton<IClock, SystemClock>();
+
+var attachmentStorageRoot = builder.Configuration["Madar:Attachments:StorageRoot"];
+if (string.IsNullOrWhiteSpace(attachmentStorageRoot))
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Madar:Attachments:StorageRoot must be explicitly configured outside Development.");
+    }
+
+    attachmentStorageRoot = Path.Combine(
+        builder.Environment.ContentRootPath,
+        "data",
+        "attachments");
+}
+
+builder.Services.AddSingleton<ICaseAttachmentContentStore>(
+    new FileSystemCaseAttachmentContentStore(attachmentStorageRoot));
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit =
+        CaseAttachmentPolicy.MaxSizeBytes + (1024 * 1024);
+});
 
 builder.Services.AddScoped<IAuditSink, SqlAuditSink>();
 builder.Services.AddScoped<IAuditContextAccessor, MadarAuditContextAccessor>();
@@ -242,6 +272,7 @@ app.MapMadarEndpoints();
 app.MapMadarDepartmentEndpoints();
 app.MapMadarDepartmentAdministrationEndpoints();
 app.MapMadarCaseCommentEndpoints();
+app.MapMadarCaseAttachmentEndpoints();
 app.MapMadarCaseApprovalEndpoints();
 app.MapFallbackToFile("index.html");
 

@@ -2,7 +2,29 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.8 controlled transfer and reassignment
+## [Unreleased] — v0.9 secure case attachments
+
+### Added
+
+- Product-owned append-only `CaseAttachment` metadata with case/uploader IDs, bounded original filename/content type/size, server-generated private storage key, creation time, and SQL Server rowversion.
+- Existing case visibility reused for list/upload/download: creator, current assignee, or a role with `madar.cases.read-all`; inaccessible cases remain masked as not found.
+- 10 MiB upload limit with PDF/PNG/JPEG/TXT allow-list, extension-to-MIME matching, and basic content-signature validation before storage.
+- Private `ICaseAttachmentContentStore` abstraction with a filesystem implementation for the current experimental Development/CI stack; storage remains outside `wwwroot` and uses a private Docker volume.
+- Authenticated attachment list/download and anti-CSRF/write-rate-limited upload endpoints under `/api/cases/{caseId}/attachments`.
+- `madar.case.attachment-uploaded` and `madar.case.attachment-downloaded` audit actions containing only `attachmentId` in custom attributes; file bytes, filename, storage key/path, and provider details are excluded.
+- Arabic attachment panel integrated into case details, including file selection, bounded upload, metadata list, and authorized download.
+- SQL migration/model snapshot plus unit and SQL/E2E coverage for validation, authorization masking, closed-case readability, private content persistence, authorized download, and audit privacy.
+
+### Deliberately deferred
+
+- edit/delete/versioning of attachments;
+- malware-scanner provider integration;
+- OCR, indexing, or full-text search inside files;
+- signed URLs, CDN, or direct public file paths;
+- Production object-storage/KMS/provider selection;
+- reusable `FoundationKit.Files` / `FoundationKit.Storage` extraction until independent product evidence exists.
+
+## [v0.8] — controlled transfer and reassignment
 
 ### Added
 
@@ -23,7 +45,7 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - transfer approval workflows or dedicated routing-history tables beyond the existing persistent audit timeline;
 - organization hierarchy, branches, teams, or multi-tenancy;
 - queue-specific business-hours/SLA policy;
-- WhatsApp/email ingestion and files/documents;
+- WhatsApp/email ingestion;
 - reusable FoundationKit organization/routing extraction until independent product evidence exists.
 
 ## [v0.7] — department administration
@@ -47,10 +69,9 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - reusable `FoundationKit.Organization` extraction until independent product evidence exists;
 - organization trees, branches, teams, parent/child departments, and multi-tenancy;
 - arbitrary user/role administration;
-- transfer/reassignment workflow and rich routing history;
 - multiple queues per department, skills, capacity, presence, round-robin, or automatic assignment;
 - queue-specific business-hours/SLA policy;
-- WhatsApp/email ingestion and files/documents.
+- WhatsApp/email ingestion.
 
 ## [v0.6] — department queues and routing
 
@@ -74,7 +95,7 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - skill/round-robin/load/capacity/presence based automatic routing;
 - routing-history aggregate beyond bounded audit evidence;
 - queue-specific SLA/business-hours policy;
-- WhatsApp/email ingestion and files/documents.
+- WhatsApp/email ingestion.
 
 ## [v0.5] — operational case notifications
 
@@ -116,7 +137,6 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - multi-stage, parallel, or quorum approvals;
 - dynamic approver routing/delegation;
 - approval SLA/background scheduling;
-- files/attachments;
 - edit/delete/versioning of approval records;
 - organization hierarchy/multi-tenancy;
 - changes to the public `FoundationKit.Approvals` API merely for Madar convenience.

@@ -16,6 +16,8 @@ public sealed class MadarDbContext(
 
     public DbSet<CaseComment> CaseComments => Set<CaseComment>();
 
+    public DbSet<CaseAttachment> CaseAttachments => Set<CaseAttachment>();
+
     public DbSet<CaseApproval> CaseApprovals => Set<CaseApproval>();
 
     public DbSet<Department> Departments => Set<Department>();
@@ -32,6 +34,7 @@ public sealed class MadarDbContext(
         ConfigureOrganization(builder);
         ConfigureCases(builder);
         ConfigureComments(builder);
+        ConfigureAttachments(builder);
         ConfigureApprovals(builder);
         ConfigureAudit(builder);
     }
@@ -215,6 +218,49 @@ public sealed class MadarDbContext(
             entity.HasOne<MadarUser>()
                 .WithMany()
                 .HasForeignKey(item => item.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureAttachments(ModelBuilder builder)
+    {
+        builder.Entity<CaseAttachment>(entity =>
+        {
+            entity.ToTable("CaseAttachments", "madar");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.OriginalFileName)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(item => item.ContentType)
+                .HasMaxLength(100)
+                .IsRequired();
+            entity.Property(item => item.SizeBytes)
+                .IsRequired();
+            entity.Property(item => item.StorageKey)
+                .HasMaxLength(100)
+                .IsRequired();
+            entity.Property(item => item.CreatedUtc)
+                .IsRequired();
+            entity.Property(item => item.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasIndex(item => item.StorageKey)
+                .IsUnique();
+            entity.HasIndex(item => new
+            {
+                item.CaseId,
+                item.CreatedUtc,
+                item.Id
+            });
+
+            entity.HasOne<Case>()
+                .WithMany()
+                .HasForeignKey(item => item.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MadarUser>()
+                .WithMany()
+                .HasForeignKey(item => item.UploadedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
