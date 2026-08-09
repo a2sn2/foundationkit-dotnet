@@ -174,6 +174,14 @@ Together with the five base packages, the current reusable output remains sevent
 
 The composition model publishes an explicit contract version and one maturity-evidence assessment for every capability identity. Contract metadata is separate from NuGet version and maturity; maturity evidence is separate from Production Approval. Catalog generation fails when a capability's declared maturity lacks the minimum repository evidence required by `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
 
+## Core v0.1 baseline closure
+
+As of 2026-08-09, the current **FoundationKit Core v0.1 composable baseline is closed** at the repository/reference level described by `docs/CORE-V0.1-BASELINE.md`.
+
+Closure means the current 17-package reusable baseline, capability graph, seven profiles, strict manifests, contract compatibility, maturity-evidence enforcement, Composer reference tooling, generated metadata, and repository verification form a coherent starting point for future work.
+
+Unchecked roadmap items remain future evidence-driven capabilities and tooling objectives. They are **not blockers** to the v0.1 baseline closure and must not be implemented or extracted merely to make this roadmap visually complete.
+
 ## Current continuation boundary
 
 The reusable extraction cycle remains consumer-driven. Madar now supplies real product semantics for departments/routing, secure attachments, SLA evaluation, and authorized search/reporting, but those are deliberately product-owned implementations rather than automatic evidence for new FoundationKit packages.
