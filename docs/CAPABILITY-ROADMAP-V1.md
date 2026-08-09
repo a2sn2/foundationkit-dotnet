@@ -9,9 +9,9 @@ A capability moves through the following lifecycle:
 1. **Planned** — vocabulary, boundary, and dependencies are defined.
 2. **ReferenceOnly** — a real reference-level boundary/package or consumer proof exists, but broader adoption, compatibility, provider, or production evidence is still limited.
 3. **Preview** — reusable package/contracts exist and pass repository quality/security gates, but compatibility or provider/adoption evidence is still evolving.
-4. **Stable** — reusable contract is documented, independently composable, tested, packaged, and supported as part of the FoundationKit public surface.
+4. **Stable** — reusable contract is documented, independently composable, tested, adopted, compatibility-supported, packaged where appropriate, and supported as part of the FoundationKit public surface.
 
-No capability is promoted merely because a class or empty package exists.
+No capability is promoted merely because a class or empty package exists. Every declared maturity must also satisfy the machine-readable Maturity Evidence v1 policy.
 
 ## Phase A — Composition foundation
 
@@ -24,11 +24,12 @@ No capability is promoted merely because a class or empty package exists.
 - [x] Strict manifest parsing/validation through current Composer tooling.
 - [x] Composition dependency diagnostics through current Composer explain/validation flow.
 - [x] Capability contract/version metadata with deterministic Composer compatibility validation.
+- [x] Machine-readable maturity-evidence assessments and fail-closed promotion policy.
 
 ## Phase B — Governance and security foundations
 
 - [x] Auditing reusable package extracted and packaged.
-- [ ] Auditing provider/adoption proof and maturity promotion beyond `ReferenceOnly`.
+- [ ] Auditing provider/adoption/compatibility proof sufficient for maturity promotion beyond `ReferenceOnly`.
 - [x] Security reusable capability boundary.
 - [x] Identity reusable capability boundary.
 - [x] Authorization roles, permissions, ownership, and scoped access primitives.
@@ -48,8 +49,8 @@ No capability is promoted merely because a class or empty package exists.
 
 ## Phase D — Communication and content
 
-- [x] Notifications v1: bounded channel-neutral message/delivery contracts with Athar consumer evidence.
-- [x] SMTP provider v1: reusable `FoundationKit.Notifications.Smtp` transport package consumed by Athar.
+- [x] Notifications v1: bounded channel-neutral message/delivery contracts with real consumer evidence.
+- [x] SMTP provider v1: reusable `FoundationKit.Notifications.Smtp` transport package consumed by products.
 - [ ] Notification templates and localization.
 - [ ] Notification preferences, routing/fallback, queues, retries, and delivery history.
 - [ ] SMTP provider family beyond the narrow reference transport: relay/provider ecosystems, retries, routing/fallback, bounce processing, credential-rotation integration, and delivery history.
@@ -76,7 +77,7 @@ No capability is promoted merely because a class or empty package exists.
 - [ ] Outbox/inbox contracts.
 - [ ] Webhooks with signing/replay/retry contracts.
 - [ ] Idempotency reusable package extraction beyond current Athar reference behavior.
-- [ ] Optimistic concurrency reusable package extraction beyond current Athar reference behavior.
+- [ ] Optimistic concurrency reusable package extraction beyond current product reference behavior.
 - [x] Caching v1: bounded byte-cache contracts, explicit TTL/hit/miss/remove semantics, bounded in-memory reference provider, and Workbench catalog-read consumer proof.
 - [ ] External HTTP integration resilience conventions.
 
@@ -97,7 +98,7 @@ Providers remain outside business capabilities and are selected explicitly.
 - [ ] SQL Server provider family where reusable provider code is justified.
 - [ ] PostgreSQL provider family.
 - [ ] Redis provider.
-- [x] SMTP provider v1 reference package extracted and consumed by Athar.
+- [x] SMTP provider v1 reference package extracted and consumed.
 - [ ] SMTP provider family expansion beyond the current reference transport.
 - [ ] Object storage providers.
 - [ ] Search providers.
@@ -111,7 +112,7 @@ Providers remain outside business capabilities and are selected explicitly.
 - [x] Strict manifest validation.
 - [x] Dependency explanation/current composition diagnostics.
 - [x] Exact capability-contract compatibility requirements and diagnostics.
-- [x] Machine maturity and human documentation aligned with the implemented validate/explain surface.
+- [x] Machine-readable capability maturity and evidence metadata aligned with human documentation.
 - [ ] `foundationkit new` interactive composer.
 - [ ] Deterministic project generation.
 - [ ] Generated architecture/decision report.
@@ -147,7 +148,8 @@ A capability is not considered complete until applicable items below are satisfi
 - README/capability documentation;
 - reference-consumer proof when runtime behavior is involved;
 - CI, security scan, and CodeQL green;
-- compatibility and migration impact documented.
+- compatibility and migration impact documented;
+- maturity-evidence assessment synchronized with the declared maturity and current repository evidence.
 
 A **Planned** or current-reference capability is not extracted into a package merely to reduce unchecked roadmap boxes. A new reusable package should require at least one concrete consumer and a boundary that is useful independently of that consumer.
 
@@ -170,13 +172,15 @@ The repository currently has extracted reusable/reference packages for:
 
 Together with the five base packages, the current reusable output remains seventeen NuGet packages plus seventeen symbol packages. Athar provides consumer evidence for security/identity/authorization/workflow/approval/notification/SMTP surfaces. Madar adds a second independent consumer for the narrow Approvals and Notifications contracts. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and Caching. Capability maturity remains conservative and does not imply production certification.
 
-The composition model also publishes an explicit contract version for every capability identity. Contract metadata is separate from NuGet version and maturity; Composer v1 can require an exact contract version for any capability that resolves in a composition.
+The composition model publishes an explicit contract version and one maturity-evidence assessment for every capability identity. Contract metadata is separate from NuGet version and maturity; maturity evidence is separate from Production Approval. Catalog generation fails when a capability's declared maturity lacks the minimum repository evidence required by `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
 
 ## Current continuation boundary
 
 The reusable extraction cycle remains consumer-driven. Madar now supplies real product semantics for departments/routing, secure attachments, SLA evaluation, and authorized search/reporting, but those are deliberately product-owned implementations rather than automatic evidence for new FoundationKit packages.
 
 There is still **no additional reusable package candidate justified by both an independently useful provider-neutral boundary and sufficient cross-product evidence**. Further runtime extraction should wait for another independent consumer or a clearly reusable provider contract rather than generalizing Madar-specific behavior prematurely.
+
+The maturity-evidence gate strengthens this stop boundary: product evidence can be recorded without pretending it is equivalent to a reusable capability implementation or a Stable compatibility/support commitment.
 
 The following areas therefore remain not ready for package extraction:
 
