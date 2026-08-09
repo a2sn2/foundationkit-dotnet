@@ -547,6 +547,21 @@
       "preview": "workbench-user"
     },
     {
+      "id": "madar-case-reports",
+      "group": "madar",
+      "app": "madar",
+      "title": "بحث وتقارير الحالات",
+      "label": "/reports/cases",
+      "route": "/reports/cases",
+      "source": "apps/Madar/Madar.Client/Pages/CaseReports.razor",
+      "kind": "ui",
+      "runtime": "local",
+      "benefit": "يبحث ضمن الحالات المسموح للمستخدم برؤيتها ويعرض ملخصًا تشغيليًا من نفس نطاق الصلاحيات والفلاتر.",
+      "details": ["Authorized search", "Bounded filters", "Deterministic paging", "Same-scope summary"],
+      "flow": ["User Scope", "Filters", "SQL Query", "Summary + Page"],
+      "preview": "workbench-admin"
+    },
+    {
       "id": "madar-case-details",
       "group": "madar",
       "app": "madar",
