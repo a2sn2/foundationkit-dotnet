@@ -62,10 +62,9 @@ public sealed class CaseAttachmentManager(
         if (access.IsFailure)
             return Result<CaseAttachmentDto>.Failure(access.Error);
 
-        var userId = currentUser.UserId!.Value;
         var creation = CaseAttachment.Create(
             caseId,
-            userId,
+            currentUser.UserId!.Value,
             upload.FileName,
             upload.ContentType,
             upload.SizeBytes,
@@ -107,29 +106,18 @@ public sealed class CaseAttachmentManager(
                 CaseAttachmentErrors.ContentUnavailable);
         }
 
-        try
-        {
-            await attachmentStore.AddAsync(attachment, cancellationToken);
-            await auditRecorder.RecordAsync(
-                new AuditRequest(
-                    "madar.case.attachment-uploaded",
-                    nameof(Case),
-                    caseId.ToString("D"),
-                    Attributes: new Dictionary<string, string>
-                    {
-                        ["attachmentId"] = attachment.Id.ToString("D")
-                    }),
-                cancellationToken);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch
-        {
-            await TryDeleteContentAsync(
-                attachment.StorageKey,
-                cancellationToken);
-            throw;
-        }
+        await attachmentStore.AddAsync(attachment, cancellationToken);
+        await auditRecorder.RecordAsync(
+            new AuditRequest(
+                "madar.case.attachment-uploaded",
+                nameof(Case),
+                caseId.ToString("D"),
+                Attributes: new Dictionary<string, string>
+                {
+                    ["attachmentId"] = attachment.Id.ToString("D")
+                }),
+            cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = await queryService.GetByIdAsync(
             attachment.Id,
@@ -277,24 +265,4 @@ public sealed class CaseAttachmentManager(
         ReadOnlySpan<byte> signature) =>
         sourceLength >= signature.Length
         && source.AsSpan(0, signature.Length).SequenceEqual(signature);
-
-    private async Task TryDeleteContentAsync(
-        string storageKey,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await contentStore.DeleteIfExistsAsync(
-                storageKey,
-                cancellationToken);
-        }
-        catch (IOException)
-        {
-            // Best-effort compensating cleanup. The original database failure remains authoritative.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort compensating cleanup. The original database failure remains authoritative.
-        }
-    }
 }
