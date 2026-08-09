@@ -12,10 +12,11 @@ The model in this document is the machine-oriented contract for that direction.
 2. **Everything beyond the kernel is opt-in.** A project should be able to use FoundationKit without taking identity, workflow, files, multi-tenancy, AI, or another unrelated concern.
 3. **Capabilities declare dependencies.** Selecting `approvals`, for example, can pull the workflow/audit/authorization contracts it requires.
 4. **Providers are separate from capabilities.** SQL Server, Redis, SMTP, cloud services, search engines, message brokers, and AI vendors are adapters rather than business-core dependencies.
-5. **Tooling consumes the same graph.** CLI and future visual composition must use the same capability IDs and dependency rules instead of maintaining a second hidden model.
+5. **Tooling consumes the same graph.** CLI and future visual composition must use the same capability IDs, contract metadata, and dependency rules instead of maintaining a second hidden model.
 6. **Maturity is explicit.** A capability listed in the catalog is not automatically implemented or production-ready.
 7. **Profiles are starting points, not frameworks inside the framework.** A project can start from a profile, include more capabilities, and remove independent capabilities.
 8. **A required dependency cannot be excluded.** Composition must fail rather than silently generate an invalid project.
+9. **Contract compatibility fails closed.** A manifest that explicitly requires a capability contract version FoundationKit does not provide is invalid even if dependency resolution succeeds.
 
 ## Capability kinds
 
@@ -36,6 +37,33 @@ The model in this document is the machine-oriented contract for that direction.
 | `Planned` | Defined in the capability graph so dependencies and future composition remain coherent; implementation must not be claimed yet. |
 
 This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated. `ReferenceOnly` likewise does not mean production approval; it means the stated reference-level surface is real and must be described without implying broader unimplemented behavior.
+
+## Capability contract versions
+
+Capability contract version is a machine-readable composition concept separate from both **NuGet package version** and **maturity**.
+
+FoundationKit v1 publishes a `CapabilityContractDescriptor` for every capability/provider/tooling identity in the canonical graph. Every current identity starts at contract version `1`.
+
+A project manifest may optionally add exact requirements such as:
+
+```json
+"capabilityContracts": {
+  "authorization": 1,
+  "provider-sqlserver": 1
+}
+```
+
+The v1 compatibility rules are intentionally narrow:
+
+- contract versions are positive integers;
+- the requirement must refer to a capability that resolves in the final composition;
+- transitive dependencies may be constrained explicitly;
+- providers may be constrained when selected;
+- the required version must exactly match the catalog version;
+- incompatibility is a composition error, not a maturity warning;
+- omitting requirements preserves previous manifest behavior.
+
+The model deliberately does not define SemVer ranges, runtime negotiation, package installation, downgrade/upgrade behavior, or migration orchestration. Those concepts can be added only if real compatibility pressure demonstrates the need.
 
 ## Current catalog groups
 
@@ -198,21 +226,28 @@ The current Composer consumes a manifest shaped like this for validation/explana
 
 ```json
 {
+  "schemaVersion": 1,
   "name": "MySystem",
   "profile": "enterprise",
   "includeCapabilities": ["documents", "search"],
   "excludeCapabilities": ["localization"],
-  "providers": ["provider-sqlserver"]
+  "providers": ["provider-sqlserver"],
+  "capabilityContracts": {
+    "authorization": 1,
+    "provider-sqlserver": 1
+  }
 }
 ```
 
-Today that manifest drives capability/profile resolution, strict validation, maturity checks, and dependency explanation. It does **not** generate projects yet.
+`capabilityContracts` is optional. Existing schema-v1 manifests that omit it remain valid.
+
+Today that manifest drives capability/profile resolution, strict validation, exact contract compatibility checks, maturity checks, and dependency explanation. It does **not** generate projects yet.
 
 Future generation may use the same manifest for:
 
 - project/package selection;
 - provider wiring;
-- generated architecture documentation;
+- compatibility-aware generated architecture documentation;
 - visual Workbench composition;
 - golden-template tests proving generated projects build/test.
 
@@ -222,30 +257,33 @@ The capability catalog is not permission to create dozens of empty packages. Ext
 
 Current sequence status:
 
-1. Capability model, resolver, profiles, and manifest contract — **implemented**.
-2. Composer validation and machine-readable catalog export — **implemented at reference/tooling level**.
+1. Capability model, resolver, profiles, manifest contract, and exact capability-contract metadata — **implemented**.
+2. Composer validation, compatibility enforcement, explanation, and machine-readable catalog export — **implemented at reference/tooling level**.
 3. Auditing, Security, Identity, and Authorization reusable boundaries — **extracted with conservative maturity levels**.
 4. Workflow and the narrow Approvals v1 decision/maker-checker surface — **extracted as `ReferenceOnly`**.
-5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly` with Athar consumer evidence**.
-6. SMTP notification provider v1 — **extracted as reusable `FoundationKit.Notifications.Smtp` and consumed by Athar; maturity remains `ReferenceOnly`**.
+5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly`; Athar and Madar provide two independent consumer shapes**.
+6. SMTP notification provider v1 — **extracted as reusable `FoundationKit.Notifications.Smtp`; maturity remains `ReferenceOnly`**.
 7. Settings v1 and Feature Management v1 — **extracted as reusable packages with Workbench runtime evidence; both remain `ReferenceOnly`**.
-8. Localization v1 — **extracted as `FoundationKit.Localization` with Workbench runtime proof for canonical culture resolution, RTL/LTR directionality, and opaque time-zone identity; maturity remains `ReferenceOnly`**.
-9. Caching v1 — **extracted as `FoundationKit.Caching` with bounded byte-cache contracts, a BCL-only in-memory reference provider, and Workbench catalog-read consumer evidence; maturity remains `ReferenceOnly`**.
-10. Repository consistency sweep — **implementation aligns Composer maturity, 17-package human metadata/Atlas/README, unified packaging, and drift-prevention checks; final merge still requires exact-head verification**.
-11. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until consumer evidence and/or required product semantics justify extraction**.
-12. Idempotency and Concurrency — **retain current Athar reference behavior, but no separate reusable package is claimed yet**.
-13. Provider-family expansion — **planned beyond the current SQL Server reference behavior and SMTP provider v1**.
-14. Composer expansion — **current `capabilities`, `profiles`, `validate`, `validate --require-stable`, and `explain` surface is `ReferenceOnly`; interactive `foundationkit new`, project generation, provider wiring generation, and visual composition remain planned**.
-15. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
+8. Localization v1 — **extracted as `FoundationKit.Localization` with Workbench runtime proof; maturity remains `ReferenceOnly`**.
+9. Caching v1 — **extracted as `FoundationKit.Caching` with bounded byte-cache contracts, an in-memory reference provider, and Workbench consumer evidence; maturity remains `ReferenceOnly`**.
+10. Repository consistency baseline — **17 reusable package projects, human metadata, Atlas, unified packaging, and drift-prevention checks are aligned**.
+11. Capability compatibility/version metadata v1 — **implemented without adding an eighteenth reusable package**.
+12. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until cross-product evidence and/or required provider semantics justify extraction**.
+13. Idempotency and Concurrency — **retain current product/reference behavior, but no separate reusable package is claimed yet**.
+14. Provider-family expansion — **planned beyond current SQL Server reference behavior and SMTP provider v1**.
+15. Composer generation expansion — **interactive `foundationkit new`, project generation, provider wiring generation, and visual composition remain planned**.
+16. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
-Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary. The extracted SMTP provider is a narrow transport adapter; it does not imply those higher-level notification capabilities.
+Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary.
+
+Madar's product-owned departments, attachments, SLA evaluation, and authorized search/reporting provide useful concrete evidence but are intentionally not promoted into FoundationKit packages until an independent second product/provider shape establishes a reusable boundary.
 
 Settings v1 deliberately does not become a secret store, Feature Management v1 deliberately does not become a percentage-rollout/experimentation engine, Localization v1 deliberately does not become a translation store or OS-specific time-zone conversion provider, and Caching v1 deliberately does not become a Redis/distributed-consistency policy layer. These capabilities express reusable deterministic boundaries while leaving provider, organizational, data-classification, and product policies to consuming systems.
 
 Each extraction must preserve the dependency direction and current security baseline. A new package should not be created merely to reduce the number of planned items: it must have a concrete consumer and an independently useful boundary.
 
-See `docs/CAPABILITY-EXTRACTION-STATUS.md` for the current extraction status and the evidence that distinguishes extracted packages from product-specific reference behavior.
+See `docs/CAPABILITY-EXTRACTION-STATUS.md` for current extraction evidence and product-owned boundaries.
 
 ## Non-goals of v1
 
-The catalog does **not** claim that every item is implemented, production-ready, or available as a NuGet package. It establishes shared vocabulary and dependency rules, while each capability's maturity and dedicated documentation state what is actually implemented.
+The catalog does **not** claim that every item is implemented, production-ready, or available as a NuGet package. It establishes shared vocabulary, dependency rules, contract compatibility metadata, and maturity signals, while each capability's dedicated documentation states what is actually implemented.

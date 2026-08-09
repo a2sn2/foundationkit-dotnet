@@ -9,6 +9,7 @@ public sealed record CompositionEntry(
 public sealed record CompositionAnalysis(
     ComposerManifest Manifest,
     IReadOnlyList<CompositionEntry> Entries,
+    IReadOnlyList<CapabilityCompatibilityResult> CompatibilityResults,
     IReadOnlyList<string> Warnings)
 {
     public bool IsStableOnly => Entries.All(entry => entry.Capability.Maturity == CapabilityMaturity.Stable);
@@ -31,6 +32,9 @@ public static class CompositionAnalyzer
         ValidateManifestKinds(manifest, catalog);
 
         var resolved = manifest.ToProjectManifest().Resolve(resolver);
+        var compatibility = CapabilityCompatibility.Evaluate(
+            resolved,
+            manifest.ContractRequirements);
         var reasons = BuildReasons(manifest, profile, resolved, catalog);
         var entries = resolved
             .Select(capability => new CompositionEntry(
@@ -47,7 +51,7 @@ public static class CompositionAnalyzer
                 "catalog selection does not mean the capability is fully generatable or production-ready.")
             .ToArray();
 
-        return new CompositionAnalysis(manifest, entries, warnings);
+        return new CompositionAnalysis(manifest, entries, compatibility, warnings);
     }
 
     private static void ValidateManifestKinds(
@@ -85,6 +89,15 @@ public static class CompositionAnalyzer
             {
                 throw new ComposerManifestException(
                     $"'{providerId}' is not a provider capability and cannot be listed under 'providers'.");
+            }
+        }
+
+        foreach (var requirement in manifest.ContractRequirements)
+        {
+            if (!catalog.ContainsKey(requirement.CapabilityId))
+            {
+                throw new ComposerManifestException(
+                    $"Unknown capability contract '{requirement.CapabilityId}'.");
             }
         }
     }

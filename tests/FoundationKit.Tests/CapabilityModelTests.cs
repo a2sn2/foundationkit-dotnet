@@ -100,6 +100,71 @@ public sealed class CapabilityModelTests
     }
 
     [Fact]
+    public void Contract_catalog_covers_every_capability_with_v1()
+    {
+        var capabilities = FoundationCapabilityCatalog.All;
+        var contracts = FoundationCapabilityContracts.All;
+
+        Assert.Equal(capabilities.Count, contracts.Count);
+        Assert.Equal(
+            capabilities.Select(capability => capability.Id).Order(StringComparer.OrdinalIgnoreCase),
+            contracts.Select(contract => contract.CapabilityId).Order(StringComparer.OrdinalIgnoreCase));
+        Assert.All(contracts, contract => Assert.Equal(1, contract.ContractVersion));
+    }
+
+    [Fact]
+    public void Project_manifest_accepts_compatible_contract_requirement()
+    {
+        var resolver = CapabilityResolver.CreateDefault();
+        var manifest = new FoundationKitProjectManifest(
+            "ApprovalSystem",
+            FoundationCapabilityProfiles.Minimal,
+            [FoundationCapabilityIds.Approvals],
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            [new CapabilityContractRequirement(FoundationCapabilityIds.Authorization, 1)]);
+
+        var resolved = manifest.Resolve(resolver);
+
+        Assert.Contains(resolved, capability => capability.Id == FoundationCapabilityIds.Authorization);
+    }
+
+    [Fact]
+    public void Project_manifest_rejects_incompatible_contract_requirement()
+    {
+        var resolver = CapabilityResolver.CreateDefault();
+        var manifest = new FoundationKitProjectManifest(
+            "ApprovalSystem",
+            FoundationCapabilityProfiles.Minimal,
+            [FoundationCapabilityIds.Approvals],
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            [new CapabilityContractRequirement(FoundationCapabilityIds.Approvals, 2)]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => manifest.Resolve(resolver));
+
+        Assert.Contains("requires contract v2", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("provides v1", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Contract_requirement_for_unresolved_capability_is_rejected()
+    {
+        var resolver = CapabilityResolver.CreateDefault();
+        var manifest = new FoundationKitProjectManifest(
+            "MinimalApi",
+            FoundationCapabilityProfiles.Minimal,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            [new CapabilityContractRequirement(FoundationCapabilityIds.Approvals, 1)]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => manifest.Resolve(resolver));
+
+        Assert.Contains("does not resolve in this composition", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Catalog_distinguishes_extracted_reference_capabilities_from_future_features()
     {
         var workflow = FoundationCapabilityCatalog.All.Single(

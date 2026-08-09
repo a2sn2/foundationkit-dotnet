@@ -23,7 +23,7 @@ No capability is promoted merely because a class or empty package exists.
 - [x] CI drift protection between compiled graph and exported JSON.
 - [x] Strict manifest parsing/validation through current Composer tooling.
 - [x] Composition dependency diagnostics through current Composer explain/validation flow.
-- [ ] Capability compatibility/version metadata.
+- [x] Capability contract/version metadata with deterministic Composer compatibility validation.
 
 ## Phase B — Governance and security foundations
 
@@ -110,6 +110,7 @@ Providers remain outside business capabilities and are selected explicitly.
 - [x] Capability/profile discovery.
 - [x] Strict manifest validation.
 - [x] Dependency explanation/current composition diagnostics.
+- [x] Exact capability-contract compatibility requirements and diagnostics.
 - [x] Machine maturity and human documentation aligned with the implemented validate/explain surface.
 - [ ] `foundationkit new` interactive composer.
 - [ ] Deterministic project generation.
@@ -167,22 +168,25 @@ The repository currently has extracted reusable/reference packages for:
 - Localization v1 (`FoundationKit.Localization`);
 - Caching v1 (`FoundationKit.Caching`).
 
-Together with the five base packages, the current reusable output is seventeen NuGet packages plus seventeen symbol packages. Athar provides consumer evidence for security/identity/authorization/workflow/approval/notification/SMTP surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and Caching. Capability maturity remains conservative and does not imply production certification.
+Together with the five base packages, the current reusable output remains seventeen NuGet packages plus seventeen symbol packages. Athar provides consumer evidence for security/identity/authorization/workflow/approval/notification/SMTP surfaces. Madar adds a second independent consumer for the narrow Approvals and Notifications contracts. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and Caching. Capability maturity remains conservative and does not imply production certification.
+
+The composition model also publishes an explicit contract version for every capability identity. Contract metadata is separate from NuGet version and maturity; Composer v1 can require an exact contract version for any capability that resolves in a composition.
 
 ## Current continuation boundary
 
-The autonomous extraction cycle has reached its consumer/policy stop boundary. Caching v1 is merged, and the repository consistency sweep aligns the current implementation, machine metadata, human catalog, Atlas, root README, unified package manager, and CI checks.
+The reusable extraction cycle remains consumer-driven. Madar now supplies real product semantics for departments/routing, secure attachments, SLA evaluation, and authorized search/reporting, but those are deliberately product-owned implementations rather than automatic evidence for new FoundationKit packages.
 
-After that consistency pull request is verified and merged, there is **no additional reusable package candidate currently justified by both a provider-neutral boundary and a real independent consumer**. Further runtime extraction should wait for real product semantics or provider decisions rather than inventing them.
+There is still **no additional reusable package candidate justified by both an independently useful provider-neutral boundary and sufficient cross-product evidence**. Further runtime extraction should wait for another independent consumer or a clearly reusable provider contract rather than generalizing Madar-specific behavior prematurely.
 
-The following items remain **not ready for package extraction** until a concrete consumer proves their semantics:
+The following areas therefore remain not ready for package extraction:
 
-- **Files / Documents** — Athar/Workbench currently have no reusable upload/storage/document lifecycle consumer.
-- **Background Jobs** — there is no delayed/scheduled/recurring work runtime consumer yet.
+- **Files / Documents** — Madar has secure product-owned case attachments, but there is not yet an independent second consumer proving a reusable storage/document lifecycle contract.
+- **Background Jobs / SLA** — Madar exposes a bounded SLA evaluation seam, but no scheduler/provider-neutral recurring-work contract is proven across products.
 - **Messaging** — the existing in-process domain-event dispatcher is not integration-event/outbox/inbox delivery.
 - **Idempotency** — Athar has product-specific duplicate-write protection, but no independent reusable reservation/store/replay contract.
-- **Concurrency** — Athar has SQL Server `rowversion` plus 409 behavior, but no reusable provider-neutral public token/precondition contract.
-- **Organization / Multi-Tenancy** — the reusable core must not invent hierarchy, tenant identity, or isolation topology before a product requires them.
-- **Search / Reporting / Privacy / Retention / Money / Numbering** — reusable semantics are not yet proven by a real reference consumer.
+- **Concurrency** — products use SQL concurrency behavior, but no reusable provider-neutral public token/precondition contract is proven.
+- **Organization / Multi-Tenancy** — Madar departments and memberships are product-owned and do not establish a general organization hierarchy or tenant-isolation topology.
+- **Search / Reporting** — Madar v0.10 proves bounded SQL-backed authorized case search and same-scope operational counts, not a provider-neutral cross-product search/reporting abstraction.
+- **Privacy / Retention / Money / Numbering** — reusable semantics still require concrete product/provider evidence.
 
 Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, business organization semantics, distributed-cache consistency, and data-classification policy remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.

@@ -10,14 +10,20 @@ public sealed record ComposerManifest(
     string Profile,
     IReadOnlyList<string> IncludeCapabilities,
     IReadOnlyList<string> ExcludeCapabilities,
-    IReadOnlyList<string> Providers)
+    IReadOnlyList<string> Providers,
+    IReadOnlyList<CapabilityContractRequirement>? CapabilityContracts = null)
 {
+    public IReadOnlyList<CapabilityContractRequirement> ContractRequirements =>
+        CapabilityContracts ?? Array.Empty<CapabilityContractRequirement>();
+
     public FoundationKitProjectManifest ToProjectManifest() =>
-        new(Name, Profile, IncludeCapabilities, ExcludeCapabilities, Providers);
+        new(Name, Profile, IncludeCapabilities, ExcludeCapabilities, Providers, ContractRequirements);
 }
 
 public static class ComposerManifestParser
 {
+    private const int MaxContractVersion = 9999;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -55,6 +61,7 @@ public static class ComposerManifestParser
         var include = NormalizeIds(document.IncludeCapabilities, "includeCapabilities");
         var exclude = NormalizeIds(document.ExcludeCapabilities, "excludeCapabilities");
         var providers = NormalizeIds(document.Providers, "providers");
+        var contracts = NormalizeContracts(document.CapabilityContracts);
 
         if (include.Intersect(exclude, StringComparer.OrdinalIgnoreCase).FirstOrDefault() is { } conflict)
         {
@@ -62,7 +69,7 @@ public static class ComposerManifestParser
                 $"Capability '{conflict}' cannot appear in both includeCapabilities and excludeCapabilities.");
         }
 
-        return new ComposerManifest(1, name, profile, include, exclude, providers);
+        return new ComposerManifest(1, name, profile, include, exclude, providers, contracts);
     }
 
     public static async Task<ComposerManifest> ParseFileAsync(
@@ -141,13 +148,54 @@ public static class ComposerManifestParser
         return result;
     }
 
+    private static CapabilityContractRequirement[] NormalizeContracts(
+        IReadOnlyDictionary<string, int>? values)
+    {
+        if (values is null)
+        {
+            return Array.Empty<CapabilityContractRequirement>();
+        }
+
+        var result = new List<CapabilityContractRequirement>(values.Count);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var pair in values)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                throw new ComposerManifestException(
+                    "Manifest field 'capabilityContracts' cannot contain an empty capability ID.");
+            }
+
+            var capabilityId = pair.Key.Trim();
+            if (!seen.Add(capabilityId))
+            {
+                throw new ComposerManifestException(
+                    $"Manifest field 'capabilityContracts' contains duplicate capability '{capabilityId}'.");
+            }
+
+            if (pair.Value is <= 0 or > MaxContractVersion)
+            {
+                throw new ComposerManifestException(
+                    $"Capability contract '{capabilityId}' must be an integer from 1 to {MaxContractVersion}.");
+            }
+
+            result.Add(new CapabilityContractRequirement(capabilityId, pair.Value));
+        }
+
+        return result
+            .OrderBy(requirement => requirement.CapabilityId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private sealed record ManifestDocument(
         int SchemaVersion,
         string? Name,
         string? Profile,
         IReadOnlyList<string>? IncludeCapabilities,
         IReadOnlyList<string>? ExcludeCapabilities,
-        IReadOnlyList<string>? Providers);
+        IReadOnlyList<string>? Providers,
+        IReadOnlyDictionary<string, int>? CapabilityContracts);
 }
 
 public sealed class ComposerManifestException : Exception

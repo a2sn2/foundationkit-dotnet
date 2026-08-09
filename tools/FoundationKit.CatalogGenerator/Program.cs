@@ -217,6 +217,35 @@ internal static class Program
             }
         }
 
+        var contracts = FoundationCapabilityContracts.All;
+        if (contracts.Count != capabilities.Count)
+        {
+            throw new InvalidOperationException(
+                "Capability contract metadata must cover every capability exactly once.");
+        }
+
+        var contractIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var contract in contracts)
+        {
+            if (!capabilityIds.Contains(contract.CapabilityId))
+            {
+                throw new InvalidOperationException(
+                    $"Capability contract references unknown capability '{contract.CapabilityId}'.");
+            }
+
+            if (!contractIds.Add(contract.CapabilityId))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate capability contract metadata: {contract.CapabilityId}.");
+            }
+
+            if (contract.ContractVersion <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Capability contract '{contract.CapabilityId}' must have a positive version.");
+            }
+        }
+
         var resolver = CapabilityResolver.CreateDefault();
         foreach (var capability in capabilities)
         {
@@ -241,6 +270,7 @@ internal static class Program
         var document = new CapabilityCatalogExport(
             1,
             FoundationCapabilityCatalog.All,
+            FoundationCapabilityContracts.All,
             FoundationCapabilityProfiles.All);
         return JsonSerializer.Serialize(document, ExportJsonOptions) + Environment.NewLine;
     }
@@ -309,6 +339,7 @@ internal static class Program
 internal sealed record CapabilityCatalogExport(
     int SchemaVersion,
     IReadOnlyList<CapabilityDescriptor> Capabilities,
+    IReadOnlyList<CapabilityContractDescriptor> Contracts,
     IReadOnlyList<CapabilityProfile> Profiles);
 
 internal sealed record CatalogDocument(

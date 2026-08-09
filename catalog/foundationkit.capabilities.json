@@ -435,6 +435,164 @@
       ]
     }
   ],
+  "contracts": [
+    {
+      "capabilityId": "kernel",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "validation",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "web-api",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "blazor",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "observability",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "security",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "identity",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "authorization",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "auditing",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "settings",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "feature-management",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "localization",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "organization",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "multi-tenancy",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "workflow",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "approvals",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "tasks",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "notifications",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "files",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "documents",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "jobs",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "messaging",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "webhooks",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "realtime",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "caching",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "search",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "reporting",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "idempotency",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "concurrency",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "money",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "numbering",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "privacy",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "retention",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "ai",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "provider-sqlserver",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "provider-redis",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "provider-smtp",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "tooling-cli",
+      "contractVersion": 1
+    },
+    {
+      "capabilityId": "tooling-workbench",
+      "contractVersion": 1
+    }
+  ],
   "profiles": [
     {
       "id": "minimal",

@@ -1,150 +1,134 @@
 # Capability Extraction Status
 
-Status date: 2026-08-08.
+Status date: 2026-08-09.
 
-This document records the current consumer-driven capability extraction status. It distinguishes reusable packages that actually exist from catalog vocabulary, product-specific reference behavior, and future roadmap ideas.
+This document records the current consumer-driven FoundationKit capability-extraction state. It distinguishes reusable packages that actually exist from machine vocabulary, product-owned behavior, and future roadmap ideas.
 
-## Completed reusable/reference extractions
+## Reusable/reference baseline
 
-| Capability | Package / boundary | First real consumer | Current maturity |
+| Capability | Package / boundary | Consumer evidence | Current maturity |
 |---|---|---|---|
-| Auditing | `FoundationKit.Auditing` | Athar / reusable audit composition | ReferenceOnly |
-| Security | `FoundationKit.Security` | Athar | Preview |
-| Identity | `FoundationKit.Identity` | Athar | ReferenceOnly |
-| Authorization | `FoundationKit.Authorization` | Athar | ReferenceOnly |
-| Workflow | `FoundationKit.Workflow` | Athar initiative review | ReferenceOnly |
-| Approvals v1 | `FoundationKit.Approvals` | Athar initiative review | ReferenceOnly |
-| Notifications v1 | `FoundationKit.Notifications` | Athar account-security adapter | ReferenceOnly |
-| SMTP provider v1 | `FoundationKit.Notifications.Smtp` | Athar account-security delivery | ReferenceOnly |
+| Auditing | `FoundationKit.Auditing` | Athar + Madar composition | ReferenceOnly |
+| Security | `FoundationKit.Security` | Athar + Madar host security use | Preview |
+| Identity | `FoundationKit.Identity` | Athar + Madar identity-adjacent composition | ReferenceOnly |
+| Authorization | `FoundationKit.Authorization` | Athar + Madar | ReferenceOnly |
+| Workflow | `FoundationKit.Workflow` | Athar + Madar lifecycle workflows | ReferenceOnly |
+| Approvals v1 | `FoundationKit.Approvals` | Athar + Madar independent approval shapes | ReferenceOnly |
+| Notifications v1 | `FoundationKit.Notifications` | Athar + Madar independent notification shapes | ReferenceOnly |
+| SMTP provider v1 | `FoundationKit.Notifications.Smtp` | Athar + optional Madar email transport | ReferenceOnly |
 | Settings v1 | `FoundationKit.Settings` | Workbench platform reference | ReferenceOnly |
 | Feature Management v1 | `FoundationKit.FeatureManagement` | Workbench platform reference | ReferenceOnly |
 | Localization v1 | `FoundationKit.Localization` | Workbench platform reference | ReferenceOnly |
 | Caching v1 | `FoundationKit.Caching` | Workbench embedded catalog read path | ReferenceOnly |
 
-The reusable package output is currently **seventeen FoundationKit NuGet packages plus seventeen symbol packages**. Maturity remains capability-specific and must not be inferred from package existence alone.
+The reusable output remains **17 FoundationKit NuGet packages plus 17 symbol packages**. Package existence does not imply a capability is Stable or production-approved.
 
-## Verified merge evidence
+## Composition compatibility v1
 
-The capability sequence is merged through pull-request gates rather than direct edits to `main`:
+The composition layer now has explicit capability contract/version metadata without creating another runtime package.
 
-- Workflow extraction — PR #59, merged to `main` at `9331460f...`.
-- Approvals v1 — PR #60, merged to `main` at `745e33f8...`.
-- Notifications v1 — PR #61, merged to `main` at `ef64a6d3...`.
-- SMTP provider v1 — PR #62, merged to `main` at `d12f34fe...`.
-- Consumer-driven extraction closure — PR #63, merged to `main` at `5141f572...`.
-- Settings + Feature Management — PR #65, merged to `main` at `72f15909...`.
-- Localization v1 — PR #66, merged to `main` at `64660c48...`.
-- Caching v1 — PR #67, merged to `main` at `9af7c2b1...`.
+The v1 model provides:
 
-PR #67 verified its exact final source head `283b432f...` with CI `31240105512`, Security Scan `31240105492`, and CodeQL `31240105490`: 355 tracked text files scanned, 198 NuGet components in the SBOM, zero build warnings/errors, 190 automated tests, 17 NuGet + 17 symbol packages, Workbench SQL/cache-path assertions, Athar E2E/non-root, and isolated backup/restore verification.
+- one machine-visible contract version for every capability/provider/tooling identity in the canonical graph;
+- current contract version `1` for every catalog identity;
+- generated contract metadata in `catalog/foundationkit.capabilities.json`;
+- optional `capabilityContracts` requirements in manifest schema v1;
+- exact-match compatibility validation for selected capabilities, providers, and transitive dependencies;
+- fail-closed handling for unknown, unresolved, invalid, or incompatible requirements;
+- Composer `capabilities`, `validate`, and `explain` diagnostics for contract compatibility;
+- backward compatibility for existing manifests that omit `capabilityContracts`.
 
-These automated results are technical repository evidence. They are not independent organizational approval, Production Approval, ISO certification, or formal Segregation-of-Duties evidence.
+Contract version is deliberately separate from NuGet package version and capability maturity. v1 does not introduce SemVer ranges, runtime provider negotiation, package upgrade/downgrade, or automatic migrations.
 
-## General-purpose continuation — Issue #64
+## Consumer-driven extraction rule
 
-Issue #64 established the rule for the general-purpose extraction cycle: build broadly useful system capabilities until the next useful step requires a real owner/product/organizational decision.
+A new reusable runtime package still requires both:
 
-The rule remains consumer-first:
+1. an independently useful provider-neutral boundary; and
+2. concrete consumer evidence strong enough to avoid baking one product's semantics into FoundationKit.
 
-1. a reusable capability must have an independently useful, provider-neutral boundary;
-2. runtime behavior should be exercised by a real Workbench/Athar reference consumer where applicable;
-3. package extraction must not fabricate product semantics just to reduce roadmap checkboxes;
-4. maturity remains conservative until broader adoption/compatibility evidence exists.
+A roadmap item, a product implementation, or a second checkbox is not sufficient by itself.
 
-### Settings v1
+## Madar evidence after v0.10
 
-The reusable package provides bounded setting keys/values, opaque caller-defined scopes, deterministic most-specific-first resolution, deterministic source precedence, and an immutable in-memory reference source.
+Madar is now a substantial product consumer and provides useful evidence for future extraction decisions, but several capabilities deliberately remain product-owned:
 
-Workbench proves runtime use through `GET /api/platform-reference`.
+- v0.2 SLA deadlines/breach evaluation proves product SLA semantics and an evaluator seam, not a generic background-jobs/scheduler contract;
+- v0.3 comments prove append-only case collaboration, not a reusable comments/activity package;
+- v0.4 approvals reuses the existing `FoundationKit.Approvals` v1 surface without requiring API expansion;
+- v0.5 notifications reuses the existing `FoundationKit.Notifications` surface without requiring API expansion;
+- v0.6-v0.8 departments, queues, memberships, transfer, and reassignment prove Madar organization/routing semantics, not a general `FoundationKit.Organization` model;
+- v0.9 secure case attachments prove a concrete file lifecycle for one product, not yet a cross-product `FoundationKit.Files` or `FoundationKit.Documents` boundary;
+- v0.10 authorized SQL-backed case search and same-scope operational reporting prove a bounded product search/reporting implementation, not a provider-neutral `FoundationKit.Search` or `FoundationKit.Reporting` abstraction.
 
-Important boundary: Settings is **not** a secret store and does not select persistence, encryption, KMS, tenant hierarchy, organization hierarchy, administration UI, or refresh policy.
+This evidence improves future design quality precisely because it remains product-owned until a second independent shape demonstrates what is truly reusable.
 
-### Feature Management v1
-
-The reusable package provides bounded feature IDs and deterministic Boolean feature evaluation backed by Settings. An absent setting uses the feature definition's explicit default. An explicitly configured non-Boolean value fails closed to disabled rather than silently falling back to an enabled default.
-
-Workbench proves runtime use through `GET /api/platform-reference`, and the SQL integration smoke flow asserts the settings-backed decision.
-
-Important boundary: v1 does not implement percentage rollouts, user/segment targeting, experiments, schedules, vendor SDKs, or arbitrary rule execution.
-
-### Localization v1
-
-The reusable package provides canonical culture metadata, RTL/LTR directionality from BCL culture data, bounded supported-culture sets, deterministic exact/parent/default fallback, explicit invalid-request provenance, and a bounded opaque time-zone identifier.
-
-Workbench supplies `ar-YE` and `UTC` through Settings and proves Localization through `GET /api/platform-reference`; the integration smoke flow asserts exact `ar-YE` resolution, `RightToLeft`, and `UTC` before exercising the existing SQL user/admin workflow.
-
-Important boundary: Localization v1 does not select a translation/resource provider, persist user/tenant preferences, negotiate HTTP languages, perform OS-specific time-zone conversion, or invent Windows/IANA mappings.
-
-### Caching v1
-
-The reusable package provides a bounded normalized `CacheKey`, explicit positive finite TTL, explicit hit/miss results, provider-neutral get/set/remove operations, caller cancellation, DateTimeOffset overflow protection, and a bounded BCL-only in-memory reference provider.
-
-Workbench is the first real consumer: `CatalogService` caches the existing embedded capability-catalog byte payload. `CatalogCachingTests` proves two gets and one set across two reads, while the SQL integration smoke flow reads `/api/catalog` twice before continuing the SQL user/admin workflow.
-
-Important boundary: Caching v1 does not select Redis or another production cache provider, define distributed coherence/locking, serialize arbitrary objects, make cache state authoritative, provide tag invalidation/refresh-ahead/stale-while-revalidate, or classify which sensitive data a product may cache.
-
-## Repository consistency closure
-
-After Caching v1, the remaining repository-only task was a consistency sweep rather than another capability extraction. The sweep aligns the repository with the already implemented baseline:
-
-- `tooling-cli` now represents the existing Composer v1 as `ReferenceOnly`, while interactive project generation remains explicitly future work;
-- the root manager delegates packaging to canonical `scripts/pack.ps1` instead of maintaining a second five-package list;
-- the human catalog and generated `FEATURES.md` describe all seventeen reusable package projects;
-- the Atlas package surface mirrors the same seventeen source package projects and documents Composer as tooling, not a package generator;
-- the root README describes the current composable baseline instead of the original five-package snapshot;
-- repository verification now derives the reusable package set from `src/FoundationKit.*` and fails when the human catalog or Atlas package cards drift from it;
-- CI parses the unified manager and canonical pack script in addition to the product/deployment PowerShell scripts.
-
-This implementation is not treated as finally verified until the consistency pull request passes CI, Security Scan, CodeQL, generated-file checks, package output, and integration workflows on its exact final head.
-
-## Current autonomous boundary
-
-No additional reusable package is currently justified by both a provider-neutral boundary and a real independent consumer. After the consistency sweep is verified and merged, further runtime capability extraction should wait for real product semantics or provider choices rather than inventing them.
-
-## Capabilities that still require stronger consumer evidence or owner semantics
+## Capabilities that still require stronger evidence
 
 ### Files / Documents
 
-Athar and Workbench currently have no upload, object-storage, document-versioning, classification, or reusable file-lifecycle consumer.
+Madar has secure product-owned case attachments with bounded type/size validation, private storage keys, SQL metadata, authorized list/download, and audit evidence.
 
-Status: **Planned — no extraction yet**.
+That is now real consumer evidence, but it is still one product shape. There is no second independent storage/document consumer or provider family proving what belongs in a reusable contract.
 
-### Background Jobs
+Status: **Planned — no reusable package extraction yet**.
 
-There is no delayed, scheduled, recurring, retryable, or worker-hosted job behavior in the current reference consumers.
+### Background Jobs / SLA
 
-Status: **Planned — no extraction yet**.
+Madar has bounded authorized SLA evaluation that a future scheduler could call, but there is still no reusable delayed/scheduled/recurring job contract, worker lifecycle, retry policy, or provider selection.
+
+Status: **Planned — no reusable Jobs package yet**.
 
 ### Messaging
 
-FoundationKit.Infrastructure has an in-process domain-event dispatcher. That mechanism dispatches domain events to in-process handlers and is deliberately not presented as integration messaging, a broker abstraction, outbox/inbox, retry/dead-letter handling, or cross-service delivery.
+`FoundationKit.Infrastructure` has an in-process domain-event dispatcher. That is not integration messaging, a broker abstraction, outbox/inbox, retry/dead-letter handling, or cross-service delivery.
 
-Status: **Planned — do not rename the existing domain-event dispatcher into Messaging**.
+Status: **Planned — do not relabel in-process domain events as Messaging**.
 
 ### Idempotency
 
-Athar has real owner-scoped `ClientRequestId` behavior plus a unique database constraint, but no reusable reservation/store/completion/replay contract is proven independently of Athar's initiative schema.
+Athar has owner-scoped `ClientRequestId` duplicate-write protection plus a database constraint, but no independent reusable reservation/store/completion/replay contract is proven.
 
-Status: **ReferenceOnly behavior — no package extraction yet**.
+Status: **ReferenceOnly behavior — no separate package extraction yet**.
 
 ### Concurrency
 
-Athar has real SQL Server `rowversion` plus HTTP 409 handling, but no reusable client-visible precondition/token contract or second consumer that justifies a separate package.
+Athar and Madar use SQL optimistic-concurrency behavior and conflict handling, but no reusable client-visible provider-neutral precondition/token contract has been established.
 
-Status: **ReferenceOnly behavior — no package extraction yet**.
+Status: **ReferenceOnly behavior — no separate package extraction yet**.
 
 ### Organization / Multi-Tenancy
 
-FoundationKit can define vocabulary in the capability graph, but it must not invent organization hierarchy, tenant identity, tenant resolution, or data-isolation topology without an actual product requirement.
+Madar now proves real departments, memberships, queues, routing, transfer, and reassignment. Those semantics are intentionally Madar-owned. They do not establish organizations/branches/teams/positions, tenant identity/resolution, or data-isolation topology.
 
-Status: **Planned — owner/product model required before runtime extraction**.
+Status: **Planned — stronger cross-product organization/tenancy evidence required**.
 
-### Search / Reporting / Privacy / Retention / Money / Numbering
+### Search / Reporting
 
-These remain catalog/roadmap vocabulary until a real consumer establishes their semantics and required provider/policy boundaries.
+Madar v0.10 proves authorization-preserving relational case search, bounded filters/paging, and same-scope operational summary counts. It deliberately does not introduce an external search provider, indexing contract, saved searches, exports, generic report definitions, or cross-product query semantics.
+
+Status: **Planned — keep Madar implementation product-owned until another independent consumer proves a reusable boundary**.
+
+### Privacy / Retention / Money / Numbering
+
+These remain capability vocabulary until real products establish the required semantics, policies, and provider boundaries.
 
 Status: **Planned — no extraction yet**.
 
+## Maturity evidence
+
+Approvals and Notifications now have two independent product consumers, Athar and Madar. That strengthens reuse evidence, but both remain `ReferenceOnly` because the current surfaces still lack broader compatibility/provider/adoption evidence required for a maturity promotion.
+
+Maturity promotion must remain explicit and evidence-based rather than being inferred automatically from consumer count.
+
+## Current continuation boundary
+
+After capability compatibility/version metadata v1, there is still no justified eighteenth reusable package.
+
+The next Core work should improve composition/maturity/compatibility evidence or wait for another independent consumer/provider shape. It should not extract Files, Organization, Search, Reporting, Jobs, or another package merely because Madar now implements one concrete version of those concerns.
+
 ## Governance boundary
 
-This status tracks **repository capability extraction**, not Production Approval. Independent approval, branch/ruleset evidence, deployment-provider choices, legal/user-data retention, monitoring/SIEM, production secret/KMS operations, distributed-cache provider policy, and formal certification remain separate organizational/deployment controls under `docs/security/`.
+This document tracks repository capability extraction and technical evidence only. It is not Production Approval, independent Segregation of Duties evidence, ISO/IEC 27001 certification, or a deployment/security attestation.
+
+Production branch/ruleset enforcement, independent approval, provider choices, retention/legal policy, monitoring/SIEM, production secrets/KMS, and other external organizational controls remain separate deployment/governance work under `docs/security/` and Issue #35.
