@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Report tracked support/documentation files with no active textual repository references.
+"""Temporarily fail while tracked support/documentation files have no active references.
 
-This is an audit aid, not an automatic deletion policy. Source/test/tool project files are
-excluded because SDK/MSBuild conventions discover them without textual path references.
-Historical security evidence is also excluded because its value is evidentiary, not current
-navigation. The repository required-file verifier is ignored as a reference source so a file
-is not considered active merely because a check asserts that it must exist.
+Source/test/tool project files are excluded because SDK/MSBuild conventions discover them
+without textual path references. Historical security evidence is excluded because its value
+is evidentiary rather than current navigation. The repository required-file verifier is also
+ignored as a reference source so a file is not considered active merely because a check
+asserts that it must exist.
 """
 
 from __future__ import annotations
@@ -87,10 +87,14 @@ def main() -> int:
     for path in candidates:
         print(f"ORPHAN-CANDIDATE {path}")
 
-    print(
-        "Audit note: candidates are review-only; SDK-discovered source, historical security "
-        "evidence, and circular required-file assertions are intentionally excluded."
-    )
+    if candidates:
+        print(
+            "Cleanup audit failed: every candidate must be reviewed, linked from an active "
+            "surface, deliberately excluded with rationale, or deleted as obsolete."
+        )
+        return 1
+
+    print("Repository reference audit passed: no support/document orphan candidates remain.")
     return 0
 
 
