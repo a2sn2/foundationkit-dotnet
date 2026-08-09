@@ -15,11 +15,13 @@ All notable repository and package changes are documented here.
 ### Composer
 
 - Added `new <manifest.json> --output <directory>` as the deterministic project-generation engine over the existing strict capability graph.
+- Added `new --interactive --output <directory>` as a thin questionnaire over the same manifest/analyzer/generator path, with canonical profile/capability/provider selection, dependency-first preview, cancellation, and explicit confirmation before writes.
 - Added package-reference output for portable dependency declarations and `--foundation-root` project-reference mode for repository-local exact-head verification.
 - Added bounded Domain/Application/Infrastructure/API/Client/Test scaffolding, a normalized manifest, generated ownership marker, README, and architecture/decision report.
 - Added guarded `--force` regeneration that refuses unowned or user-added files instead of deleting arbitrary non-empty directories.
 - Added golden generation tests and a dedicated CI workflow that proves byte-stable regeneration, then restores, builds, and tests the generated solution.
-- Kept interactive composition, visual Workbench composition, business-domain templates, and speculative runtime package generation outside this slice.
+- Added automated interactive-session tests covering successful generation, invalid selection retry, confirmation cancellation, stable-only fail-closed behavior, and manifest/interactive mutual exclusion.
+- Kept visual Workbench composition, business-domain templates, and speculative runtime package generation outside this slice.
 
 ### Workbench
 
