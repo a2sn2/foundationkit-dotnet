@@ -17,6 +17,8 @@ Consumers
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model. Every capability identity also publishes a machine-readable contract version for composition compatibility; contract version is distinct from both package version and maturity.
 
+FoundationKit Composer consumes that same model and can now generate a deterministic product skeleton plus an architecture decision report without adding another runtime package or inventing product semantics.
+
 > FoundationKit has a verified automated repository baseline for the documented scope. Production approval, organizational compliance, provider operations, and formal certification remain deployment- and organization-specific.
 
 ---
@@ -31,7 +33,7 @@ foundationkit-dotnet/
 ├─ apps/Madar/                  operational case product through v0.10
 ├─ tools/
 │  ├─ FoundationKit.CatalogGenerator
-│  └─ FoundationKit.Composer
+│  └─ FoundationKit.Composer    validate/explain/generate tooling
 ├─ tests/                       core, Workbench, Athar, and Madar tests
 ├─ catalog/                     human and machine capability catalogs
 ├─ docs/                        architecture, capability, security, and runbooks
@@ -245,7 +247,7 @@ Read:
 
 ## FoundationKit Composer v1
 
-The current Composer is **real reference tooling**, but it does **not** generate a project yet.
+Composer now supports **strict composition analysis plus deterministic project generation** from the same manifest/capability graph.
 
 Supported commands:
 
@@ -255,44 +257,41 @@ dotnet run --project tools/FoundationKit.Composer -- profiles
 dotnet run --project tools/FoundationKit.Composer -- validate path/to/manifest.json
 dotnet run --project tools/FoundationKit.Composer -- validate path/to/manifest.json --require-stable
 dotnet run --project tools/FoundationKit.Composer -- explain path/to/manifest.json
+dotnet run --project tools/FoundationKit.Composer -- new path/to/manifest.json --output path/to/new-system
 ```
 
 Current responsibilities:
 
-- capability/profile discovery, including current contract versions;
+- capability/profile discovery, including contract versions;
 - strict project-manifest parsing;
-- composition validation;
-- exact fail-closed capability-contract compatibility validation when requirements are declared;
-- fail-closed maturity validation with `--require-stable`;
-- dependency and compatibility explanation.
+- dependency and compatibility explanation;
+- exact fail-closed capability-contract validation;
+- optional stable-only maturity gate;
+- deterministic Domain/Application/Infrastructure/API/Client/Test scaffolding from the resolved graph;
+- generated normalized manifest and `ARCHITECTURE.md` decision report;
+- package-reference mode for portable dependency declarations;
+- repository-local `--foundation-root` project-reference mode for exact-head build/test proof;
+- guarded `--force` regeneration that refuses unknown/user-added files.
 
-A schema-v1 manifest can optionally constrain resolved capability contracts:
+Example:
 
-```json
-{
-  "schemaVersion": 1,
-  "name": "ApprovalSystem",
-  "profile": "minimal",
-  "includeCapabilities": ["approvals"],
-  "excludeCapabilities": [],
-  "providers": [],
-  "capabilityContracts": {
-    "approvals": 1,
-    "authorization": 1
-  }
-}
+```powershell
+dotnet run --project tools/FoundationKit.Composer -- `
+  new docs/examples/foundationkit.project.minimal.json `
+  --output artifacts/composer-golden `
+  --foundation-root .
 ```
 
-The v1 compatibility language is intentionally exact-match only. It does not negotiate runtime versions, install packages, or implement SemVer ranges.
+The generator does not equate catalog presence with runtime implementation. If a resolved capability is planned/preview/reference-only or has no reusable package binding, that remains explicit in maturity warnings and the generated architecture report. No fake `FoundationKit.Files`, `FoundationKit.Search`, `FoundationKit.Organization`, or other speculative package is produced.
 
-Not implemented yet:
+A dedicated Composer Generation workflow proves determinism by hashing generated files before/after guarded regeneration and then restoring, building, and testing the generated solution.
+
+Still future tooling:
 
 ```text
-foundationkit new
-interactive project generation
-deterministic project scaffolding
-provider wiring generation
+interactive foundationkit new questionnaire
 visual Workbench composer
+richer provider-specific wiring where reusable provider contracts exist
 ```
 
 Read [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md).
@@ -460,10 +459,11 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
 - generated capability/catalog drift checks, including contract metadata;
-- unit and architecture tests, including Madar Domain/Application behavior and database-startup retry logic;
+- unit and architecture tests, including Composer generation safety/determinism tests;
 - Workbench, Athar, and Madar publish;
 - all reusable NuGet + symbol packages;
 - artifact SHA-256 evidence including Madar publish output;
+- dedicated Composer golden generation → hash/re-generation equality → restore → Release build → test;
 - Workbench SQL Server workflow;
 - Athar readiness, non-root, Arabic/API surface, E2E workflow, and isolated backup/restore;
 - Madar non-root runtime, Blazor/API surface, SQL migration/startup, liveness/readiness, authentication/authorization, lifecycle/audit, SLA/collaboration/approvals, department routing/claim/administration, reassignment, transfer, target-queue, secure attachment persistence/download/audit privacy, authorized search/reporting row/count isolation, and persisted SQL/audit E2E workflows;
@@ -503,7 +503,7 @@ Start with:
 
 ## Current autonomous stop boundary
 
-The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. Capability contract/version metadata now closes the composition-compatibility gap without adding another runtime package. New packages are **not** created merely to reduce roadmap checkboxes.
+The general-purpose reusable baseline has reached a deliberate consumer/policy boundary. Capability contract/version metadata and deterministic Composer generation close composition/tooling gaps without adding another runtime package. New packages are **not** created merely to reduce roadmap checkboxes.
 
 The following areas need a real product/provider decision or stronger consumer evidence before reusable runtime extraction:
 
@@ -518,10 +518,10 @@ The following areas need a real product/provider decision or stronger consumer e
 - Money / Numbering and finance semantics;
 - Redis/object storage/messaging/search/observability provider families;
 - advanced approval routing;
-- project generation and visual composition;
+- interactive/visual composition UX beyond the deterministic generator;
 - AI abstractions after real provider-neutral consumer requirements exist.
 
-That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is a concrete second product-domain consumer that can provide evidence for future extraction decisions.
+That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is a concrete product-domain consumer that can provide evidence for future extraction decisions.
 
 ---
 
@@ -563,6 +563,6 @@ Current package version:
 0.1.0
 ```
 
-The current repository is still evolving. NuGet package version, capability maturity, and capability contract version are separate signals. Compatibility requirements should be read from the capability model/Composer contract metadata, while behavioral changes remain documented in the changelog.
+The current repository is still evolving. NuGet package version, capability maturity, capability contract version, and Composer generator contract are separate signals. Compatibility requirements should be read from the capability model/Composer contract metadata, while behavioral changes remain documented in the changelog.
 
 See [`CHANGELOG.md`](CHANGELOG.md).
