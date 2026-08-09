@@ -139,3 +139,8 @@ bash scripts/smoke-madar-transfer.sh
 # limiter between independent SQL suites; do not weaken the product policy.
 reset_madar_api
 bash scripts/smoke-madar-attachments.sh
+
+# Search/reporting creates a small private test set before executing read-only
+# queries. Reset the in-memory limiter to keep this independent suite stable.
+reset_madar_api
+bash scripts/smoke-madar-search.sh
