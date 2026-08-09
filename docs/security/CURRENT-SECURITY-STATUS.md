@@ -26,17 +26,19 @@ The Security Scan black-box suite explicitly passed authorization, CSRF, BOLA, a
 
 Documentation/evidence-only commits after that technical source do not invalidate the runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
 
-The repository is currently operating in **experimental / pre-production mode**. The owner activated `Protect main` to retain pull-request, required-check, branch-freshness, conversation-resolution, deletion and force-push protections. On 2026-08-09 the owner explicitly decided that **independent approval must not block experimental iteration**. This is a temporary workflow decision; it does not satisfy Segregation of Duties and is not Production Approval or compliance evidence.
+The repository is currently operating in **experimental / pre-production mode**. A temporary `Protect main` ruleset was created and then intentionally removed by the owner on 2026-08-09 because formal GitHub branch/review governance is not a current development blocker. There is therefore **no active protected-main ruleset currently claimed**.
 
-Before the first real Production deployment/release, at least one independent reviewer plus latest-push separation and stale-approval dismissal must be re-enabled and proven. The mandatory activation checklist is `PRODUCTION-GOVERNANCE-CHECKLIST.md`, and issue #35 is retained as the Production go-live reminder.
+Current development may still use pull requests and CI/security workflows as the preferred working process, but this is a convention rather than enforced branch protection. Independent approval is also intentionally not a current merge blocker. This does not satisfy Segregation of Duties and is not Production Approval or compliance evidence.
 
-Historical PR #34 had already been merged before the current ruleset/governance model existed. No retroactive independent-approval claim is made.
+Before the first real Production deployment/release, protected-branch/ruleset enforcement and at least one independent reviewer must be enabled and proven. The mandatory activation checklist is `PRODUCTION-GOVERNANCE-CHECKLIST.md`, and issue #35 is retained as the Production go-live reminder.
+
+Historical PR #34 had already been merged before this governance decision. No retroactive independent-approval claim is made.
 
 ## PR #34 review-closure status
 
 | Review finding | Current state | Repository closure |
 |---|---|---|
-| PR34-REV-01 independent approval | **Historical exception retained / Production activation deferred** | PR #34 predates the current governance model. Experimental work does not require independent approval. Real Production/release-governed changes must restore and prove at least one independent approval. |
+| PR34-REV-01 independent approval | **Historical exception retained / Production activation deferred** | PR #34 predates the current governance decision. Experimental work does not require independent approval or active branch protection. Real Production/release-governed changes must restore and prove both. |
 | PR34-APP-01 reverse proxy / forwarded headers | **Verified** | Explicit reverse-proxy decision; exact trusted proxy IP allow-list; no trust-all behavior; middleware runs before HTTPS/rate limiting; trusted/untrusted tests passed. |
 | PR34-AUTH-01 MFA full re-authentication | **Verified** | MFA disable and recovery-code rotation require current password + fresh TOTP/recovery factor; black-box negative/positive paths passed. |
 | PR34-AUTH-02 independent security notifications | **Repository capability verified / provider external** | Notifications exist for password reset/change, MFA enable/disable and recovery-code regeneration; real Production delivery provider remains external configuration. |
@@ -52,7 +54,7 @@ Historical PR #34 had already been merged before the current ruleset/governance 
 
 | Area | Current state | Notes |
 |---|---|---|
-| Independent review / protected `main` | **Experimental protection active / Production review gate deferred** | PR, required checks, branch freshness, conversation resolution, deletion restriction and force-push blocking remain part of the current experimental baseline. Independent approval is intentionally deferred and must be re-enabled before Production. |
+| Independent review / protected `main` | **Deferred to Production** | No active GitHub ruleset is currently claimed. PR/CI remains the preferred experimental workflow. Protected-main enforcement and independent review become mandatory before Production. |
 | Risk/threat model | **Verified baseline** | Risk register, threat model, decision register and tracked residual technical risks exist. |
 | Secure SDLC / malware gates | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, baseline SBOM, integrity evidence, build/test/publish/pack passed at post-review technical closure. |
 | Dependency/supply-chain baseline | **Verified baseline / partial provenance** | Dependabot + vulnerability gates + SHA-pinned security-sensitive Actions. Full artifact signing/provenance remains external/next hardening. |
@@ -80,6 +82,7 @@ Historical PR #34 had already been merged before the current ruleset/governance 
 The repository owner authorized the following current/future baseline:
 
 - independent reviewers: `0` required during experimental/pre-production iteration; at least `1` independent reviewer required before real Production/release-governed changes;
+- protected-main/ruleset enforcement: intentionally deferred during current experimentation; mandatory before real Production/release governance;
 - administrator MFA in Production: required;
 - normal-user MFA: supported, not globally mandatory by Foundation;
 - password minimum: `15` for the default password-only baseline;
@@ -98,11 +101,12 @@ PII/user-data retention remains product/legal-purpose-specific rather than being
 
 ## Production boundary
 
-Current decision: **continue experimental Foundation/product development and defer concrete Production infrastructure and independent-release governance until a product is selected for real deployment.**
+Current decision: **continue experimental Foundation/product development and defer concrete Production infrastructure and repository/release governance until a product is selected for real deployment.**
 
 Therefore the following remain external by design and are not repository blockers for current experimental development:
 
-- independent approving reviewer enforcement for real Production/release-governed changes;
+- protected-main/ruleset enforcement;
+- independent approving reviewer enforcement;
 - production domain/TLS ingress/network topology;
 - Vault/KMS/CA and key/certificate lifecycle;
 - central SIEM/log sink/alerts/on-call;
@@ -118,10 +122,10 @@ Before real Production, the controls in `PRODUCTION-GOVERNANCE-CHECKLIST.md` mus
 
 **FoundationKit has a verified global-ready technical security baseline for the documented repository/automated scope.**
 
-**Current repository operation is experimental/pre-production. Independent approval is intentionally not a current merge blocker.**
+**Current repository operation is experimental/pre-production. No active GitHub branch ruleset is currently claimed, and independent approval is intentionally not a current merge blocker.**
 
-**Production governance requires independent approval to be restored and proven before real Production/release-governed changes.**
+**Production governance requires protected-branch/ruleset enforcement and independent approval to be restored and proven before real Production/release-governed changes.**
 
-**Historical PR #34 predates the current governance model; no retroactive independent-approval claim is made.**
+**Historical PR #34 predates the current governance decision; no retroactive independent-approval claim is made.**
 
 **Production Approved: not asserted. ISO/IEC 27001 Certified: not asserted.**
