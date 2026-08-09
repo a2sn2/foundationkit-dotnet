@@ -15,16 +15,12 @@ from pathlib import PurePosixPath
 
 
 CANDIDATE_ROOTS = {"deploy", "docs", "postman", "scripts", "site"}
-EXCLUDED_PREFIXES = (
-    "docs/security/evidence/",
-)
+EXCLUDED_PREFIXES = ("docs/security/evidence/",)
 EXCLUDED_EXACT = {
     "site/index.html",
     "scripts/audit-repository-references.py",
 }
-IGNORED_REFERENCE_SOURCES = {
-    "scripts/verify-repository.sh",
-}
+IGNORED_REFERENCE_SOURCES = {"scripts/verify-repository.sh"}
 TEXT_SUFFIXES = {
     ".cmd", ".css", ".csproj", ".html", ".js", ".json", ".md", ".props",
     ".ps1", ".py", ".sh", ".sln", ".targets", ".txt", ".xml", ".yml", ".yaml",
@@ -32,23 +28,13 @@ TEXT_SUFFIXES = {
 
 
 def tracked_files() -> list[str]:
-    completed = subprocess.run(
-        ["git", "ls-files", "-z"],
-        check=True,
-        capture_output=True,
-    )
-    return sorted(
-        entry.decode("utf-8")
-        for entry in completed.stdout.split(b"\0")
-        if entry
-    )
+    completed = subprocess.run(["git", "ls-files", "-z"], check=True, capture_output=True)
+    return sorted(entry.decode("utf-8") for entry in completed.stdout.split(b"\0") if entry)
 
 
 def read_text(path: str) -> str | None:
-    file_path = PurePosixPath(path)
-    if file_path.suffix.lower() not in TEXT_SUFFIXES:
+    if PurePosixPath(path).suffix.lower() not in TEXT_SUFFIXES:
         return None
-
     try:
         with open(path, encoding="utf-8") as handle:
             return handle.read()
@@ -61,7 +47,13 @@ def is_candidate(path: str) -> bool:
         return False
 
     parts = PurePosixPath(path).parts
-    return bool(parts) and parts[0] in CANDIDATE_ROOTS
+    if not parts:
+        return False
+
+    if len(parts) == 1:
+        return PurePosixPath(path).suffix.lower() == ".cmd"
+
+    return parts[0] in CANDIDATE_ROOTS
 
 
 def main() -> int:
@@ -80,13 +72,11 @@ def main() -> int:
             continue
 
         basename = PurePosixPath(path).name
-        references = 0
-        for other_path, text in corpus.items():
-            if other_path == path:
-                continue
-            if path in text or basename in text:
-                references += 1
-
+        references = sum(
+            1
+            for other_path, text in corpus.items()
+            if other_path != path and (path in text or basename in text)
+        )
         if references == 0:
             candidates.append(path)
 
