@@ -12,7 +12,7 @@ Optional capabilities and provider adapters
 Consumers
 ├── Workbench — executable architecture/reference consumer
 ├── Athar — complete Arabic reference product
-└── Madar — operational case product under apps/ with verified product depth through v0.9
+└── Madar — operational case product under apps/ with product depth through v0.10
 ```
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model.
@@ -28,7 +28,7 @@ foundationkit-dotnet/
 ├─ src/                         reusable FoundationKit packages
 ├─ samples/                     FoundationKit Workbench
 ├─ examples/Athar/              complete Arabic reference product
-├─ apps/Madar/                  operational case product through v0.9
+├─ apps/Madar/                  operational case product through v0.10
 ├─ tools/
 │  ├─ FoundationKit.CatalogGenerator
 │  └─ FoundationKit.Composer
@@ -192,7 +192,7 @@ Read [`examples/Athar/README.md`](examples/Athar/README.md).
 
 ## Madar
 
-`apps/Madar` is the repository's operational case-management and orchestration product. It deliberately remains a product consumer of FoundationKit rather than turning its organization, routing, case, or attachment rules into speculative reusable packages.
+`apps/Madar` is the repository's operational case-management and orchestration product. It deliberately remains a product consumer of FoundationKit rather than turning its organization, routing, case, attachment, search, or reporting rules into speculative reusable packages.
 
 The deterministic case lifecycle remains:
 
@@ -213,17 +213,20 @@ v0.6   Department queues + routing + Operator claim flow
 v0.7   Department administration + safe Operator membership
 v0.8   Controlled transfer + reassignment
 v0.9   Secure append-only case attachments/documents
+v0.10  Authorized case search + same-scope operational reporting
 ```
 
 Routing is contextual rather than a workflow state. Transfer is an explicit supervised operation: an already-routed active case can move to a different active department, become `new` and unassigned in the target queue, and keep its SLA evidence, comments, approvals, attachments, creator, and prior audit history. Reassignment changes the eligible Operator while preserving the active lifecycle status and SLA evidence. The corresponding transfer/reassignment permissions are held by Supervisor/Administrator, while Application-layer authorization remains the source of truth.
 
 v0.9 adds product-owned attachments with SQL metadata and private content storage behind a Madar abstraction. Case visibility governs list/upload/download; files are bounded to 10 MiB and an allow-list of PDF/PNG/JPEG/TXT with basic signature checks. Storage keys are server-generated and content is not exposed as static files. Audit evidence records only bounded attachment identifiers. The current filesystem provider is for the experimental Development/CI topology; Production object-storage/KMS/malware-scanning/retention decisions remain deployment work.
 
-Madar reuses FoundationKit Domain/Application/Infrastructure/WebApi/Blazor together with Security, Authorization, Auditing, Workflow, Approvals, Notifications, and the optional SMTP adapter where their contracts fit. Madar keeps ASP.NET Core Identity configuration, product permissions, SQL schema/migrations, department/routing semantics, SLA values, attachment policy/storage abstraction, API endpoints, audit sink, readiness policy, Docker topology, and Arabic UI inside `apps/Madar`.
+v0.10 adds SQL-backed case search and a same-scope operational summary. The existing creator/assignee/`madar.cases.read-all` visibility boundary is applied before filters, counts, or paging, so narrower roles cannot infer hidden cases from result rows or counters. Search is bounded by validated filters and deterministic paging, remains product-owned, and does not introduce an external index or a reusable FoundationKit search/reporting package.
 
-Pull-request CI publishes Madar and exercises real SQL Server workflows for readiness, authentication/anti-CSRF, lifecycle/audit, SLA, comments, approvals, department routing/claim, department administration, reassignment, cross-department transfer, target-queue behavior, secure attachments, and final persisted SQL/audit evidence. Repository security gates also scan the Madar container and upload SARIF evidence.
+Madar reuses FoundationKit Domain/Application/Infrastructure/WebApi/Blazor together with Security, Authorization, Auditing, Workflow, Approvals, Notifications, and the optional SMTP adapter where their contracts fit. Madar keeps ASP.NET Core Identity configuration, product permissions, SQL schema/migrations, department/routing semantics, SLA values, attachment policy/storage abstraction, search/reporting semantics, API endpoints, audit sink, readiness policy, Docker topology, and Arabic UI inside `apps/Madar`.
 
-This product depth still does **not** claim a production organization tree, multi-tenancy, production-grade object-storage/malware-scanning/retention infrastructure, advanced search/reporting, external-channel ingestion, durable background scheduling/outbox delivery, generic routing/files/storage extraction, or production deployment approval.
+Pull-request CI publishes Madar and exercises real SQL Server workflows for readiness, authentication/anti-CSRF, lifecycle/audit, SLA, comments, approvals, department routing/claim, department administration, reassignment, cross-department transfer, target-queue behavior, secure attachments, authorized search/reporting privacy, and final persisted SQL/audit evidence. Repository security gates also scan the Madar container and upload SARIF evidence.
+
+This product depth still does **not** claim a production organization tree, multi-tenancy, production-grade object-storage/malware-scanning/retention infrastructure, external search/index infrastructure, saved/scheduled/exported/BI reports, external-channel ingestion, durable background scheduling/outbox delivery, generic routing/files/storage/search/reporting extraction, or production deployment approval.
 
 Read:
 
@@ -233,6 +236,7 @@ Read:
 - [`docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md)
 - [`docs/MADAR-CASE-TRANSFER-AR.md`](docs/MADAR-CASE-TRANSFER-AR.md)
 - [`docs/MADAR-ATTACHMENTS-AR.md`](docs/MADAR-ATTACHMENTS-AR.md)
+- [`docs/MADAR-SEARCH-REPORTING-AR.md`](docs/MADAR-SEARCH-REPORTING-AR.md)
 
 ---
 
@@ -438,7 +442,7 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - artifact SHA-256 evidence including Madar publish output;
 - Workbench SQL Server workflow;
 - Athar readiness, non-root, Arabic/API surface, E2E workflow, and isolated backup/restore;
-- Madar non-root runtime, Blazor/API surface, SQL migration/startup, liveness/readiness, authentication/authorization, lifecycle/audit, SLA/collaboration/approvals, department routing/claim/administration, reassignment, transfer, target-queue, secure attachment persistence/download/audit privacy, and persisted SQL/audit E2E workflows;
+- Madar non-root runtime, Blazor/API surface, SQL migration/startup, liveness/readiness, authentication/authorization, lifecycle/audit, SLA/collaboration/approvals, department routing/claim/administration, reassignment, transfer, target-queue, secure attachment persistence/download/audit privacy, authorized search/reporting row/count isolation, and persisted SQL/audit E2E workflows;
 - Trivy repository plus Athar and Madar image scanning, with Madar SARIF evidence uploaded to code scanning;
 - black-box negative security tests;
 - CodeQL for C# and JavaScript/TypeScript;
@@ -485,7 +489,7 @@ The following areas need a real product/provider decision or stronger consumer e
 - reusable Idempotency beyond Athar's product-specific behavior;
 - reusable Concurrency beyond Athar's SQL Server `rowversion` behavior;
 - Organization / Multi-Tenancy hierarchy and isolation topology;
-- Search / Reporting;
+- reusable Search / Reporting beyond Madar v0.10's first product-owned evidence;
 - Privacy / Retention and legal/product semantics;
 - Money / Numbering and finance semantics;
 - Redis/object storage/messaging/search/observability provider families;
@@ -507,20 +511,21 @@ Start here:
 4. [`docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md) — department lifecycle and Operator membership administration.
 5. [`docs/MADAR-CASE-TRANSFER-AR.md`](docs/MADAR-CASE-TRANSFER-AR.md) — controlled reassignment and cross-department transfer.
 6. [`docs/MADAR-ATTACHMENTS-AR.md`](docs/MADAR-ATTACHMENTS-AR.md) — secure case attachment policy, storage boundary, API, and audit privacy.
-7. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-8. [`docs/PACKAGES.md`](docs/PACKAGES.md)
-9. [`docs/FEATURES.md`](docs/FEATURES.md)
-10. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
-11. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
-12. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
-13. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
-14. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
-15. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
-16. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
-17. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
-18. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
-19. [`examples/Athar/README.md`](examples/Athar/README.md)
-20. [`apps/Madar/README.md`](apps/Madar/README.md)
+7. [`docs/MADAR-SEARCH-REPORTING-AR.md`](docs/MADAR-SEARCH-REPORTING-AR.md) — authorized case search, same-scope reporting, filters, and privacy boundary.
+8. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+9. [`docs/PACKAGES.md`](docs/PACKAGES.md)
+10. [`docs/FEATURES.md`](docs/FEATURES.md)
+11. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
+12. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
+13. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
+14. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
+15. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
+16. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
+17. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
+18. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
+19. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
+20. [`examples/Athar/README.md`](examples/Athar/README.md)
+21. [`apps/Madar/README.md`](apps/Madar/README.md)
 
 The GitHub Pages Atlas is generated from `site/portal-manifest.json` and provides a navigable view of the same repository surfaces.
 
