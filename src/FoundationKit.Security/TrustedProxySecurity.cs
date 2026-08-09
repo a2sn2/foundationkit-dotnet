@@ -67,7 +67,7 @@ public static class TrustedProxySecurity
             ForwardLimit = options.ForwardLimit
         };
 
-        forwardedHeaders.KnownNetworks.Clear();
+        forwardedHeaders.KnownIPNetworks.Clear();
         forwardedHeaders.KnownProxies.Clear();
 
         foreach (var proxy in options.KnownProxies)
@@ -99,7 +99,7 @@ public static class TrustedProxySecurityExtensions
         {
             target.ForwardedHeaders = configured.ForwardedHeaders;
             target.ForwardLimit = configured.ForwardLimit;
-            target.KnownNetworks.Clear();
+            target.KnownIPNetworks.Clear();
             target.KnownProxies.Clear();
 
             foreach (var proxy in configured.KnownProxies)
