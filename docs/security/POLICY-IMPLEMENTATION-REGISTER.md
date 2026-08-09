@@ -43,8 +43,8 @@ A green build is not production approval. `Verified` always names its scope; org
 
 | ID | Sev. | Finding / risk | Policies | Current status | Implemented control / evidence / residual action |
 |---|---:|---|---|---|---|
-| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **Owner Decision Recorded / Production activation required** | On 2026-08-09 the owner explicitly deferred independent PR approval during the experimental/pre-production phase. Current experimental governance keeps PRs, required CI/security checks, branch freshness, conversation resolution, deletion restriction and force-push blocking, but does not claim SoD. Before real Production/release-governed changes, at least 1 independent approval plus latest-push separation and stale-approval dismissal must be enabled and proven by a real governed PR. See `PRODUCTION-GOVERNANCE-CHECKLIST.md` and issue #35. |
-| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **Verified non-review protection baseline / Production review gate deferred** | The owner activated ruleset `Protect main` targeting default branch `main`, with empty bypass list, deletion restriction, force-push blocking, pull-request requirement, required status checks and branch-up-to-date enforcement. Independent approval is intentionally deferred during experimentation and must be re-enabled before Production. Dated governance evidence is tracked in issue #35. |
+| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **Owner Decision Recorded / Production activation required** | On 2026-08-09 the owner explicitly deferred independent PR approval during the experimental/pre-production phase. No current SoD claim is made. Before real Production/release-governed changes, at least 1 independent approval plus latest-push separation and stale-approval dismissal must be enabled and proven by a real governed PR. See `PRODUCTION-GOVERNANCE-CHECKLIST.md` and issue #35. |
+| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **Deferred to Production / currently not enforced by a GitHub ruleset** | A `Protect main` ruleset was briefly configured and then intentionally removed by the owner on 2026-08-09 because the repository is still experimental. Current development may continue using PRs and CI/security checks as workflow convention, but no active branch/ruleset enforcement is claimed. Before real Production, protected-branch/ruleset controls, required checks, force-push/deletion restrictions, and reviewer governance must be re-enabled and evidenced. Issue #35 is the persistent go-live reminder. |
 | FK-RISK-001 | High | Repository risk/threat model absent | Risk, SDLC, AppSec | **Verified baseline** | `RISK-REGISTER.md`, `THREAT-MODEL.md`, `SECURITY-DECISIONS.md`; residual/external risks remain explicitly tracked. |
 | FK-SDLC-001 | High | Security CI gates absent | SDLC, Malware, AppSec | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, negative suite, SBOM/integrity evidence, build/test/publish/pack. STEP-06 records successful post-review runs at `c3f7754...`. |
 | FK-SUP-001 | High | Dependency governance weak | Malware, SDLC | **Verified baseline / further hardening available** | Central package floors, NuGet audit, Trivy, baseline CycloneDX inventory, Dependabot. Lock files/source mapping remain optional next-hardening items or registry decisions. |
@@ -87,7 +87,7 @@ A green build is not production approval. `Verified` always names its scope; org
 
 | Review ID | Repository action | Current state |
 |---|---|---|
-| PR34-REV-01 | Independent GitHub review + protected branch evidence | **Historical PR #34 exception retained. Independent approval is intentionally deferred during current experimentation and becomes mandatory before real Production/release governance.** |
+| PR34-REV-01 | Independent GitHub review + protected branch evidence | **Historical PR #34 exception retained. Independent approval and protected-branch enforcement are intentionally deferred during current experimentation and become mandatory before real Production/release governance.** |
 | PR34-APP-01 | Trusted forwarded headers, explicit proxy IP allow-list, ordering before HTTPS/rate limiting, trusted/untrusted proxy tests | **Verified at STEP-06 technical closure source** |
 | PR34-AUTH-01 | Password + fresh TOTP/recovery proof for MFA disable/recovery rotation | **Verified by black-box security suite** |
 | PR34-AUTH-02 | Independent email security notifications for password/MFA lifecycle | **Repository capability verified; delivery provider external** |
@@ -104,6 +104,7 @@ A green build is not production approval. `Verified` always names its scope; org
 See `SECURITY-DECISIONS.md` for the canonical decision record. Current baseline includes:
 
 - independent reviewers: `0` required during experimental/pre-production iteration; at least `1` independent reviewer required before real Production/release-governed changes;
+- protected-main/ruleset enforcement: intentionally deferred during current experimentation; mandatory before real Production/release governance;
 - administrator MFA in Production: `required`;
 - normal-user MFA: available, not globally mandatory by Foundation;
 - password baseline: minimum `15`, default no mandatory composition rules; compromised/common-password screening required before Production Approved where passwords are used;
@@ -122,4 +123,4 @@ PII retention remains product/legal-purpose-specific by design; Foundation does 
 
 A finding moves to `Verified` only when this register points to reproducible evidence for the affected security-relevant source head. Documentation-only evidence/status commits after `c3f7754...` do not invalidate runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
 
-External/governance configuration is recorded independently from runtime CI. The active `Protect main` ruleset provides non-review protection during experimentation; independent approval is explicitly deferred by owner decision and must be re-enabled and evidenced before Production. This experimental exception is not SoD evidence and does not imply Production Approval.
+External/governance configuration is recorded independently from runtime CI. As of 2026-08-09 there is no active `Protect main` ruleset; the owner intentionally deferred branch/ruleset enforcement and independent approval until real Production/release governance. This experimental choice is not SoD evidence and does not imply Production Approval.
