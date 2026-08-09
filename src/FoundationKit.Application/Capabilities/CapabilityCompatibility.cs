@@ -25,7 +25,7 @@ public static class FoundationCapabilityContracts
                 CurrentContractVersion))
             .ToArray();
 
-    private static readonly IReadOnlyDictionary<string, CapabilityContractDescriptor> ById =
+    private static readonly Dictionary<string, CapabilityContractDescriptor> ById =
         Contracts.ToDictionary(
             contract => contract.CapabilityId,
             StringComparer.OrdinalIgnoreCase);
