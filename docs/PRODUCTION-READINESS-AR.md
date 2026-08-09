@@ -1,106 +1,130 @@
-# جاهزية FoundationKit للإنتاج
+# جاهزية FoundationKit والمنتجات للإنتاج
 
 ## التعريف الصحيح
 
-لا توجد مكتبة يمكن وصفها بأنها «جاهزة لأي Production» دون معرفة بيئة النشر والتهديدات والامتثال وحجم الحمل.
+FoundationKit لا يمكن أن يمنح أي منتج عبارة «Production Ready لأي بيئة» بمجرد وجود الكود. الجاهزية النهائية تعتمد على deployment حقيقي، threat model، البيانات، الحمل، المراقبة، النسخ الاحتياطي، والحوكمة.
 
-الاعتماد الصحيح في هذا المستودع هو:
+الوضع الصحيح للمستودع حاليًا:
 
-> FoundationKit يوفّر Production Baseline قابلًا لإعادة الاستخدام، ومشروع أثَر يثبت دمجه من قاعدة البيانات حتى UI/UX. يصبح المنتج جاهزًا للإطلاق بعد اجتياز بوابة البيئة والتشغيل الخاصة به.
+```text
+FoundationKit Core v0.1
+  = technical/composable baseline مكتمل للاستهلاك
 
-## ما يقدمه المستودع فعليًا
+Workbench
+  = executable architecture/reference consumer
 
-### الكور
+Athar
+  = complete Arabic reference product
 
-- Entity وAggregateRoot وValue Objects وDomain Events.
-- Result وتصنيف الأخطاء.
-- Commands وQueries وUse Cases.
-- Specifications وRepositories وUnit of Work.
-- EF Core provider-neutral infrastructure.
-- Problem Details وCorrelation ID وSecurity Headers.
-- Typed Blazor API client وتصنيف أخطاء الشبكة.
-- AsyncState وViewModelBase المناسبان لـBlazor.
-- Pagination وGeneric Entity DTOs.
-- Architecture tests وحدود تمنع تسرب SQL Server إلى الكور.
+Madar v0.10
+  = operational case-management product
+```
 
-### مشروع أثَر
+كل هذه الأسطح تمر ببوابات repository قوية، لكن **Production Approval يخص منتجًا وبيئة محددين**.
 
-- ASP.NET Core Identity.
-- Cookie Authentication آمنة وHttpOnly.
-- Roles وسياسة Administrator.
-- Password Policy وقفل الحساب.
-- Anti-CSRF لكل POST.
-- Rate Limiting على الدخول والكتابة.
-- Validation في DTO وDomain.
-- Idempotency عبر ClientRequestId فريد لكل مستخدم.
-- Optimistic Concurrency عبر RowVersion.
-- Audit Trail.
-- SQL Server migrations.
-- Startup migration retry.
-- Live وReady health endpoints.
-- Swagger وPostman.
-- Docker topology.
-- Unit tests وSQL-backed smoke workflow.
-- أسرار عبر Configuration/User Secrets/Environment فقط.
+## ما يقدمه FoundationKit فعليًا
+
+- 17 حزمة NuGet قابلة لإعادة الاستخدام + 17 symbol packages؛
+- Domain/Application/Infrastructure/WebApi/Blazor؛
+- Auditing/Security/Identity/Authorization/Workflow/Approvals؛
+- Notifications + SMTP؛
+- Settings/Feature Management/Localization/Caching؛
+- capability graph، profiles، contract compatibility، maturity evidence؛
+- Composer للتحقق والشرح، وليس project generation بعد؛
+- CI/Security/CodeQL/package/integration gates.
+
+Package existence لا يعني `Stable` maturity ولا Production Approval.
+
+## دور Workbench
+
+Workbench يثبت المسارات المعمارية والتكامل SQL/UI ويعطي runtime evidence لبعض capabilities. لا يُعامل كخدمة Production عامة، ولا ينبغي إضافة production identity إليه فقط كي يبدو مثل المنتج الحقيقي.
+
+## دور Athar
+
+أثَر يثبت منتجًا مرجعيًا كاملًا مع Identity، MFA، anti-CSRF، rate limiting، maker-checker، SQL Server، migrations، audit، notifications، Docker، E2E، readiness، وbackup/restore verification.
+
+هذا يجعله reference قويًا، لكنه لا يختار مزودات Production الفعلية نيابة عن deployment.
+
+## دور Madar
+
+Madar v0.10 هو المنتج التشغيلي الحالي في المستودع. يغطي case lifecycle، الأقسام/التوجيه، SLA، التعليقات، الاعتمادات، الإشعارات، النقل/إعادة الإسناد، attachments، authorized search/reporting، SQL Server، Identity، Arabic Blazor، Docker وSQL/E2E.
+
+لكن مسار Development/CI الحالي لا يساوي تلقائيًا production topology. Object storage/KMS/malware scanning، organization/tenancy، durable jobs/outbox، observability، ingress، backup operations وغيرها تُحسم عند deployment الحقيقي.
 
 ## بوابة الإطلاق الفعلي
 
-يجب ألا يتم إطلاق أي منتج حتى تكون البنود التالية مكتملة في بيئته:
-
 ### الأمن
 
-- HTTPS إلزامي وشهادة موثوقة.
-- تخزين الأسرار في Secret Vault.
-- تغيير حساب المسؤول الأولي بعد التهيئة أو تعطيل Seed.
-- تفعيل Email Confirmation وPassword Reset بمزود بريد حقيقي.
-- MFA للحسابات الإدارية عند الحاجة.
-- مراجعة CORS وCookie Domain وSameSite حسب النطاقات الفعلية.
-- فحص SAST وDependency Scanning وSecret Scanning.
-- اختبار اختراق وفق نطاق المنتج.
+- HTTPS إلزامي وشهادة موثوقة؛
+- الأسرار في Vault/Secret Manager مناسب؛
+- production bootstrap/seed مضبوط أو معطل حسب المنتج؛
+- MFA/confirmed email/password recovery وفق السياسة المعتمدة؛
+- CORS/Cookie/SameSite/AllowedHosts/reverse-proxy trust حسب topology؛
+- SAST/dependency/secret/container scanning؛
+- CSP/cache policy متوافقة ومختبرة مع Blazor إذا كانت مطلوبة؛
+- penetration test بنطاق المنتج.
 
 ### البيانات
 
-- SQL Server مُدار أو خطة نسخ احتياطي واختبار استعادة.
-- تشفير البيانات أثناء النقل وفي التخزين.
-- صلاحيات حساب قاعدة البيانات بالحد الأدنى.
-- خطة Retention وحذف وتصدير للبيانات.
-- تشغيل migrations كخطوة نشر مضبوطة بدل التشغيل التلقائي عندما تتطلب البيئة ذلك.
+- SQL Server مُدار أو خطة تشغيل DBA واضحة؛
+- TLS والتحقق من شهادة قاعدة البيانات؛
+- runtime/migration principals بأقل صلاحية؛
+- backup مشفر/off-site/immutable حسب السياسة واختبار restore دوري؛
+- retention/deletion/export/PII decisions معتمدة؛
+- migrations كخطوة نشر مضبوطة عند Production.
 
 ### التشغيل
 
-- Logs مركزية مع Correlation ID.
-- Metrics وTracing إلى مزود مراقبة.
-- Alerts للصحة والأخطاء وزمن الاستجابة.
-- تحديد SLO وSLA.
-- Runbook للحوادث والتراجع.
-- Load test بحمل واقعي.
-- WAF/Reverse Proxy وسياسة Rate Limiting على الحافة.
-- Deployment slots أو Blue/Green عند الحاجة.
+- central logs مع Correlation ID؛
+- metrics/tracing؛
+- alerts + on-call ownership؛
+- SLO/SLA حسب المنتج؛
+- incident/rollback runbook؛
+- realistic load/performance test؛
+- WAF/reverse proxy/rate limiting على الحافة عند الحاجة؛
+- release/rollback strategy.
+
+### الحوكمة
+
+قبل أول Production deployment/release-governed change يجب إغلاق متطلبات Issue #35، ومنها:
+
+- protected `main` أو production release branch؛
+- PR requirement؛
+- reviewer مستقل واحد على الأقل؛
+- required exact checks؛
+- conversation resolution؛
+- force-push/deletion restrictions؛
+- break-glass path موثق؛
+- evidence من PR حقيقي محكوم بهذه القواعد.
 
 ### المنتج والامتثال
 
-- سياسة خصوصية وشروط استخدام.
-- تعريف الصلاحيات والأدوار بموافقة مالك المنتج.
-- Threat Model.
-- متطلبات KYC/AML/PCI أو غيرها حسب المجال.
-- مراجعة سهولة الوصول واللغة والأجهزة المستهدفة.
+- product owner acceptance؛
+- approved roles/permissions؛
+- privacy notice/terms عندما تنطبق؛
+- product threat model؛
+- متطلبات KYC/AML/PCI/sector controls حسب المجال؛
+- accessibility/device/language acceptance؛
+- residual-risk approval من الجهة المخولة.
+
+## إطار .NET المدعوم
+
+المستودع حاليًا يستهدف `net8.0` مع servicing packages المحدثة إلى خط `8.0.29`. هذا baseline مدعوم حاليًا، لكنه له نهاية دعم زمنية. الانتقال إلى .NET 10 LTS قبل انتهاء دعم .NET 8 مُسجل في Issue #104 ويجب ألا يُترك حتى يتحول إلى دين صامت.
 
 ## قرار الجاهزية
 
 ```text
-Core tests pass
+Repository/Core gates pass
     +
-Example end-to-end tests pass
+Product E2E/security tests pass
     +
-Security gate pass
+Production environment controls pass
     +
-Data recovery test pass
+Recovery/observability/load acceptance pass
     +
-Observability gate pass
-    +
-Product acceptance pass
+Governance/product acceptance pass
     =
-Approved for production
+Production Approved for that deployment
 ```
 
-أي فشل في بوابة البيئة لا يعني أن الكور ناقص؛ يعني أن المنتج لم يُجهّز بعد لبيئته الفعلية.
+فشل شرط deployment لا يعني أن FoundationKit Core مكسور؛ يعني أن المنتج أو البيئة لم يكملا بوابة الإطلاق بعد.
