@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "evidence": [
+    {
+      "capabilityId": "kernel",
+      "assessedMaturity": "stable",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": true,
+      "rationale": "Base domain/application primitives are packaged, tested, consumed by repository products, and treated as the supported composition baseline."
+    },
+    {
+      "capabilityId": "validation",
+      "assessedMaturity": "stable",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": true,
+      "rationale": "Validation contracts are implemented in the supported base surface, covered by tests, and consumed through the current application stack."
+    },
+    {
+      "capabilityId": "web-api",
+      "assessedMaturity": "stable",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": true,
+      "rationale": "Web API result, Problem Details, correlation, and response conventions are implemented, tested, adopted by repository hosts, and supported as base public surface."
+    },
+    {
+      "capabilityId": "blazor",
+      "assessedMaturity": "stable",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": true,
+      "rationale": "Blazor API-result/client/state primitives are implemented, tested, used by repository clients, and supported as base public surface."
+    },
+    {
+      "capabilityId": "observability",
+      "assessedMaturity": "preview",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Operational logging, correlation, health, and diagnostic behavior has repository proof and quality coverage, while a broader compatibility commitment remains incomplete."
+    },
+    {
+      "capabilityId": "security",
+      "assessedMaturity": "preview",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Reusable security conventions are packaged, tested, and consumed by real hosts, while compatibility/provider breadth is still evolving."
+    },
+    {
+      "capabilityId": "identity",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Identity policy and notification/step-up contracts are implemented and exercised by product consumers, but broader compatibility evidence remains limited."
+    },
+    {
+      "capabilityId": "authorization",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Authorization primitives are implemented, tested, and reused by products; the supported compatibility surface remains intentionally conservative."
+    },
+    {
+      "capabilityId": "auditing",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Auditing contracts are implemented, packaged, tested, and composed by products, without a broad compatibility/support commitment yet."
+    },
+    {
+      "capabilityId": "settings",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Settings v1 is implemented, tested, and consumed by Workbench, while provider/adoption breadth and compatibility evidence remain limited."
+    },
+    {
+      "capabilityId": "feature-management",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Feature Management v1 is implemented, tested, and consumed through Workbench, while advanced rollout and compatibility evidence remain future work."
+    },
+    {
+      "capabilityId": "localization",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Localization v1 is implemented, tested, and consumed by Workbench; translation/provider breadth and compatibility evidence remain limited."
+    },
+    {
+      "capabilityId": "organization",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Madar departments provide product evidence only; a reusable organization hierarchy contract is intentionally not extracted."
+    },
+    {
+      "capabilityId": "multi-tenancy",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Tenant identity, resolution, and isolation topology remain product/owner decisions without a reusable implementation."
+    },
+    {
+      "capabilityId": "workflow",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Workflow transition primitives are implemented, tested, and consumed by Athar and Madar, with broader compatibility evidence still intentionally limited."
+    },
+    {
+      "capabilityId": "approvals",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Approvals v1 is implemented and reused by two independent product shapes, but advanced approval patterns and compatibility breadth are not established."
+    },
+    {
+      "capabilityId": "tasks",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Assignable reusable work-item semantics have not yet been established by an independent capability implementation."
+    },
+    {
+      "capabilityId": "notifications",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Notification message/delivery contracts are implemented and reused by Athar and Madar, while channel/provider diversity and compatibility breadth remain limited."
+    },
+    {
+      "capabilityId": "files",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Madar attachments remain product-owned evidence; a provider-neutral reusable file-storage contract is not yet extracted."
+    },
+    {
+      "capabilityId": "documents",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Reusable document metadata, versioning, classification, and lifecycle semantics are not yet established."
+    },
+    {
+      "capabilityId": "jobs",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Madar exposes an SLA evaluator seam, but reusable delayed/scheduled/recurring job semantics and providers are not established."
+    },
+    {
+      "capabilityId": "messaging",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "The existing in-process domain-event dispatcher is deliberately not treated as integration messaging or outbox/inbox delivery."
+    },
+    {
+      "capabilityId": "webhooks",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Reusable webhook signing, replay, retry, and delivery-history contracts are not implemented."
+    },
+    {
+      "capabilityId": "realtime",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "No provider-neutral realtime delivery boundary has sufficient consumer evidence for extraction."
+    },
+    {
+      "capabilityId": "caching",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Caching v1 is implemented, tested, and consumed by Workbench; distributed-provider and compatibility semantics remain deliberately unclaimed."
+    },
+    {
+      "capabilityId": "search",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Madar v0.10 search is product-owned relational behavior and does not yet establish a reusable search-provider contract."
+    },
+    {
+      "capabilityId": "reporting",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Madar operational counts are product-owned and do not yet establish reusable report-definition/export semantics."
+    },
+    {
+      "capabilityId": "idempotency",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Real duplicate-write prevention behavior is proven in Athar, but a separate reusable reservation/replay contract has not yet been extracted."
+    },
+    {
+      "capabilityId": "concurrency",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Real optimistic-concurrency behavior is proven in products, but a provider-neutral client precondition/token contract has not yet been extracted."
+    },
+    {
+      "capabilityId": "money",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Currency-aware reusable money semantics and conversion boundaries have not yet been established."
+    },
+    {
+      "capabilityId": "numbering",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Business sequence semantics and organizational scoping require concrete product evidence before extraction."
+    },
+    {
+      "capabilityId": "privacy",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "PII classification, masking, consent, and anonymization policy remain product/legal decisions without a reusable implementation."
+    },
+    {
+      "capabilityId": "retention",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Retention, archive, deletion, and anonymization scheduling semantics remain product/legal/provider decisions."
+    },
+    {
+      "capabilityId": "ai",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "AI abstractions remain intentionally deferred until provider-neutral consumer requirements and observability controls are established."
+    },
+    {
+      "capabilityId": "provider-sqlserver",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "SQL Server is exercised across repository products and integration workflows, while no broad reusable provider-family compatibility commitment is claimed."
+    },
+    {
+      "capabilityId": "provider-redis",
+      "assessedMaturity": "planned",
+      "hasImplementationEvidence": false,
+      "hasQualityEvidence": false,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "No Redis provider adapter is selected or implemented; distributed cache semantics remain an explicit future provider decision."
+    },
+    {
+      "capabilityId": "provider-smtp",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
+      "hasCompatibilityEvidence": false,
+      "rationale": "The SMTP provider adapter is implemented, packaged, tested, and consumed, while provider-family breadth and compatibility support remain limited."
+    },
+    {
+      "capabilityId": "tooling-cli",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Composer CLI discovery, validation, compatibility, and explanation are implemented and tested; external adoption/support evidence remains limited."
+    },
+    {
+      "capabilityId": "tooling-workbench",
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": false,
+      "hasCompatibilityEvidence": false,
+      "rationale": "Workbench is implemented and tested as an interactive repository reference consumer, while it is not yet a supported visual composer product."
+    }
+  ]
+}

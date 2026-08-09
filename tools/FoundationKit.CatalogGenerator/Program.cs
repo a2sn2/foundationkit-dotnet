@@ -37,6 +37,10 @@ internal static class Program
             repositoryRoot,
             "catalog",
             "foundationkit.capabilities.json");
+        var maturityEvidencePath = Path.Combine(
+            repositoryRoot,
+            "catalog",
+            "foundationkit.maturity-evidence.json");
         var outputPath = Path.Combine(repositoryRoot, "docs", "FEATURES.md");
 
         var json = await File.ReadAllTextAsync(catalogPath);
@@ -48,6 +52,7 @@ internal static class Program
 
         var generated = GenerateMarkdown(catalog);
         var generatedCapabilityCatalog = GenerateCapabilityCatalog();
+        var generatedMaturityEvidence = GenerateMaturityEvidenceCatalog();
 
         if (checkOnly)
         {
@@ -61,14 +66,19 @@ internal static class Program
                 generatedCapabilityCatalog,
                 "catalog/foundationkit.capabilities.json",
                 "dotnet run --project tools/FoundationKit.CatalogGenerator");
+            var maturityEvidenceMatches = CheckGeneratedFile(
+                maturityEvidencePath,
+                generatedMaturityEvidence,
+                "catalog/foundationkit.maturity-evidence.json",
+                "dotnet run --project tools/FoundationKit.CatalogGenerator");
 
-            if (!generatedDocumentationMatches || !capabilityCatalogMatches)
+            if (!generatedDocumentationMatches || !capabilityCatalogMatches || !maturityEvidenceMatches)
             {
                 return 1;
             }
 
             Console.WriteLine(
-                "Catalog validation, capability graph validation, and generated-file checks passed.");
+                "Catalog validation, capability graph validation, maturity evidence validation, and generated-file checks passed.");
             return 0;
         }
 
@@ -78,11 +88,17 @@ internal static class Program
             capabilityCatalogPath,
             generatedCapabilityCatalog,
             new UTF8Encoding(false));
+        await File.WriteAllTextAsync(
+            maturityEvidencePath,
+            generatedMaturityEvidence,
+            new UTF8Encoding(false));
 
         Console.WriteLine(
             $"Generated {Path.GetRelativePath(repositoryRoot, outputPath)} from the canonical catalog.");
         Console.WriteLine(
             $"Generated {Path.GetRelativePath(repositoryRoot, capabilityCatalogPath)} from the compiled capability model.");
+        Console.WriteLine(
+            $"Generated {Path.GetRelativePath(repositoryRoot, maturityEvidencePath)} from the compiled maturity evidence model.");
         return 0;
     }
 
@@ -246,6 +262,10 @@ internal static class Program
             }
         }
 
+        CapabilityMaturityEvidencePolicy.EnsureCatalogValid(
+            capabilities,
+            FoundationCapabilityMaturityEvidence.All);
+
         var resolver = CapabilityResolver.CreateDefault();
         foreach (var capability in capabilities)
         {
@@ -272,6 +292,14 @@ internal static class Program
             FoundationCapabilityCatalog.All,
             FoundationCapabilityContracts.All,
             FoundationCapabilityProfiles.All);
+        return JsonSerializer.Serialize(document, ExportJsonOptions) + Environment.NewLine;
+    }
+
+    private static string GenerateMaturityEvidenceCatalog()
+    {
+        var document = new CapabilityMaturityEvidenceExport(
+            1,
+            FoundationCapabilityMaturityEvidence.All);
         return JsonSerializer.Serialize(document, ExportJsonOptions) + Environment.NewLine;
     }
 
@@ -341,6 +369,10 @@ internal sealed record CapabilityCatalogExport(
     IReadOnlyList<CapabilityDescriptor> Capabilities,
     IReadOnlyList<CapabilityContractDescriptor> Contracts,
     IReadOnlyList<CapabilityProfile> Profiles);
+
+internal sealed record CapabilityMaturityEvidenceExport(
+    int SchemaVersion,
+    IReadOnlyList<CapabilityMaturityEvidenceDescriptor> Evidence);
 
 internal sealed record CatalogDocument(
     int SchemaVersion,

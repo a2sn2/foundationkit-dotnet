@@ -25,7 +25,7 @@ The reusable output remains **17 FoundationKit NuGet packages plus 17 symbol pac
 
 ## Composition compatibility v1
 
-The composition layer now has explicit capability contract/version metadata without creating another runtime package.
+The composition layer has explicit capability contract/version metadata without creating another runtime package.
 
 The v1 model provides:
 
@@ -40,6 +40,30 @@ The v1 model provides:
 
 Contract version is deliberately separate from NuGet package version and capability maturity. v1 does not introduce SemVer ranges, runtime provider negotiation, package upgrade/downgrade, or automatic migrations.
 
+## Maturity Evidence v1
+
+Capability maturity is now paired with one canonical machine-readable assessment for every capability/provider/tooling identity.
+
+The assessment records four broad evidence signals:
+
+- implementation/proof;
+- repository quality gates;
+- adoption;
+- compatibility/support.
+
+The fail-closed minimum policy is:
+
+- `Planned` — bounded rationale;
+- `ReferenceOnly` — implementation/proof;
+- `Preview` — implementation/proof + quality evidence;
+- `Stable` — implementation/proof + quality + adoption + compatibility/support evidence.
+
+Catalog generation verifies complete one-to-one coverage, maturity agreement, bounded rationales, and the minimum policy before generated capability metadata can pass CI. A maturity promotion therefore requires an explicit synchronized evidence change rather than an enum edit alone.
+
+The gate does **not** automatically promote capabilities and does not map consumer count directly to maturity. It also does not equate repository evidence with Production Approval, Segregation of Duties, ISO certification, or production operations.
+
+Canonical details: `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
+
 ## Consumer-driven extraction rule
 
 A new reusable runtime package still requires both:
@@ -47,7 +71,7 @@ A new reusable runtime package still requires both:
 1. an independently useful provider-neutral boundary; and
 2. concrete consumer evidence strong enough to avoid baking one product's semantics into FoundationKit.
 
-A roadmap item, a product implementation, or a second checkbox is not sufficient by itself.
+A roadmap item, a product implementation, an evidence flag, or a second checkbox is not sufficient by itself.
 
 ## Madar evidence after v0.10
 
@@ -61,7 +85,7 @@ Madar is now a substantial product consumer and provides useful evidence for fut
 - v0.9 secure case attachments prove a concrete file lifecycle for one product, not yet a cross-product `FoundationKit.Files` or `FoundationKit.Documents` boundary;
 - v0.10 authorized SQL-backed case search and same-scope operational reporting prove a bounded product search/reporting implementation, not a provider-neutral `FoundationKit.Search` or `FoundationKit.Reporting` abstraction.
 
-This evidence improves future design quality precisely because it remains product-owned until a second independent shape demonstrates what is truly reusable.
+This evidence improves future design quality precisely because it remains product-owned until another independent shape demonstrates what is truly reusable.
 
 ## Capabilities that still require stronger evidence
 
@@ -69,7 +93,7 @@ This evidence improves future design quality precisely because it remains produc
 
 Madar has secure product-owned case attachments with bounded type/size validation, private storage keys, SQL metadata, authorized list/download, and audit evidence.
 
-That is now real consumer evidence, but it is still one product shape. There is no second independent storage/document consumer or provider family proving what belongs in a reusable contract.
+That is real product evidence, but it is still one product shape. There is no independent storage/document consumer or provider family proving what belongs in a reusable contract.
 
 Status: **Planned — no reusable package extraction yet**.
 
@@ -99,7 +123,7 @@ Status: **ReferenceOnly behavior — no separate package extraction yet**.
 
 ### Organization / Multi-Tenancy
 
-Madar now proves real departments, memberships, queues, routing, transfer, and reassignment. Those semantics are intentionally Madar-owned. They do not establish organizations/branches/teams/positions, tenant identity/resolution, or data-isolation topology.
+Madar proves real departments, memberships, queues, routing, transfer, and reassignment. Those semantics are intentionally Madar-owned. They do not establish organizations/branches/teams/positions, tenant identity/resolution, or data-isolation topology.
 
 Status: **Planned — stronger cross-product organization/tenancy evidence required**.
 
@@ -115,17 +139,19 @@ These remain capability vocabulary until real products establish the required se
 
 Status: **Planned — no extraction yet**.
 
-## Maturity evidence
+## Maturity interpretation
 
-Approvals and Notifications now have two independent product consumers, Athar and Madar. That strengthens reuse evidence, but both remain `ReferenceOnly` because the current surfaces still lack broader compatibility/provider/adoption evidence required for a maturity promotion.
+Approvals and Notifications have two independent product consumers, Athar and Madar. That strengthens adoption evidence, but both remain `ReferenceOnly` because broader compatibility/provider/support evidence required for a stronger maturity commitment remains incomplete.
 
-Maturity promotion must remain explicit and evidence-based rather than being inferred automatically from consumer count.
+The new evidence gate records this explicitly. It does not automatically promote them because a consumer-count threshold was reached.
 
 ## Current continuation boundary
 
-After capability compatibility/version metadata v1, there is still no justified eighteenth reusable package.
+Capability compatibility/version metadata and the Maturity Evidence v1 gate close the current machine-composition/maturity integrity gaps without adding an eighteenth package.
 
-The next Core work should improve composition/maturity/compatibility evidence or wait for another independent consumer/provider shape. It should not extract Files, Organization, Search, Reporting, Jobs, or another package merely because Madar now implements one concrete version of those concerns.
+There is still no justified eighteenth reusable runtime package. Further Core runtime extraction should wait for another independent consumer/provider shape or a clearly reusable contract rather than generalizing Madar-specific behavior prematurely.
+
+The next FoundationKit work, if continuing without new product evidence, should focus on repository/composer closure or deterministic project-generation planning rather than fabricating Files, Organization, Search, Reporting, Jobs, or another runtime package.
 
 ## Governance boundary
 
