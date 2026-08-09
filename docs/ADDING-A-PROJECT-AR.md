@@ -14,35 +14,83 @@ apps/<ProjectName>/       منتجات تشغيلية فعلية
 
 ## Composer اليوم
 
-`FoundationKit.Composer` يستطيع اكتشاف capabilities/profiles والتحقق من manifest والاعتماديات والنضج وcontract compatibility، لكنه **لا يولد مشروعًا بعد**. لا يوجد حاليًا `foundationkit new` أو scaffolding حتمي؛ لذلك إنشاء المنتج ما زال قرارًا معماريًا صريحًا وليس نسخ قالب آلي.
+`FoundationKit.Composer` هو نقطة البداية الآلية الحالية عند إنشاء هيكل منتج جديد. يستطيع:
 
-## هيكل مقترح عند الحاجة
+- اكتشاف capabilities وprofiles؛
+- التحقق الصارم من manifest والاعتماديات؛
+- فحص capability contract compatibility؛
+- إظهار maturity warnings أو رفض التوليد مع `--require-stable`؛
+- توليد Solution حتمية من نفس Capability Graph؛
+- إنشاء Domain/Application/Infrastructure وAPI/Client عندما تحل قدراتهما؛
+- إنشاء Test project؛
+- توليد `ARCHITECTURE.md` يشرح سبب كل capability وما إذا كان لها reusable package حقيقي؛
+- إعادة التوليد بـ`--force` فقط إذا كان المجلد ما زال يحتوي حصريًا على الملفات التي سبق للـComposer توليدها.
+
+مثال داخل نسخة repository محلية:
+
+```powershell
+dotnet run --project tools/FoundationKit.Composer -- `
+  new docs/examples/foundationkit.project.minimal.json `
+  --output artifacts/MySystem `
+  --foundation-root .
+```
+
+بدون `--foundation-root` يكتب Composer `PackageReference` إلى حزم FoundationKit الحالية. هذا الوضع يحتاج NuGet source يحتوي تلك الحزم. وضع `--foundation-root` يستخدم `ProjectReference` إلى نفس source tree وهو المسار الذي يثبته CI حاليًا بالبناء والاختبار.
+
+التوليد الحالي **غير تفاعلي**؛ أنت تكتب/تختار manifest ثم تولد. الـwizard التفاعلي والـvisual composer ما زالا طبقة UX لاحقة، لكن محرك التوليد الحتمي نفسه موجود الآن.
+
+## ماذا يولد وماذا لا يولد؟
+
+الهيكل الأساسي الناتج هو:
 
 ```text
 <Project>.Domain
 <Project>.Application
 <Project>.Infrastructure
-<Project>.Contracts
-<Project>.Api
-<Project>.Client
+<Project>.Api        عند حل web-api
+<Project>.Client     عند حل blazor
 tests/<Project>.Tests
 ```
 
-هذا هو الشكل الذي أثبته Athar وMadar، لكنه ليس إلزامًا لكل خدمة صغيرة. استخدم فقط المشاريع التي يحتاجها المنتج فعليًا.
+ويولد كذلك:
+
+```text
+<Project>.sln
+Directory.Build.props
+Directory.Packages.props
+foundationkit.project.json
+.foundationkit-generated.json
+README.md
+ARCHITECTURE.md
+```
+
+لكن Composer لا يخترع:
+
+- Entities أو Aggregates خاصة بالمنتج؛
+- DbContext أو Migrations؛
+- أدوار وصلاحيات المنتج؛
+- tenant/organization model؛
+- SLA أو routing أو attachment/search/reporting semantics؛
+- أسرار أو connection strings؛
+- Production deployment topology.
+
+إذا احتوى الـprofile على capability مخططة أو لا يوجد لها reusable package، يسجلها Composer بوضوح في تقرير المعمارية ولا يصنع package وهمية لها.
 
 ## اتجاه الاعتماد
 
 ```text
 Domain
   ↑
-Application ← Contracts
+Application
   ↑
 Infrastructure
   ↑
-Api ← Client hosting
+Api
 
-Client → Contracts + FoundationKit.Blazor
+Client = boundary مستقل للواجهة
 ```
+
+بعد التوليد تستطيع إضافة Contracts أو تقسيمات إضافية بحسب جمهور المنتج؛ المولد v1 يتعمد إبقاء البداية صغيرة بدل نسخ Athar/Madar بالكامل.
 
 الممنوع:
 
@@ -51,11 +99,12 @@ Client → Contracts + FoundationKit.Blazor
 - Migrations داخل `src/FoundationKit.*`؛
 - Entity من قاعدة البيانات يُعاد مباشرة من API؛
 - Generic CRUD يبتلع قواعد المنتج؛
-- نقل organization/files/search/reporting أو أي سلوك منتج إلى FoundationKit بلا evidence مستقل.
+- نقل organization/files/search/reporting أو أي سلوك منتج إلى FoundationKit بلا evidence مستقل؛
+- التعامل مع وجود capability في catalog كأنه يعني وجود implementation/package مكتمل.
 
 ## اختيار FoundationKit packages
 
-ابدأ من الحاجة الفعلية، ثم راجع Capability Model/Composer. لا تضف كل الـ17 package تلقائيًا.
+ابدأ من الحاجة الفعلية، ثم استخدم Capability Model/Composer. لا تضف كل الـ17 package تلقائيًا.
 
 أمثلة:
 
@@ -66,23 +115,26 @@ Client → Contracts + FoundationKit.Blazor
 - Notifications + SMTP عند الحاجة للنقل الحالي؛
 - Settings/FeatureManagement/Localization/Caching عندما تنطبق حدودها الحالية.
 
-الم maturity والـcontract version لا تُستنتجان من رقم NuGet package؛ اقرأ `catalog/foundationkit.capabilities.json` وComposer.
+الـmaturity والـcontract version لا تُستنتجان من رقم NuGet package؛ اقرأ `catalog/foundationkit.capabilities.json` واستخدم Composer.
 
 ## خطوات إنشاء منتج
 
 1. عرّف نطاق المنتج وملكيته للبيانات والسياسات أولًا.
-2. اختر `apps/` للمنتج التشغيلي أو `examples/` للمرجع الكامل.
-3. صمم Domain/use cases قبل UI والتخزين التفصيلي.
-4. عرّف Contracts حسب الجمهور.
-5. اختر FoundationKit capabilities التي تناسب boundary حقيقيًا فقط.
-6. نفذ Infrastructure وDbContext ومهاجرات المنتج.
-7. أضف Authentication/Authorization/Privacy حسب طبيعة المنتج.
-8. أنشئ typed client وواجهة UI عندما يحتاجها المنتج.
-9. أضف tests + SQL/E2E + Docker/operational path بحسب المخاطر.
-10. اربط المنتج ببوابات CI/Security/CodeQL ومستندات التشغيل.
-11. حدّث Atlas/README فقط بعد أن تصبح الأسطح حقيقية.
-12. إذا كشف المنتج عن concern متكرر، اتركه product-owned أولًا ثم قيّم الاستخراج بعد ظهور evidence مستقل.
+2. أنشئ manifest يعبّر فقط عن profile/capabilities/providers المطلوبة فعلًا.
+3. نفذ `validate` و`explain` قبل التوليد عند الحاجة لمراجعة التركيب.
+4. شغل `new ... --output ...` لتوليد الهيكل، أو `--foundation-root .` إذا كنت تطور داخل نسخة FoundationKit المصدرية.
+5. راجع `ARCHITECTURE.md` الناتج، خصوصًا maturity warnings والقدرات التي لا تملك runtime binding.
+6. انقل الهيكل إلى `apps/` للمنتج التشغيلي أو `examples/` للمرجع الكامل إذا كان سيعيش داخل هذا repository.
+7. صمم Domain/use cases الحقيقية قبل UI والتخزين التفصيلي.
+8. أضف Contracts فقط بحسب الجمهور الفعلي.
+9. نفذ Infrastructure وDbContext ومهاجرات المنتج عندما يحتاج قاعدة بيانات.
+10. أضف Authentication/Authorization/Privacy حسب طبيعة المنتج، ولا تفترض أن المولد اختار سياسة العمل بدلًا عنك.
+11. أنشئ typed clients وUI الحقيقيين فوق boundary المولد عندما يحتاج المنتج.
+12. أضف tests + SQL/E2E + Docker/operational path بحسب المخاطر.
+13. اربط المنتج ببوابات CI/Security/CodeQL ووثائق التشغيل.
+14. حدّث Atlas/README فقط بعد أن تصبح الأسطح حقيقية.
+15. إذا كشف المنتج عن concern متكرر، اتركه product-owned أولًا ثم قيّم الاستخراج بعد ظهور evidence مستقل.
 
 ## ملاحظة مهمة
 
-لا تنسخ Athar أو Madar حرفيًا ثم تغير الاسم. استخدمهما كـevidence وخرائط تنفيذ، وليس كقالب يفرض سياسات الهوية أو الأدوار أو الأقسام أو SLA أو التخزين على منتج جديد.
+لا تنسخ Athar أو Madar حرفيًا ثم تغير الاسم. استخدمهما كـevidence وخرائط تنفيذ. واستخدم Composer لتوحيد **البداية المعمارية** فقط، لا لفرض سياسات الهوية أو الأدوار أو الأقسام أو SLA أو التخزين على منتج جديد.
