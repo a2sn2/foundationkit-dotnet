@@ -2,12 +2,13 @@
 
 FoundationKit Composer is the executable developer-facing layer over the canonical Capability Model.
 
-Its v1 surface now has two responsibilities:
+Its v1 surface now has three responsibilities:
 
 1. **analyze compositions** — list, validate, and explain profiles/capabilities/contracts/maturity;
-2. **generate a deterministic product skeleton** from the same strict manifest and resolved capability graph.
+2. **generate a deterministic product skeleton** from the same strict manifest and resolved capability graph;
+3. **collect an interactive project selection** and feed it into that same deterministic analyzer/generator path.
 
-The generator does not introduce a second hidden template model. It consumes the existing manifest parser, dependency resolver, capability contract metadata, and maturity diagnostics.
+The generator does not introduce a second hidden template model. Manifest-driven and interactive generation both consume the existing manifest parser, dependency resolver, capability contract metadata, maturity diagnostics, and project generator.
 
 ## Commands
 
@@ -48,7 +49,7 @@ authorization [Optional/ReferenceOnly/contract:v1] <- required-by:approvals | re
 kernel [Kernel/Stable/contract:v1] <- profile:enterprise, required-by:web-api
 ```
 
-### Deterministic project generation
+### Deterministic manifest-driven project generation
 
 ```bash
 dotnet run --project tools/FoundationKit.Composer -- \
@@ -69,13 +70,35 @@ dotnet run --project tools/FoundationKit.Composer -- \
 
 `--foundation-root` must point at a FoundationKit source tree containing `src/FoundationKit.Domain/FoundationKit.Domain.csproj`. This mode emits `ProjectReference` entries instead of requiring FoundationKit packages from an external NuGet feed. It is the mode used by the repository's generated-project CI gate.
 
-Optional generation flags:
+### Interactive project generation
 
-- `--require-stable` — refuse generation when any resolved capability is not `Stable`;
+```bash
+dotnet run --project tools/FoundationKit.Composer -- \
+  new --interactive \
+  --output ./generated/MySystem
+```
+
+Interactive mode is a thin input layer over the same deterministic engine. It currently asks for:
+
+1. project name;
+2. one of the canonical seven profiles, by number or profile ID;
+3. optional extra runtime capability IDs not already supplied by the selected profile;
+4. optional provider capability IDs;
+5. explicit confirmation after the dependency-first composition preview.
+
+The preview shows the normalized project/profile selections plus every resolved capability with kind, maturity, and contract version. Maturity warnings are visible before confirmation. Type `cancel`, `quit`, or `q` at a questionnaire prompt to stop before generation. A blank or negative confirmation also exits without writing files.
+
+The questionnaire does **not** invent capability IDs, infer packages from free text, create business-domain semantics, or maintain a second capability graph. Project-name validation is routed through the strict manifest parser; capability/profile/provider choices come from the canonical model; resolution goes through `CompositionAnalyzer`; writing goes through `ComposerProjectGenerator`.
+
+Advanced manifest-only controls such as explicit `excludeCapabilities` and `capabilityContracts` remain available through the manifest-driven path. Interactive v1 intentionally keeps those policy choices explicit rather than hiding them behind inferred answers.
+
+Optional generation flags apply to both manifest-driven and interactive generation:
+
+- `--require-stable` — refuse generation when any resolved capability is not `Stable`; interactive mode shows the preview and fails before the confirmation/write step;
 - `--force` — regenerate only a directory previously created by Composer whose recorded file set and generated-file SHA-256 hashes are still unchanged;
 - `--foundation-root <directory>` — use known FoundationKit source projects for repository-local verification.
 
-Unknown options, duplicate options, incompatible contracts, invalid manifests, unsafe destinations, non-empty unowned directories, user-added files, and edited generated files fail closed.
+A manifest path and `--interactive` are mutually exclusive. Unknown options, duplicate options, incompatible contracts, invalid manifests, unsafe destinations, non-empty unowned directories, user-added files, and edited generated files fail closed.
 
 ## What is generated
 
@@ -120,7 +143,7 @@ This is important for profiles that contain planned/preview/reference vocabulary
 
 ## Determinism contract
 
-For the same manifest, generator contract, reference mode, and FoundationKit baseline, Composer produces the same file names and content:
+For the same manifest, generator contract, reference mode, and FoundationKit baseline, Composer produces the same file names and content. Interactive mode first produces a normal validated `ComposerManifest`; once that manifest reaches the generator, the same determinism contract applies.
 
 - generated file ordering is stable;
 - solution project GUIDs are deterministic;
@@ -191,13 +214,13 @@ The parser rejects:
 - exclusions that break required dependency closure;
 - dependency cycles.
 
-Generation adds destination and output safety checks on top of parser strictness.
+The interactive layer additionally rejects unknown profile/capability/provider answers and retries the prompt without writing files. Generation adds destination and output safety checks on top of parser strictness.
 
 ## Maturity behavior
 
-`validate` and `new` distinguish **structural validity**, **contract compatibility**, and **capability maturity**.
+`validate` and both `new` modes distinguish **structural validity**, **contract compatibility**, and **capability maturity**.
 
-Planned, ReferenceOnly, and Preview capabilities are warnings by default. `--require-stable` converts those warnings into a failing readiness gate; for `new`, the failure occurs before any file is written. Contract incompatibility always fails regardless of maturity mode.
+Planned, ReferenceOnly, and Preview capabilities are warnings by default. `--require-stable` converts those warnings into a failing readiness gate; for `new`, the failure occurs before any file is written. Interactive mode shows the resolved preview before that failure and does not ask for confirmation when the stable-only gate has already failed. Contract incompatibility always fails regardless of maturity mode.
 
 A default generation therefore means "a deterministic scaffold for this resolved composition", not "every selected capability is fully implemented or production-ready". The generated architecture report makes missing runtime bindings explicit.
 
@@ -207,17 +230,19 @@ Package mode is the portable declaration mode. It emits the known FoundationKit 
 
 Project mode (`--foundation-root`) is the verified repository-local mode. It references the source projects directly and is used by CI to prove that the generated solution builds and tests against the exact repository head.
 
-Neither mode downloads arbitrary packages, executes provider hooks, or infers a package name from user-controlled manifest text.
+Neither mode downloads arbitrary packages, executes provider hooks, or infers a package name from user-controlled manifest or questionnaire text.
 
 ## Security and destructive-operation boundaries
 
 Composer:
 
-- never executes code from the manifest;
+- never executes code from the manifest or interactive answers;
 - does not support script/template hooks in v1;
 - uses catalog-owned package/project mappings only;
 - does not print raw manifest contents during validation/explanation;
 - bounds capability contract versions to positive integers from 1 through 9999;
+- requires explicit interactive confirmation before generation;
+- allows interactive cancellation before filesystem writes;
 - refuses filesystem-root generation;
 - refuses to overwrite non-empty destinations by default;
 - `--force` requires a valid Composer marker, the exact recorded file set, and matching SHA-256 for every generated file; user-added or edited files block deletion;
@@ -226,14 +251,13 @@ Composer:
 
 ## Still future work
 
-The deterministic engine now exists. The following remain separate tooling work:
+The deterministic engine and first interactive CLI questionnaire now exist. The following remain separate tooling work:
 
 ```text
-interactive foundationkit new questionnaire
 visual Workbench composer
 richer provider-specific wiring templates
 generated deployment topology
 business-domain templates
 ```
 
-Any interactive or visual composer must consume this same deterministic generation engine instead of introducing a parallel capability model.
+Any visual composer must consume this same deterministic generation engine instead of introducing a parallel capability model.
