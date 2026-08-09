@@ -68,7 +68,7 @@ internal static class Program
             }
 
             Console.WriteLine(
-                "Catalog validation, capability graph validation, and generated-file checks passed.");
+                "Catalog validation, capability graph validation, maturity evidence validation, and generated-file checks passed.");
             return 0;
         }
 
@@ -82,7 +82,7 @@ internal static class Program
         Console.WriteLine(
             $"Generated {Path.GetRelativePath(repositoryRoot, outputPath)} from the canonical catalog.");
         Console.WriteLine(
-            $"Generated {Path.GetRelativePath(repositoryRoot, capabilityCatalogPath)} from the compiled capability model.");
+            $"Generated {Path.GetRelativePath(repositoryRoot, capabilityCatalogPath)} from the compiled capability model and maturity evidence.");
         return 0;
     }
 
@@ -246,6 +246,10 @@ internal static class Program
             }
         }
 
+        CapabilityMaturityEvidencePolicy.EnsureCatalogValid(
+            capabilities,
+            FoundationCapabilityMaturityEvidence.All);
+
         var resolver = CapabilityResolver.CreateDefault();
         foreach (var capability in capabilities)
         {
@@ -271,6 +275,7 @@ internal static class Program
             1,
             FoundationCapabilityCatalog.All,
             FoundationCapabilityContracts.All,
+            FoundationCapabilityMaturityEvidence.All,
             FoundationCapabilityProfiles.All);
         return JsonSerializer.Serialize(document, ExportJsonOptions) + Environment.NewLine;
     }
@@ -340,6 +345,7 @@ internal sealed record CapabilityCatalogExport(
     int SchemaVersion,
     IReadOnlyList<CapabilityDescriptor> Capabilities,
     IReadOnlyList<CapabilityContractDescriptor> Contracts,
+    IReadOnlyList<CapabilityMaturityEvidenceDescriptor> MaturityEvidence,
     IReadOnlyList<CapabilityProfile> Profiles);
 
 internal sealed record CatalogDocument(
