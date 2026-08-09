@@ -98,8 +98,7 @@ internal static class ComposerInteractiveSession
                 input,
                 output,
                 "Generate this project now? [y/N]: ",
-                cancellationToken,
-                treatCancelAsNull: true);
+                cancellationToken);
 
             if (answer is null || answer.Length == 0 ||
                 answer.Equals("n", StringComparison.OrdinalIgnoreCase) ||
@@ -129,8 +128,7 @@ internal static class ComposerInteractiveSession
                 input,
                 output,
                 "Project name: ",
-                cancellationToken,
-                treatCancelAsNull: true);
+                cancellationToken);
             if (value is null)
             {
                 return null;
@@ -171,8 +169,7 @@ internal static class ComposerInteractiveSession
                 input,
                 output,
                 $"Profile [1-{profiles.Length}, default 1={profiles[0].Id}, ?=list]: ",
-                cancellationToken,
-                treatCancelAsNull: true);
+                cancellationToken);
             if (value is null)
             {
                 return null;
@@ -232,8 +229,7 @@ internal static class ComposerInteractiveSession
                 input,
                 output,
                 "Extra capabilities [comma-separated IDs, Enter=none, ?=list]: ",
-                cancellationToken,
-                treatCancelAsNull: true);
+                cancellationToken);
             if (value is null)
             {
                 return null;
@@ -305,8 +301,7 @@ internal static class ComposerInteractiveSession
                 input,
                 output,
                 "Providers [comma-separated IDs, Enter=none, ?=list]: ",
-                cancellationToken,
-                treatCancelAsNull: true);
+                cancellationToken);
             if (value is null)
             {
                 return null;
@@ -341,7 +336,7 @@ internal static class ComposerInteractiveSession
         }
     }
 
-    private static IReadOnlyList<string> ParseIds(string value)
+    private static List<string> ParseIds(string value)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -410,8 +405,7 @@ internal static class ComposerInteractiveSession
         TextReader input,
         TextWriter output,
         string prompt,
-        CancellationToken cancellationToken,
-        bool treatCancelAsNull)
+        CancellationToken cancellationToken)
     {
         await output.WriteAsync(prompt);
         var line = await input.ReadLineAsync(cancellationToken);
@@ -421,7 +415,7 @@ internal static class ComposerInteractiveSession
         }
 
         var value = line.Trim();
-        if (treatCancelAsNull && IsCancel(value))
+        if (IsCancel(value))
         {
             return null;
         }
