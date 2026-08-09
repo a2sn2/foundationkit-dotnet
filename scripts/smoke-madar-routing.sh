@@ -134,3 +134,8 @@ bash scripts/smoke-madar-department-admin.sh
 # transfer/reassignment proof rather than weakening the application rate limit.
 reset_madar_api
 bash scripts/smoke-madar-transfer.sh
+
+# Attachments use the same protected write limiter. Reset only the in-memory
+# limiter between independent SQL suites; do not weaken the product policy.
+reset_madar_api
+bash scripts/smoke-madar-attachments.sh
