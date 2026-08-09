@@ -617,7 +617,7 @@ public static class ComposerProjectGenerator
         var currentDirectory = Path.Combine(outputDirectory, ToPlatformPath(project.RelativeDirectory));
         var target = Path.Combine(foundationRoot, ToPlatformPath(binding.ProjectPath));
         var relative = NormalizeProjectPath(Path.GetRelativePath(currentDirectory, target));
-        return $"    <ProjectReference Include=\"{XmlEscape(relative)}\" />";
+        return $"    <ProjectReference Include=\"{XmlEscape(relative)}\" AdditionalProperties=\"Configuration=$(Configuration)\" />";
     }
 
     private static SortedDictionary<string, string> BuildSourceFiles(
@@ -701,7 +701,7 @@ public static class ComposerProjectGenerator
                     public sealed class GeneratedScaffoldTests
                     {
                         [Fact]
-                        public void Product_markers_share_the_manifest_name()
+                        public void ProductMarkersShareTheManifestName()
                         {
                             Assert.Equal(ProductDomainMarker.ProductName, ProductApplicationMarker.ProductName);
                             Assert.Equal({{productLiteral}}, ProductDomainMarker.ProductName);
