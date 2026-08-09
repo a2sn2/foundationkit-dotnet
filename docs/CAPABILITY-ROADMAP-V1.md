@@ -114,10 +114,14 @@ Providers remain outside business capabilities and are selected explicitly.
 - [x] Exact capability-contract compatibility requirements and diagnostics.
 - [x] Machine-readable capability maturity and evidence metadata aligned with human documentation.
 - [ ] `foundationkit new` interactive composer.
-- [ ] Deterministic project generation.
-- [ ] Generated architecture/decision report.
+- [x] Deterministic manifest-driven project generation engine.
+- [x] Generated architecture/decision report.
 - [ ] Workbench visual composer using the same capability graph.
-- [ ] Golden-template tests proving generated projects build/test.
+- [x] Golden generated-project tests proving deterministic output plus restore/build/test.
+
+The completed generation slice is intentionally non-interactive. `FoundationKit.Composer new` consumes the existing strict manifest and writes a bounded Domain/Application/Infrastructure/API/Client/Test skeleton. Repository-local project-reference mode is verified by a dedicated CI workflow; portable package-reference mode is emitted for environments that provide the FoundationKit packages through a NuGet source. The generator does not synthesize product semantics or packages for catalog identities that lack a reusable runtime package.
+
+Interactive prompts and the visual Workbench composer remain future UX layers over this same deterministic engine, not parallel composition models.
 
 ## Phase J — AI as an optional capability
 
@@ -172,7 +176,9 @@ The repository currently has extracted reusable/reference packages for:
 
 Together with the five base packages, the current reusable output remains seventeen NuGet packages plus seventeen symbol packages. Athar provides consumer evidence for security/identity/authorization/workflow/approval/notification/SMTP surfaces. Madar adds a second independent consumer for the narrow Approvals and Notifications contracts. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and Caching. Capability maturity remains conservative and does not imply production certification.
 
-The composition model publishes an explicit contract version and one maturity-evidence assessment for every capability identity. Contract metadata is separate from NuGet version and maturity; maturity evidence is separate from Production Approval. Catalog generation fails when a capability's declared maturity lacks the minimum repository evidence required by `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
+The composition model publishes an explicit contract version and one maturity-evidence assessment for every capability identity. Contract metadata is separate from NuGet version and maturity. Catalog generation fails when a capability's declared maturity lacks the minimum repository evidence required by `docs/CAPABILITY-MATURITY-EVIDENCE-V1.md`.
+
+The Composer now adds deterministic project generation on top of this composition baseline without changing the 17-package runtime surface or capability maturity. Generation is tooling behavior: it references only reusable packages that actually exist and reports unresolved/planned capability semantics instead of manufacturing runtime implementations.
 
 ## Core v0.1 baseline closure
 
@@ -180,11 +186,13 @@ As of 2026-08-09, the current **FoundationKit Core v0.1 composable baseline is c
 
 Closure means the current 17-package reusable baseline, capability graph, seven profiles, strict manifests, contract compatibility, maturity-evidence enforcement, Composer reference tooling, generated metadata, and repository verification form a coherent starting point for future work.
 
+Composer deterministic generation is a subsequent tooling extension over that closed baseline; it is not a new runtime package and does not reopen the Core extraction cycle.
+
 Unchecked roadmap items remain future evidence-driven capabilities and tooling objectives. They are **not blockers** to the v0.1 baseline closure and must not be implemented or extracted merely to make this roadmap visually complete.
 
 ## Current continuation boundary
 
-The reusable extraction cycle remains consumer-driven. Madar now supplies real product semantics for departments/routing, secure attachments, SLA evaluation, and authorized search/reporting, but those are deliberately product-owned implementations rather than automatic evidence for new FoundationKit packages.
+The reusable extraction cycle remains consumer-driven. Madar supplies real product semantics for departments/routing, secure attachments, SLA evaluation, and authorized search/reporting, but those remain product-owned implementations rather than automatic evidence for new FoundationKit packages.
 
 There is still **no additional reusable package candidate justified by both an independently useful provider-neutral boundary and sufficient cross-product evidence**. Further runtime extraction should wait for another independent consumer or a clearly reusable provider contract rather than generalizing Madar-specific behavior prematurely.
 
