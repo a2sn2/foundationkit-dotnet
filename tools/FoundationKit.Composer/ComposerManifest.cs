@@ -148,7 +148,7 @@ public static class ComposerManifestParser
         return result;
     }
 
-    private static IReadOnlyList<CapabilityContractRequirement> NormalizeContracts(
+    private static CapabilityContractRequirement[] NormalizeContracts(
         IReadOnlyDictionary<string, int>? values)
     {
         if (values is null)
