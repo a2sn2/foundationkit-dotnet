@@ -24,9 +24,34 @@ apps/<ProjectName>/       منتجات تشغيلية فعلية
 - إنشاء Domain/Application/Infrastructure وAPI/Client عندما تحل قدراتهما؛
 - إنشاء Test project؛
 - توليد `ARCHITECTURE.md` يشرح سبب كل capability وما إذا كان لها reusable package حقيقي؛
-- إعادة التوليد بـ`--force` فقط إذا كان المجلد ما زال يحتوي حصريًا على الملفات التي سبق للـComposer توليدها.
+- إعادة التوليد بـ`--force` فقط إذا كان المجلد ما زال يحتوي حصريًا على الملفات التي سبق للـComposer توليدها؛
+- تشغيل **wizard تفاعلي** يجمع الاسم والـprofile والـcapabilities الإضافية والـproviders ثم يعرض Preview قبل أي كتابة.
 
-مثال داخل نسخة repository محلية:
+### المسار التفاعلي
+
+للبداية الأسرع:
+
+```powershell
+dotnet run --project tools/FoundationKit.Composer -- `
+  new --interactive `
+  --output artifacts/MySystem
+```
+
+يسألك Composer عن:
+
+1. اسم المشروع؛
+2. واحد من الـ7 profiles الرسمية، بالرقم أو الـID؛
+3. capabilities إضافية اختيارية لا يوفرها الـprofile أصلًا؛
+4. providers اختيارية؛
+5. تأكيد صريح بعد عرض التركيب النهائي dependency-first.
+
+يمكن كتابة `cancel` أو `quit` أو `q` في أي خطوة لإلغاء العملية قبل التوليد. إذا رفضت التأكيد الأخير فلن يكتب Composer أي ملف.
+
+الـwizard **ليس محركًا ثانيًا**: يحوّل إجاباتك إلى `ComposerManifest` عادي، ثم يمررها إلى نفس `CompositionAnalyzer` ونفس `ComposerProjectGenerator`. لذلك لا توجد قائمة capabilities منفصلة أو قواعد توليد مختلفة بين interactive وmanifest mode.
+
+إذا كنت تحتاج `excludeCapabilities` أو `capabilityContracts` صريحة، استخدم مسار manifest لأن interactive v1 يتعمد عدم تخمين هذه القرارات المتقدمة.
+
+### المسار المعتمد على manifest
 
 ```powershell
 dotnet run --project tools/FoundationKit.Composer -- `
@@ -37,7 +62,7 @@ dotnet run --project tools/FoundationKit.Composer -- `
 
 بدون `--foundation-root` يكتب Composer `PackageReference` إلى حزم FoundationKit الحالية. هذا الوضع يحتاج NuGet source يحتوي تلك الحزم. وضع `--foundation-root` يستخدم `ProjectReference` إلى نفس source tree وهو المسار الذي يثبته CI حاليًا بالبناء والاختبار.
 
-التوليد الحالي **غير تفاعلي**؛ أنت تكتب/تختار manifest ثم تولد. الـwizard التفاعلي والـvisual composer ما زالا طبقة UX لاحقة، لكن محرك التوليد الحتمي نفسه موجود الآن.
+الخياران `--require-stable` و`--force` و`--foundation-root` يعملان مع المسارين. في الوضع التفاعلي، `--require-stable` يعرض الـPreview أولًا ثم يرفض قبل شاشة التأكيد وقبل أي كتابة إذا وجد capability غير `Stable`.
 
 ## ماذا يولد وماذا لا يولد؟
 
@@ -120,9 +145,9 @@ Client = boundary مستقل للواجهة
 ## خطوات إنشاء منتج
 
 1. عرّف نطاق المنتج وملكيته للبيانات والسياسات أولًا.
-2. أنشئ manifest يعبّر فقط عن profile/capabilities/providers المطلوبة فعلًا.
-3. نفذ `validate` و`explain` قبل التوليد عند الحاجة لمراجعة التركيب.
-4. شغل `new ... --output ...` لتوليد الهيكل، أو `--foundation-root .` إذا كنت تطور داخل نسخة FoundationKit المصدرية.
+2. اختر إما `new --interactive` للبداية الموجهة، أو أنشئ manifest إذا كنت تحتاج exclusions/contracts صريحة.
+3. في manifest mode نفذ `validate` و`explain` قبل التوليد عند الحاجة لمراجعة التركيب؛ في interactive mode راجع الـPreview الذي يظهر قبل التأكيد.
+4. شغل `new ... --output ...`، أو أضف `--foundation-root .` إذا كنت تطور داخل نسخة FoundationKit المصدرية.
 5. راجع `ARCHITECTURE.md` الناتج، خصوصًا maturity warnings والقدرات التي لا تملك runtime binding.
 6. انقل الهيكل إلى `apps/` للمنتج التشغيلي أو `examples/` للمرجع الكامل إذا كان سيعيش داخل هذا repository.
 7. صمم Domain/use cases الحقيقية قبل UI والتخزين التفصيلي.
