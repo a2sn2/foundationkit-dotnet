@@ -16,6 +16,7 @@ builder.Services.AddScoped(_ => new HttpClient
 builder.Services.AddMudServices();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<MadarApiClient>();
+builder.Services.AddScoped<CaseSearchApiClient>();
 builder.Services.AddScoped<MadarAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(services =>
     services.GetRequiredService<MadarAuthenticationStateProvider>());

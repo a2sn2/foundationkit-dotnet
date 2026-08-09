@@ -1,3 +1,4 @@
+using FoundationKit.Application.Abstractions;
 using FoundationKit.Authorization;
 using FoundationKit.WebApi.Results;
 using Madar.Api.Security;
@@ -6,6 +7,7 @@ using Madar.Application.Security;
 using Madar.Contracts.Cases;
 using Madar.Contracts.Security;
 using Madar.Infrastructure;
+using Madar.Infrastructure.Cases;
 using Madar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
@@ -134,6 +136,49 @@ public static class MadarEndpoints
                         .ToHttpResult(Results.Ok))
             .WithName("ListMadarCases")
             .Produces<IReadOnlyList<CaseDto>>();
+
+        cases.MapGet(
+                "/search",
+                async (
+                    string? query,
+                    string? caseType,
+                    string? priority,
+                    string? status,
+                    string? slaState,
+                    Guid? departmentId,
+                    Guid? assignedToUserId,
+                    DateTimeOffset? createdFromUtc,
+                    DateTimeOffset? createdToUtc,
+                    int? offset,
+                    int? limit,
+                    ICurrentUser currentUser,
+                    IAuthorizationEvaluator authorization,
+                    CaseQueryService queryService,
+                    IClock clock,
+                    CancellationToken cancellationToken) =>
+                    (await CaseSearchApplication.SearchAsync(
+                        new CaseSearchRequest(
+                            query,
+                            caseType,
+                            priority,
+                            status,
+                            slaState,
+                            departmentId,
+                            assignedToUserId,
+                            createdFromUtc,
+                            createdToUtc,
+                            offset ?? 0,
+                            limit ?? CaseSearchApplication.DefaultLimit),
+                        currentUser,
+                        authorization,
+                        queryService,
+                        clock,
+                        cancellationToken))
+                    .ToHttpResult(Results.Ok))
+            .WithName("SearchMadarCases")
+            .Produces<CaseSearchResponseDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         cases.MapPost(
                 "/sla/evaluate",
@@ -292,7 +337,7 @@ public static class MadarEndpoints
     }
 
     private static async Task<CurrentUserResponse> GetCurrentUserAsync(
-        FoundationKit.Application.Abstractions.ICurrentUser currentUser,
+        ICurrentUser currentUser,
         UserManager<MadarUser> userManager)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId is null)

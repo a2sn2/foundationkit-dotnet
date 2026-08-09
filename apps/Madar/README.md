@@ -1,18 +1,18 @@
 # Madar
 
-> Status: **v0.1–v0.9 implementation is complete on the current feature branch only after exact-head verification succeeds**. Repository evidence demonstrates implemented behavior for the verified commit; it is not Production Approval, Segregation-of-Duties evidence, or an external security certification.
+> Status: **v0.1–v0.9 is merged; v0.10 search/reporting is complete only after exact-head verification succeeds and the PR is merged**. Repository evidence demonstrates implemented behavior for the verified commit; it is not Production Approval, Segregation-of-Duties evidence, or an external security certification.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It remains intentionally separate from reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
 ## Product purpose
 
-Madar turns operational work into traceable cases that can be created, routed, assigned, transferred, reassigned, progressed through controlled states, audited, governed by SLA expectations, collaborated on, approved where sensitive, accompanied by bounded operational notifications, and supported by private case attachments/documents.
+Madar turns operational work into traceable cases that can be created, routed, assigned, transferred, reassigned, progressed through controlled states, audited, governed by SLA expectations, collaborated on, approved where sensitive, accompanied by bounded operational notifications, supported by private case attachments/documents, and searched/reported within the caller's existing case visibility scope.
 
 Representative case types include customer complaints, operational incidents, internal service requests, access requests, compliance cases, technical escalations, and operational exceptions.
 
 ## Product boundary
 
-Madar owns its business model, SQL schema, Identity configuration, permissions, Arabic UI copy, organization/routing semantics, SLA policy values, attachment policy/storage abstraction, runtime composition, and deployment topology. FoundationKit capabilities are reused only where their contracts fit the product.
+Madar owns its business model, SQL schema, Identity configuration, permissions, Arabic UI copy, organization/routing semantics, SLA policy values, attachment policy/storage abstraction, search/reporting semantics, runtime composition, and deployment topology. FoundationKit capabilities are reused only where their contracts fit the product.
 
 ```text
 apps/Madar/
@@ -55,7 +55,8 @@ v0.5   Bounded operational notifications
 v0.6   Department queues + routing + operator claim flow
 v0.7   Department administration + safe Operator membership
 v0.8   Controlled transfer + reassignment
-v0.9   Secure append-only case attachments/documents          ← current product depth
+v0.9   Secure append-only case attachments/documents
+v0.10  Authorized case search + same-scope operational reporting ← current feature branch
 ```
 
 The deterministic lifecycle remains:
@@ -134,6 +135,16 @@ Custom audit attributes contain only `attachmentId`; filename, bytes, storage ke
 
 See [`../../docs/MADAR-ATTACHMENTS-AR.md`](../../docs/MADAR-ATTACHMENTS-AR.md).
 
+## v0.10 authorized search and operational reporting
+
+`GET /api/cases/search` applies the existing case visibility boundary **before** search filters, summary aggregation, and pagination. A Requester/Operator therefore cannot infer hidden cases from either returned rows or report counters; Supervisor/Administrator retain the existing `madar.cases.read-all` scope.
+
+Supported bounded filters include title/description/full case ID text, case type, priority, lifecycle status, SLA state, department, assignee, and created-date range. Text is trimmed and limited to 200 characters; page size defaults to 25 and is capped at 100; offset is bounded; a two-sided creation range is capped at 366 days.
+
+Results are ordered by `UpdatedUtc` descending and then case ID for deterministic pagination. The response includes the requested page plus same-scope counts for total/unassigned, lifecycle states, and SLA states. This is SQL-backed filtering through EF Core; no external index or attachment-content search is introduced.
+
+The Arabic UI is `/reports/cases`. Read [`../../docs/MADAR-SEARCH-REPORTING-AR.md`](../../docs/MADAR-SEARCH-REPORTING-AR.md) for the policy and verification model.
+
 ## SLA, collaboration, approvals, and notifications
 
 When SLA is enabled, Madar snapshots an absolute target at case creation. States are `not-applicable`, `active`, `met`, and `breached`; first breach and escalation evidence are persisted. The bounded evaluator remains `POST /api/cases/sla/evaluate`; no reusable jobs/scheduler package is inferred from this alone.
@@ -156,7 +167,7 @@ Madar currently reuses:
 - `FoundationKit.Approvals` — generic approval eligibility/decision semantics;
 - `FoundationKit.Notifications` and `.Smtp` — bounded notification contract/current provider.
 
-Madar does **not** introduce `FoundationKit.Organization`, `FoundationKit.Files`, `FoundationKit.Storage`, or a reusable routing/history package in v0.9. Department/routing and attachment semantics remain product-owned until independent reuse evidence demonstrates a sufficiently stable general contract.
+Madar does **not** introduce `FoundationKit.Organization`, `FoundationKit.Files`, `FoundationKit.Storage`, `FoundationKit.Search`, `FoundationKit.Reporting`, or a reusable routing/history package in v0.10. Department/routing, attachment, and search/reporting semantics remain product-owned until independent reuse evidence demonstrates a sufficiently stable general contract.
 
 ## Authentication and authorization
 
@@ -165,11 +176,11 @@ Madar uses ASP.NET Core Identity with secure cookie authentication, anti-CSRF va
 | Role | Current responsibility |
 |---|---|
 | `Requester` | create cases and see cases they created |
-| `Operator` | see assigned cases, member department queues, claim queued cases, progress own assignments |
+| `Operator` | see assigned/created cases, member department queues, claim queued cases, progress own assignments |
 | `Supervisor` | read all cases, route/assign/reassign/transfer/progress/close, evaluate SLA, make approval decisions |
 | `Administrator` | receives all currently defined Madar permissions, including department/membership administration |
 
-Attachment list/upload/download reuse case-read authorization; upload additionally uses the normal anti-CSRF and write-rate-limit path. Application authorization remains authoritative.
+Attachment list/upload/download reuse case-read authorization; upload additionally uses the normal anti-CSRF and write-rate-limit path. Search/reporting reuses case-read scope and adds no privilege. Application authorization remains authoritative.
 
 ## SQL Server persistence
 
@@ -198,7 +209,7 @@ Current migrations include:
 20260809070000_AddCaseAttachments
 ```
 
-v0.8 required no schema change because transfer/reassignment reused routing and assignment columns. v0.9 adds attachment metadata, uploader/case foreign keys, deterministic case-history indexing, unique private storage-key indexing, and rowversion concurrency.
+v0.8 required no schema change because transfer/reassignment reused routing and assignment columns. v0.9 adds attachment metadata, uploader/case foreign keys, deterministic case-history indexing, unique private storage-key indexing, and rowversion concurrency. v0.10 requires no schema migration because search/reporting reads existing case columns and SQL state.
 
 ## Bootstrap and local run
 
@@ -234,6 +245,7 @@ GET  /api/users/operators
 
 GET  /api/cases
 POST /api/cases
+GET  /api/cases/search
 GET  /api/cases/{caseId}
 POST /api/cases/{caseId}/assignment
 POST /api/cases/{caseId}/route
@@ -267,6 +279,7 @@ DELETE /api/admin/departments/{departmentId}/members/{userId}
 /                         product landing page
 /login                    cookie-authentication login
 /cases                    cases + department queue + create + SLA evaluation
+/reports/cases            authorized case search + same-scope operational summary
 /cases/{CaseId:guid}      details + routing/lifecycle + comments + attachments + approvals + audit
 /admin/departments        Administrator department + Operator membership management
 ```
@@ -276,12 +289,13 @@ DELETE /api/admin/departments/{departmentId}/members/{userId}
 The repository gate is expected to cover:
 
 - Release build with warnings as errors;
-- Madar domain/application attachment validation and authorization tests;
+- Madar domain/application validation and authorization tests, including v0.10 search policy boundaries;
 - existing routing/transfer/reassignment/department-administration tests;
 - migration/snapshot/readiness correctness;
 - Workbench and Athar regressions;
 - existing Madar SQL/E2E flows;
 - attachment SQL/E2E proof covering rejected signature mismatch, upload, SQL metadata, private content persistence, unauthorized denial, closure readability, authorized download, and audit privacy;
+- search/reporting SQL/E2E proof covering hidden-case isolation from rows/counts, broad-read visibility, filters, deterministic bounded paging, and rejected invalid input;
 - Security Scan and CodeQL;
 - unchanged reusable 17 `.nupkg` + 17 `.snupkg` output.
 
@@ -293,12 +307,12 @@ Exact evidence belongs to the exact PR head that produced it. A previous green r
 - arbitrary product user/role administration;
 - transfer approval workflow, bulk reassignment, and dedicated routing-history aggregate;
 - multiple queues, skill/round-robin/capacity/presence/automatic routing;
-- reusable organization/routing/files/storage extraction without independent evidence;
+- reusable organization/routing/files/storage/search/reporting extraction without independent evidence;
 - durable notification outbox/retries/background scheduler;
 - attachment edit/delete/versioning;
 - malware-scanning provider, OCR/indexing/full-text search, signed URLs/CDN;
 - Production object-storage/KMS/retention/provider configuration;
-- advanced search/reporting;
+- saved searches, exports, charts, scheduled reports, BI integration, and report sharing;
 - WhatsApp/email/external channel ingestion.
 
 ## Product rule
@@ -316,4 +330,5 @@ When Madar reveals a missing capability, first decide whether the behavior is pr
 - #84 — v0.6 department queues/routing: complete.
 - #86 — v0.7 department administration: complete.
 - #88 — v0.8 controlled transfer/reassignment: complete.
-- #92 — v0.9 secure case attachments/documents: in verification until the exact PR head is green and merged.
+- #92 — v0.9 secure case attachments/documents: complete.
+- #94 — v0.10 authorized case search/reporting: in verification until the exact PR head is green and merged.

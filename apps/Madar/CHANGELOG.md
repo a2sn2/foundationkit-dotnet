@@ -2,7 +2,28 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.9 secure case attachments
+## [Unreleased] — v0.10 authorized case search and reporting
+
+### Added
+
+- Product-owned SQL-backed case search that applies the existing creator/assignee/`madar.cases.read-all` visibility boundary before filters, paging, or report aggregation.
+- Bounded filters for text, case type, priority, lifecycle status, SLA state, department, assignee, and creation-date range.
+- Deterministic result paging ordered by `UpdatedUtc` descending then case ID, with default page size 25 and hard maximum 100.
+- Same-scope operational summary counts for total/unassigned, lifecycle states, and SLA states; hidden cases cannot influence rows or counts for narrower roles.
+- Authenticated `GET /api/cases/search` endpoint and typed Blazor client support without introducing per-query write/audit noise.
+- Arabic `/reports/cases` page with filters, summary cards, result table, and bounded previous/next paging.
+- Application tests for authentication, normalization, `read-all` scope, and validation boundaries plus real SQL/E2E coverage for hidden-case isolation, filters, paging, and invalid input.
+- Dedicated Arabic guide `docs/MADAR-SEARCH-REPORTING-AR.md` and Atlas route registration.
+
+### Deliberately deferred
+
+- external search/index providers such as Elasticsearch, OpenSearch, or Lucene;
+- OCR, attachment-content indexing, and database full-text search;
+- saved searches, exports, charts, scheduled reports, BI integration, or report sharing;
+- cross-tenant or organization-hierarchy analytics;
+- reusable `FoundationKit.Search` / `FoundationKit.Reporting` extraction until independent product evidence exists.
+
+## [v0.9] — secure case attachments
 
 ### Added
 
