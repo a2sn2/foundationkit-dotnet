@@ -57,7 +57,7 @@ public static class ComposerCli
             throw new ComposerManifestException("Usage: capabilities");
         }
 
-        await output.WriteLineAsync("ID | Kind | Maturity | Category | Dependencies");
+        await output.WriteLineAsync("ID | Contract | Kind | Maturity | Category | Dependencies");
         foreach (var capability in FoundationCapabilityCatalog.All
                      .OrderBy(item => item.Category, StringComparer.OrdinalIgnoreCase)
                      .ThenBy(item => item.Id, StringComparer.OrdinalIgnoreCase))
@@ -65,8 +65,9 @@ public static class ComposerCli
             var dependencies = capability.Dependencies.Count == 0
                 ? "-"
                 : string.Join(",", capability.Dependencies);
+            var contractVersion = FoundationCapabilityContracts.Get(capability.Id).ContractVersion;
             await output.WriteLineAsync(
-                $"{capability.Id} | {capability.Kind} | {capability.Maturity} | " +
+                $"{capability.Id} | v{contractVersion} | {capability.Kind} | {capability.Maturity} | " +
                 $"{capability.Category} | {dependencies}");
         }
 
@@ -117,6 +118,12 @@ public static class ComposerCli
         await output.WriteLineAsync(
             $"Manifest valid: {manifest.Name} ({manifest.Profile}), {analysis.Entries.Count} resolved capabilities.");
 
+        if (analysis.CompatibilityResults.Count > 0)
+        {
+            await output.WriteLineAsync(
+                $"Contract requirements satisfied: {analysis.CompatibilityResults.Count}.");
+        }
+
         foreach (var warning in analysis.Warnings)
         {
             await output.WriteLineAsync($"WARNING: {warning}");
@@ -144,6 +151,9 @@ public static class ComposerCli
 
         var manifest = await ComposerManifestParser.ParseFileAsync(args[1], cancellationToken);
         var analysis = CompositionAnalyzer.Analyze(manifest);
+        var compatibilityById = analysis.CompatibilityResults.ToDictionary(
+            result => result.CapabilityId,
+            StringComparer.OrdinalIgnoreCase);
 
         await output.WriteLineAsync($"Project: {manifest.Name}");
         await output.WriteLineAsync($"Profile: {manifest.Profile}");
@@ -151,9 +161,14 @@ public static class ComposerCli
 
         foreach (var entry in analysis.Entries)
         {
+            var contractVersion = FoundationCapabilityContracts.Get(entry.Capability.Id).ContractVersion;
+            var compatibility = compatibilityById.TryGetValue(entry.Capability.Id, out var requirement)
+                ? $" | requires:v{requirement.RequiredContractVersion}=compatible"
+                : string.Empty;
+
             await output.WriteLineAsync(
-                $"- {entry.Capability.Id} [{entry.Capability.Kind}/{entry.Capability.Maturity}] " +
-                $"<- {string.Join(", ", entry.Reasons)}");
+                $"- {entry.Capability.Id} [{entry.Capability.Kind}/{entry.Capability.Maturity}/contract:v{contractVersion}] " +
+                $"<- {string.Join(", ", entry.Reasons)}{compatibility}");
         }
 
         if (analysis.Warnings.Count > 0)
@@ -190,6 +205,6 @@ public static class ComposerCli
         await output.WriteLineAsync("  explain <manifest.json>");
         await output.WriteLineAsync();
         await output.WriteLineAsync(
-            "The v1 composer validates and explains selections; it does not generate projects yet.");
+            "The v1 composer validates capability selection, contract compatibility, and maturity; it does not generate projects yet.");
     }
 }
