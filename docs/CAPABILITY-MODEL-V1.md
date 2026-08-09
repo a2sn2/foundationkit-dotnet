@@ -12,7 +12,7 @@ The model in this document is the machine-oriented contract for that direction.
 2. **Everything beyond the kernel is opt-in.** A project should be able to use FoundationKit without taking identity, workflow, files, multi-tenancy, AI, or another unrelated concern.
 3. **Capabilities declare dependencies.** Selecting `approvals`, for example, can pull the workflow/audit/authorization contracts it requires.
 4. **Providers are separate from capabilities.** SQL Server, Redis, SMTP, cloud services, search engines, message brokers, and AI vendors are adapters rather than business-core dependencies.
-5. **Tooling consumes the same graph.** CLI, deterministic generation, and future visual composition must use the same capability IDs, contract metadata, maturity evidence, and dependency rules instead of maintaining a second hidden model.
+5. **Tooling consumes the same graph.** CLI, deterministic generation, interactive generation, and future visual composition must use the same capability IDs, contract metadata, maturity evidence, and dependency rules instead of maintaining a second hidden model.
 6. **Maturity is explicit.** A capability listed in the catalog is not automatically implemented or production-ready.
 7. **Profiles are starting points, not frameworks inside the framework.** A project can start from a profile, include more capabilities, and remove independent capabilities.
 8. **A required dependency cannot be excluded.** Composition must fail rather than silently generate an invalid project.
@@ -279,13 +279,14 @@ That manifest now drives:
 - normalized generated manifest metadata;
 - generated architecture/decision documentation.
 
-The current non-interactive `new` command writes a bounded Domain/Application/Infrastructure/API/Client/Test skeleton. It does **not** translate every selected catalog identity into generated implementation. Planned or unbound identities stay visible in the generated architecture report with no fake runtime package or product semantic attached.
+Manifest-driven `new` consumes the JSON contract directly. Interactive `new --interactive` collects a bounded subset of the same choices—project name, one canonical profile, optional extra capabilities, and optional providers—then constructs a normal validated `ComposerManifest`, shows the resolved dependency-first preview, and delegates to the same analyzer/generator after explicit confirmation.
+
+Neither mode translates every selected catalog identity into generated implementation. Planned or unbound identities stay visible in the generated architecture report with no fake runtime package or product semantic attached. Explicit `excludeCapabilities` and `capabilityContracts` remain manifest-driven controls in interactive v1 rather than being inferred by the questionnaire.
 
 Package-reference mode expresses portable FoundationKit dependencies; repository-local `--foundation-root` mode uses source `ProjectReference`s and is the CI-proven build/test path.
 
 Future composition work may add:
 
-- interactive questionnaire UX over the same deterministic engine;
 - richer provider wiring templates where provider contracts actually exist;
 - visual Workbench composition;
 - additional generated topology only when it can be produced without inventing business policy.
@@ -311,7 +312,7 @@ Current sequence status:
 13. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until cross-product evidence and/or required provider semantics justify extraction**.
 14. Idempotency and Concurrency — **retain current product/reference behavior, but no separate reusable package is claimed yet**.
 15. Provider-family expansion — **planned beyond current SQL Server reference behavior and SMTP provider v1**.
-16. Composer deterministic generation — **implemented as a manifest-driven, architecture-reporting, golden-build-tested tooling slice; interactive `foundationkit new` UX, richer provider wiring, and visual composition remain future work**.
+16. Composer deterministic generation and interactive questionnaire — **implemented as one shared, architecture-reporting, golden-build-tested tooling path; richer provider wiring and visual composition remain future work**.
 17. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
 Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary.
