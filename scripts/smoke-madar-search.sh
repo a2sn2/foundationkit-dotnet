@@ -89,7 +89,7 @@ python3 -c 'import json,sys; hidden,owned,assigned=sys.argv[1:4]; item=json.load
 admin_search="$(curl --fail --silent --show-error \
   -b "$admin_cookie" \
   "$base_url/api/cases/search?query=$encoded_marker&offset=0&limit=25")"
-python3 -c 'import json,sys; expected=set(sys.argv[1:4]); item=json.load(sys.stdin); ids={case["id"] for case in item["items"]}; assert item["total"] == 3, item; assert item["summary"]["total"] == 3; assert ids == expected; assert item["summary"]["critical"] if False else True' "$hidden_id" "$owned_id" "$assigned_id" <<< "$admin_search"
+python3 -c 'import json,sys; expected=set(sys.argv[1:4]); item=json.load(sys.stdin); ids={case["id"] for case in item["items"]}; assert item["total"] == 3, item; assert item["summary"]["total"] == 3; assert item["summary"]["unassigned"] == 2; assert item["summary"]["assigned"] == 1; assert ids == expected' "$hidden_id" "$owned_id" "$assigned_id" <<< "$admin_search"
 
 assigned_filter="$(curl --fail --silent --show-error \
   -b "$operator_cookie" \
@@ -107,8 +107,7 @@ page_one="$(curl --fail --silent --show-error \
 page_two="$(curl --fail --silent --show-error \
   -b "$operator_cookie" \
   "$base_url/api/cases/search?query=$encoded_marker&offset=1&limit=1")"
-python3 -c 'import json,sys; hidden,owned,assigned=sys.argv[1:4]; first=json.loads(sys.stdin.readline()); second=json.loads(sys.stdin.readline()); ids={first["items"][0]["id"],second["items"][0]["id"]}; assert first["total"] == 2 and second["total"] == 2; assert first["summary"]["total"] == 2 and second["summary"]["total"] == 2; assert hidden not in ids; assert ids == {owned,assigned}' "$hidden_id" "$owned_id" "$assigned_id" <<< "$page_one
-$page_two"
+python3 -c 'import json,sys; hidden,owned,assigned=sys.argv[1:4]; first=json.loads(sys.argv[4]); second=json.loads(sys.argv[5]); ids={first["items"][0]["id"],second["items"][0]["id"]}; assert first["total"] == 2 and second["total"] == 2; assert first["summary"]["total"] == 2 and second["summary"]["total"] == 2; assert hidden not in ids; assert ids == {owned,assigned}' "$hidden_id" "$owned_id" "$assigned_id" "$page_one" "$page_two"
 
 invalid_status="$(curl --silent --show-error \
   -o "$workdir/invalid.json" \
