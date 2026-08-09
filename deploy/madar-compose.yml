@@ -47,11 +47,14 @@ services:
       Madar__Notifications__Smtp__Username: "${MADAR_SMTP_USERNAME:-}"
       Madar__Notifications__Smtp__Password: "${MADAR_SMTP_PASSWORD:-}"
       Madar__Notifications__Smtp__FromAddress: "${MADAR_SMTP_FROM_ADDRESS:-}"
+      Madar__Attachments__StorageRoot: "/app/data/attachments"
     depends_on:
       madar-sqlserver:
         condition: service_healthy
     ports:
       - "8100:8080"
+    volumes:
+      - madar-attachment-data:/app/data/attachments
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -69,3 +72,4 @@ services:
 
 volumes:
   madar-sql-data:
+  madar-attachment-data:
