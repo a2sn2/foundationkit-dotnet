@@ -105,13 +105,24 @@ function Test-DockerReady {
         return $false
     }
 
-    & docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+
+        & docker info *> $null
+        if ($LASTEXITCODE -ne 0) {
+            return $false
+        }
+
+        & docker compose version *> $null
+        return $LASTEXITCODE -eq 0
+    }
+    catch {
         return $false
     }
-
-    & docker compose version *> $null
-    return $LASTEXITCODE -eq 0
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 }
 
 function New-StrongPassword {

@@ -1,17 +1,22 @@
-# إضافة مشروع جديد بجانب FoundationKit
+# إضافة منتج جديد بجانب FoundationKit
 
-## القاعدة
+## القاعدة الحالية
 
-كل منتج جديد يكون مستقلًا داخل مجلده، ويستهلك حزم FoundationKit دون تعديلها لتناسب منتجًا واحدًا.
+كل منتج جديد يملك Domain وسياسات وبيانات وتشغيلًا مستقلًا، ويستهلك FoundationKit حسب الحاجة دون تعديل الكور ليناسب منتجًا واحدًا.
 
 ```text
-examples/<ProjectName>/     أمثلة مكتملة
-apps/<ProjectName>/         منتجات فعلية عند اعتماد هذا المسار
+samples/                  مراجع معمارية صغيرة/موجهة
+examples/<ProjectName>/   منتجات مرجعية كاملة
+apps/<ProjectName>/       منتجات تشغيلية فعلية
 ```
 
-يمكن إضافة مجلد `apps/` مستقبلًا دون نقل مشروع أثَر.
+`apps/` **موجود ومستخدم بالفعل**؛ `apps/Madar` هو المنتج التشغيلي الحالي. `examples/Athar` يبقى المنتج العربي المرجعي الكامل ولا يحتاج نقله إلى `apps/`.
 
-## الهيكل القياسي
+## Composer اليوم
+
+`FoundationKit.Composer` يستطيع اكتشاف capabilities/profiles والتحقق من manifest والاعتماديات والنضج وcontract compatibility، لكنه **لا يولد مشروعًا بعد**. لا يوجد حاليًا `foundationkit new` أو scaffolding حتمي؛ لذلك إنشاء المنتج ما زال قرارًا معماريًا صريحًا وليس نسخ قالب آلي.
+
+## هيكل مقترح عند الحاجة
 
 ```text
 <Project>.Domain
@@ -21,9 +26,9 @@ apps/<ProjectName>/         منتجات فعلية عند اعتماد هذا �
 <Project>.Api
 <Project>.Client
 tests/<Project>.Tests
-postman/<Project>.Api.postman_collection.json
-deploy/<project>-compose.yml
 ```
+
+هذا هو الشكل الذي أثبته Athar وMadar، لكنه ليس إلزامًا لكل خدمة صغيرة. استخدم فقط المشاريع التي يحتاجها المنتج فعليًا.
 
 ## اتجاه الاعتماد
 
@@ -41,92 +46,43 @@ Client → Contracts + FoundationKit.Blazor
 
 الممنوع:
 
-- مرجع من Domain إلى EF Core أو ASP.NET Core.
-- مرجع من Client إلى Infrastructure أو DbContext.
-- وضع Migrations داخل `src/FoundationKit.*`.
-- إعادة Generic CRUD لمجرد تقليل عدد الملفات.
-- إرجاع Entity من API مباشرة.
-- خلط عقود المستخدم مع عقود الإدارة دون سبب واضح.
+- Domain يعتمد على EF Core أو ASP.NET Core؛
+- Client يعتمد على Infrastructure أو DbContext؛
+- Migrations داخل `src/FoundationKit.*`؛
+- Entity من قاعدة البيانات يُعاد مباشرة من API؛
+- Generic CRUD يبتلع قواعد المنتج؛
+- نقل organization/files/search/reporting أو أي سلوك منتج إلى FoundationKit بلا evidence مستقل.
 
-## دور الطبقات
+## اختيار FoundationKit packages
 
-### Domain
+ابدأ من الحاجة الفعلية، ثم راجع Capability Model/Composer. لا تضف كل الـ17 package تلقائيًا.
 
-Entities وAggregates وقواعد الأعمال والأحداث فقط.
+أمثلة:
 
-### Application
+- Domain/Application/Infrastructure/WebApi/Blazor حسب نوع التطبيق؛
+- Authorization عند وجود permission/ownership boundary مناسب؛
+- Workflow عند وجود state-transition graph حتمي؛
+- Approvals عند توافق maker-checker/approve-reject v1 مع المنتج؛
+- Notifications + SMTP عند الحاجة للنقل الحالي؛
+- Settings/FeatureManagement/Localization/Caching عندما تنطبق حدودها الحالية.
 
-Managers وUse Cases وPorts والتنسيق بين Domain وPersistence.
+الم maturity والـcontract version لا تُستنتجان من رقم NuGet package؛ اقرأ `catalog/foundationkit.capabilities.json` وComposer.
 
-### Infrastructure
+## خطوات إنشاء منتج
 
-EF Core وSQL Server وIdentity وQueries وIntegrations.
+1. عرّف نطاق المنتج وملكيته للبيانات والسياسات أولًا.
+2. اختر `apps/` للمنتج التشغيلي أو `examples/` للمرجع الكامل.
+3. صمم Domain/use cases قبل UI والتخزين التفصيلي.
+4. عرّف Contracts حسب الجمهور.
+5. اختر FoundationKit capabilities التي تناسب boundary حقيقيًا فقط.
+6. نفذ Infrastructure وDbContext ومهاجرات المنتج.
+7. أضف Authentication/Authorization/Privacy حسب طبيعة المنتج.
+8. أنشئ typed client وواجهة UI عندما يحتاجها المنتج.
+9. أضف tests + SQL/E2E + Docker/operational path بحسب المخاطر.
+10. اربط المنتج ببوابات CI/Security/CodeQL ومستندات التشغيل.
+11. حدّث Atlas/README فقط بعد أن تصبح الأسطح حقيقية.
+12. إذا كشف المنتج عن concern متكرر، اتركه product-owned أولًا ثم قيّم الاستخراج بعد ظهور evidence مستقل.
 
-### Contracts
+## ملاحظة مهمة
 
-DTOs وRequests وResponses وRoute constants.
-
-### Api
-
-Authentication وAuthorization وEndpoint groups وProblem Details وSwagger.
-
-### Client
-
-Typed API Client وViewModels وRazor Components وMudBlazor وUI/UX.
-
-## Managers وServices
-
-استخدم Manager عندما تجمع العملية أكثر من مسؤولية تطبيقية:
-
-```text
-validate current user
-load aggregate
-apply domain transition
-write audit
-commit unit of work
-return DTO
-```
-
-استخدم Service لحد واضح مثل:
-
-```text
-IInitiativeQueryService
-IAuditWriter
-IEmailSender
-IFileStorage
-```
-
-لا تنشئ `GenericManager<TEntity>` ينفذ CRUD لجميع الكيانات؛ هذا يلغي معنى قواعد الأعمال.
-
-## MVVM مع Blazor
-
-FoundationKit لا يقلد WPF حرفيًا. النموذج المعتمد:
-
-```text
-Component subscribes to ViewModel.StateChanged
-ViewModel owns loading/error/data state
-ViewModel calls typed client
-Typed client uses shared contracts
-```
-
-استخدم:
-
-```text
-ViewModelBase
-ListViewModel<T>
-AsyncState<T>
-ApiClientBase
-```
-
-## خطوات الإضافة
-
-1. انسخ هيكل مشروع أثَر مع تغيير الاسم.
-2. اكتب Domain قبل الواجهة.
-3. عرّف Contracts حسب الجمهور.
-4. اكتب Manager لكل Use Case حقيقي.
-5. نفذ Infrastructure ومهاجرة مستقلة.
-6. أضف Authentication/Authorization حسب المنتج.
-7. اكتب Typed Client وViewModels.
-8. ابنِ UI/UX.
-9. أضف tests وPostman وDocker وCI smoke.
-10. حدّث README وProduction Readiness.
+لا تنسخ Athar أو Madar حرفيًا ثم تغير الاسم. استخدمهما كـevidence وخرائط تنفيذ، وليس كقالب يفرض سياسات الهوية أو الأدوار أو الأقسام أو SLA أو التخزين على منتج جديد.

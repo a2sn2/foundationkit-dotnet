@@ -1,321 +1,151 @@
-# Package Contracts
+# FoundationKit Package Contracts
 
-## FoundationKit.Domain
+This document describes the **17 reusable package boundaries currently shipped by FoundationKit Core v0.1**. Package version, capability maturity, and capability contract version are separate concepts. The machine source of truth for maturity/compatibility is the capability model and generated catalog.
 
-Public building blocks:
+## Base packages
 
-- `Entity<TId>`;
-- `AggregateRoot<TId>`;
-- `ValueObject`;
-- `DomainException`;
-- `IDomainEvent`;
-- `IHasDomainEvents`.
+### FoundationKit.Domain
 
-No framework packages are referenced.
+Domain primitives only: `Entity<TId>`, `AggregateRoot<TId>`, `ValueObject`, domain exceptions/events. No framework package dependency.
 
-## FoundationKit.Application
+### FoundationKit.Application
 
-Public building blocks:
+Use-case contracts, classified Results/Errors, validation, pagination, current-user/clock/unit-of-work ports, repository/specification contracts, domain-event dispatch contracts, and the capability/composition model. It does not query SQL or inspect HTTP directly.
 
-- command and query contracts;
-- classified `Error`, `Result`, and `Result<T>`;
-- current-user, clock, and unit-of-work ports;
-- repository and specification contracts;
-- pagination records;
-- validation contracts;
-- domain-event handler and dispatcher contracts.
+### FoundationKit.Infrastructure
 
-Application does not query a database or inspect HTTP context directly.
+Provider-neutral EF Core repository/unit-of-work/specification adapters and in-process domain-event dispatch. It does **not** select SQL Server or own a product `DbContext`/migrations.
 
-## FoundationKit.Infrastructure
+### FoundationKit.WebApi
 
-Public building blocks:
+ASP.NET Core result-to-HTTP/Problem Details mapping, correlation IDs, baseline response headers, and request-pipeline helpers. Product authentication/authorization/CORS/OpenAPI/deployment policy remain consumer-owned.
 
-- `EfRepository<TEntity, TId, TContext>`;
-- `EfUnitOfWork<TContext>`;
-- `SpecificationEvaluator`;
-- `DomainEventDispatcher`;
-- `DomainEventsSaveChangesInterceptor`;
-- `AddFoundationInfrastructure`.
+### FoundationKit.Blazor
 
-The package references EF Core abstractions but no relational provider.
+Typed API results/errors, resilient response parsing, `ApiClientBase`, async state and Blazor-oriented ViewModel primitives. No EF Core/SQL/server-host dependency.
 
-A consuming application selects its provider and registers the interceptor:
+## Optional/reference capabilities
+
+### FoundationKit.Auditing
+
+Provider-neutral bounded audit request/event/context and sink/recorder contracts. Sensitive attribute names are rejected and consumers own persistence, SIEM, retention and fail-open/fail-closed policy.
+
+**Current evidence:** consumed by Athar and Madar. Maturity remains `ReferenceOnly`; two product consumers do not prove a universal production audit provider or retention model.
+
+### FoundationKit.Security
+
+Trusted reverse-proxy conventions, deterministic rate-limit partition helpers, and shared MFA-assurance convention. It does not authenticate users or choose rate limits/providers.
+
+**Current evidence:** Athar and Madar consume the reusable security boundary. Maturity remains `Preview`; stable deployment compatibility/support across broader real ingress topologies is not yet claimed.
+
+### FoundationKit.Identity
+
+Reusable account-policy vocabulary, account notification port, security-event vocabulary, and step-up requirements. It does not provide a user store, Identity schema, OAuth/OIDC server, SMTP, or product email copy.
+
+**Current evidence:** Athar is the deepest identity consumer; Madar provides a second identity-adjacent product composition. Maturity remains `ReferenceOnly` because broader provider/account-lifecycle compatibility is still limited.
+
+### FoundationKit.Authorization
+
+Permission IDs/definitions, role-to-permission grants, authorization subjects/evaluator, and owner-or-privileged access semantics. Product roles, permission names, persistence and tenant/organization scope remain product-owned.
+
+**Current evidence:** Athar and Madar both use application-layer semantic authorization. Maturity remains `ReferenceOnly`; organization/tenant/scoped-policy compatibility is not yet generalized.
+
+### FoundationKit.Workflow
+
+Deterministic state/trigger transition definitions and resolution plus bounded audit intent. No workflow database, scheduler, BPMN engine or task routing.
+
+**Current evidence:** Athar initiative review and Madar case lifecycle independently reuse the transition model. Maturity remains `ReferenceOnly`; persistence/version migration/scheduling/advanced workflow semantics are intentionally outside v1.
+
+### FoundationKit.Approvals
+
+Narrow `approve`/`reject` decision model, permission-first eligibility, maker-checker rule, Workflow resolution, and bounded audit intent.
+
+**Current evidence:** Athar and Madar are independent consumers of the unchanged v1 boundary. Advanced sequential/parallel/quorum/delegation/escalation/routing behavior is not included, so maturity remains `ReferenceOnly`.
+
+### FoundationKit.Notifications
+
+Channel-neutral bounded `NotificationMessage`, `INotificationSender`, and delivery-result contracts with sensitive-safe diagnostics.
+
+**Current evidence:** Athar and Madar independently consume the same generic boundary. Both currently rely on SMTP transport and no durable queue/multi-channel routing is proven; maturity remains `ReferenceOnly`.
+
+### FoundationKit.Notifications.Smtp
+
+Narrow SMTP transport adapter over `FoundationKit.Notifications`, including validated transport options and bounded observer diagnostics. It does not own relay policy, secrets, retries, templates, routing/fallback, bounces or delivery history.
+
+**Current evidence:** Athar uses the adapter for account notifications; Madar can opt into it for operational notifications. Provider diversity and durable delivery operations remain unproven; maturity remains `ReferenceOnly`.
+
+### FoundationKit.Settings
+
+Bounded keys/scopes/values, deterministic scope fallback/source precedence, `ISettingSource`/`ISettingReader`, composite and in-memory reference sources. It is not a secret store or organization model.
+
+**Current evidence:** Workbench runtime platform-reference path. Maturity `ReferenceOnly`.
+
+### FoundationKit.FeatureManagement
+
+Bounded Boolean feature definitions/evaluation backed by Settings with explicit defaults and fail-closed invalid explicit configuration. No percentage rollout, targeting, experimentation or vendor SDK.
+
+**Current evidence:** Workbench runtime platform-reference path. Maturity `ReferenceOnly`.
+
+### FoundationKit.Localization
+
+Culture definitions, RTL/LTR metadata, deterministic supported-culture fallback, opaque bounded time-zone IDs. It does not own translation storage, user/tenant preferences, OS-specific time-zone mapping or conversion.
+
+**Current evidence:** Workbench proves `ar-YE`, RTL direction and configured time-zone identity. Maturity `ReferenceOnly`.
+
+### FoundationKit.Caching
+
+Bounded byte-cache contracts with explicit hit/miss/remove/TTL semantics and a bounded in-memory reference provider. Serialization, encryption, object schemas and distributed coherence remain consumer/provider concerns.
+
+**Current evidence:** Workbench `CatalogService` cache path plus tests and SQL-smoke reads. Maturity `ReferenceOnly`.
+
+## Product ownership boundary
+
+The following current product behavior is **not** a hidden reusable package:
+
+```text
+Madar departments/routing    ≠ FoundationKit.Organization
+Madar SLA evaluation         ≠ FoundationKit.Jobs/SLA
+Madar attachments            ≠ FoundationKit.Files/Documents
+Madar case search            ≠ FoundationKit.Search
+Madar operational reporting  ≠ FoundationKit.Reporting
+Athar idempotency             ≠ standalone FoundationKit.Idempotency package
+Product SQL rowversion usage ≠ standalone Concurrency package
+```
+
+A future extraction requires an independently useful provider-neutral boundary and enough independent evidence to avoid encoding one product's semantics.
+
+## Provider/schema rule
+
+Consuming products select relational providers and own their schemas/migrations:
 
 ```csharp
 services.AddFoundationInfrastructure();
 
 services.AddDbContext<ProductDbContext>((serviceProvider, options) =>
 {
-    options.UseSqlServer(connectionString); // consumer-owned provider decision
+    options.UseSqlServer(connectionString); // product/provider decision
     options.AddInterceptors(
         serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
 });
 ```
 
-Provider selection, DbContext, configurations, migrations, transactions, concurrency policy, specialized repositories, and read models remain in the consuming application.
-
-The local Workbench under `samples/` is the reference implementation for SQL Server ownership. Its migrations are not package assets.
-
-## FoundationKit.WebApi
-
-Public building blocks:
-
-- `AddFoundationWebApi`;
-- `UseFoundationRequestPipeline`;
-- `ToHttpResult`;
-- correlation-ID middleware;
-- baseline security-header middleware.
-
-A consuming API still chooses authentication, authorization, CORS, OpenAPI, and operational policy. Reusable trusted-proxy and authentication-assurance conventions live in the opt-in `FoundationKit.Security` package rather than being forced by WebApi.
-
-## FoundationKit.Blazor
-
-Public building blocks:
-
-- `ApiError`;
-- `ApiResult` and `ApiResult<T>`;
-- `ApiClientBase`;
-- `ApiResponseReader`;
-- `AsyncState<T>`.
-
-Successful responses with invalid JSON become `Response.InvalidJson` failures rather than escaping as deserialization exceptions.
-
-## FoundationKit.Auditing
-
-Public building blocks:
-
-- immutable audit request/event/context contracts;
-- `IAuditSink`;
-- `IAuditRecorder` / `AuditRecorder`;
-- bounded metadata validation and defensive copying;
-- rejection of common secret/credential attribute names.
-
-The package does not select a database, SIEM, logging framework, retention policy, or failure policy. Consumers provide the sink and data-classification rules.
-
-## FoundationKit.Security
-
-Public building blocks:
-
-- `TrustedProxyOptions`;
-- `TrustedProxySecurity`;
-- `AddFoundationTrustedProxyForwarding`;
-- `UseFoundationTrustedProxyForwarding`;
-- `FoundationRateLimitPartitions`;
-- `FoundationAuthenticationAssurance`;
-- `RequireFoundationMultiFactor`.
-
-The package is opt-in and depends on `FoundationKit.WebApi`; the kernel and application layers do not depend on it.
-
-Trusted forwarded headers are fail-closed: when enabled, at least one explicit trusted proxy IP is required, trust-all defaults are cleared, and forwarded `for`/`proto` values are processed only through ASP.NET Core forwarded-header middleware. Consumers must place the forwarding middleware before any security decision that uses scheme or remote address.
-
-Rate-limit helpers define partition keys only; they do not force permit counts, windows, queuing, storage, or distributed rate-limit providers. The consuming product still owns those policy values.
-
-The shared MFA convention uses the standard authentication-method reference claim shape `amr=mfa`. Security does not own user storage, authentication flows, MFA enrollment, recovery, or session persistence.
-
-## FoundationKit.Identity
-
-Public building blocks:
-
-- `AccountSecurityOptions` and `AccountSecurityOptionsValidator`;
-- `IAccountNotificationSender`;
-- `AccountSecurityNotification`;
-- `IdentitySensitiveOperation`;
-- `IdentityStepUpFactor`;
-- `IdentityStepUpPolicy`.
-
-The package depends on `FoundationKit.Security` but does not provide or select a user store, ASP.NET Core Identity implementation, EF schema, token provider, SMTP provider, OAuth/OIDC server, or external IdP.
-
-`AccountSecurityOptions` centralizes the reusable account policy that consumers bind to their configuration. The supported structural range is validated, while the consuming organization remains responsible for selecting approved policy values.
-
-`IAccountNotificationSender` is a provider port. It carries confirmation/reset tokens and security notification intent to a consumer-owned adapter; implementations must avoid logging token or destination contents.
-
-`IdentityStepUpPolicy` expresses factor requirements for sensitive account operations without deciding how those factors are verified. Athar remains responsible for the actual ASP.NET Core Identity verification and its account-notification adapter.
-
-See `docs/capabilities/IDENTITY.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Authorization
-
-Public building blocks:
-
-- `IAuthorizationSubject`;
-- `PermissionDefinition` and `PermissionId`;
-- `RolePermissionGrant` and `RolePermissionMap`;
-- `IAuthorizationEvaluator`;
-- `RolePermissionAuthorizationEvaluator`.
-
-The package depends on `FoundationKit.Identity` but does not own product roles, product permission IDs, role/permission persistence, EF migrations, ASP.NET Core policy registration, tenant scope, or external policy engines.
-
-`RolePermissionMap` is an immutable in-memory mapping primitive. Unknown permissions fail closed. `RolePermissionAuthorizationEvaluator` grants only to authenticated subjects with a matching product-owned role, and `CanAccessOwnedResource` allows ownership or an explicitly supplied privileged permission without a universal administrator bypass.
-
-Athar is the first consumer: it owns its `athar.*` permission IDs and maps its own `Administrator` role to them. The business layer asks for semantic permissions instead of hard-coding that role inside `InitiativeManager`, while the existing ASP.NET Core administrator policy remains a coarse outer defense.
-
-See `docs/capabilities/AUTHORIZATION.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Workflow
-
-Public building blocks:
-
-- `WorkflowTransitionDefinition`;
-- `WorkflowTransition`;
-- `WorkflowDefinition`;
-- `WorkflowId`;
-- `WorkflowTransitionAudit`.
-
-The package depends on `FoundationKit.Auditing` and remains independent of Security, Identity, Authorization, EF, ASP.NET Core, and product assemblies.
-
-`WorkflowDefinition` validates a deterministic state/trigger graph: duplicate transition IDs and ambiguous `fromState + trigger` pairs are rejected, transition collections are read-only, and unknown transitions fail closed.
-
-`WorkflowTransitionAudit` maps a successful transition into the bounded `AuditRequest` contract without selecting an audit sink or persistence strategy.
-
-Athar is the first consumer: `InitiativeWorkflow` defines its own submitted/approve/reject state machine and the aggregate uses the reusable resolver while retaining product-owned validation, mutation, events, concurrency, and persistence.
-
-See `docs/capabilities/WORKFLOW.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Approvals
-
-Public building blocks:
-
-- `ApprovalDecision` and `ApprovalDecisions`;
-- `ApprovalResolution`;
-- `ApprovalEligibility`;
-- `ApprovalPolicy`;
-- `ApprovalDecisionAudit`.
-
-The package composes `FoundationKit.Workflow`, `FoundationKit.Authorization`, and `FoundationKit.Auditing`. It does not own identity persistence, ASP.NET Core policies, EF migrations, approver-routing tables, queues, schedulers, or product UI.
-
-`ApprovalDecisions` accepts only normalized `approve` and `reject` tokens and resolves them through a consumer-owned `WorkflowDefinition`; unknown decisions or unavailable transitions fail closed.
-
-`ApprovalPolicy` evaluates an explicit product-supplied permission and a maker-checker boundary. Permission denial is evaluated first, and a checker with the same normalized actor identifier as the maker is rejected.
-
-Athar is the first consumer in its application-layer initiative review flow. The reusable gate does not replace the aggregate invariant: `Initiative.Review` still rejects self-review and invalid transitions as defense-in-depth, while Athar retains its persistence, audit entry, domain events, concurrency, routes, and DTOs.
-
-Advanced sequential, parallel, quorum, delegation, escalation, dynamic routing, and approval persistence are not implemented by v1.
-
-See `docs/capabilities/APPROVALS.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Notifications
-
-Public building blocks:
-
-- `NotificationMessage`;
-- `INotificationSender`;
-- `NotificationDeliveryStatus`;
-- `NotificationDeliveryResult`.
-
-The package is provider-neutral and does not depend on SMTP, ASP.NET Core, EF, Identity, Authorization, Workflow, Approvals, or any Athar product assembly.
-
-`NotificationMessage` bounds destination, title, body, and purpose. It rejects unsupported control characters in destination/title, accepts line breaks only in body content, validates a restricted purpose-code shape, and has a diagnostic `ToString()` that omits destination/body.
-
-`INotificationSender` is the transport boundary. Its reusable result communicates only delivered/not-configured/failed state; provider exceptions, credentials, recipient data, and message contents are not part of the result contract.
-
-Athar is the first consumer. `AccountSecurityNotificationAdapter` retains Identity/account semantics, Arabic copy, and one-time tokens, then delegates the generic message through `INotificationSender` to the reusable SMTP provider package. Provider selection, credentials, TLS policy, and deployment approval remain consumer-owned concerns.
-
-See `docs/capabilities/NOTIFICATIONS.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Notifications.Smtp
-
-Public building blocks:
-
-- `SmtpNotificationOptions`;
-- `SmtpNotificationOptionsValidator`;
-- `SmtpNotificationSender`;
-- `ISmtpNotificationObserver`.
-
-The package depends only on `FoundationKit.Notifications` and the base `System.Net.Mail` transport APIs. It does not depend on FoundationKit Domain/Application/Infrastructure/WebApi/Blazor/Auditing/Security/Identity/Authorization/Workflow/Approvals, EF Core, ASP.NET Core, or Athar product assemblies.
-
-The provider validates transport identifiers and port range, snapshots validated options at construction, preserves caller cancellation, maps missing host/from configuration to `NotConfigured`, and maps bounded SMTP/format/operation failures to `Failed` without returning provider exceptions through the generic notification contract.
-
-`ISmtpNotificationObserver` is intentionally narrow. It receives only notification purpose and, for failures, the exception type name. It never receives destination, title/body, one-time tokens, SMTP credentials, or the exception object itself.
-
-Athar is the first consumer. It maps its existing `AccountSecurityDeliveryOptions` to `SmtpNotificationOptions`, retains fail-closed production SMTP/TLS validation, and provides a local observer that logs only purpose and error type. The provider does not own organizational TLS/relay policy, secret storage/rotation, queues/retries, bounce processing, routing/fallback, templates, or delivery-history persistence.
-
-See `docs/capabilities/SMTP-PROVIDER.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Settings
-
-Public building blocks:
-
-- `SettingKey`;
-- `SettingScope` and `SettingScopeKind`;
-- `SettingEntry` and `ResolvedSetting`;
-- `SettingResolutionContext`;
-- `ISettingSource` and `ISettingReader`;
-- `SettingReader`;
-- `CompositeSettingSource`;
-- `InMemorySettingSource`.
-
-The package is provider-neutral and has no dependency on another FoundationKit package. It resolves caller-defined scopes in most-specific-first order and appends global fallback automatically. Within one scope, composite sources are evaluated in declared order.
-
-Keys, scope metadata, context depth, and values are bounded. Duplicate in-memory addresses fail rather than overwrite. Diagnostic `ToString()` values omit setting contents and non-global scope identifiers. The package is not a secret store and does not own persistence, encryption, a tenant/organization model, write administration, or refresh policy.
-
-Workbench is the first runtime consumer through `GET /api/platform-reference` and the SQL Server integration smoke flow.
-
-See `docs/capabilities/SETTINGS.md` for the full boundary and consumer evidence.
-
-## FoundationKit.FeatureManagement
-
-Public building blocks:
-
-- `FeatureId`;
-- `FeatureDefinition`;
-- `FeatureEvaluationContext`;
-- `IFeatureEvaluator`;
-- `SettingBackedFeatureEvaluator`;
-- `FeatureDecision` and `FeatureDecisionSource`.
-
-The package depends only on `FoundationKit.Settings`. The reference evaluator reads `features.<feature-id>.enabled`, uses the explicit definition default only when the setting is absent, and fails closed to disabled when an explicit setting is not a valid Boolean.
-
-It does not implement percentage rollout, targeting, experiments, schedules, vendor SDKs, persistence, change approval, realtime refresh, or arbitrary rule/expression execution.
-
-Workbench is the first runtime consumer through `GET /api/platform-reference`, where the integration smoke flow proves a settings-backed feature decision.
-
-See `docs/capabilities/FEATURE-MANAGEMENT.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Localization
-
-Public building blocks:
-
-- `CultureDefinition`;
-- `TextDirection`;
-- `SupportedCultureSet`;
-- `CultureResolution` and `CultureResolutionSource`;
-- `TimeZoneId`;
-- `LocalizationContext`.
-
-The package is BCL-only and does not depend on another FoundationKit package. Culture names are canonicalized through `CultureInfo`; directionality comes from `TextInfo.IsRightToLeft`; supported-culture resolution is deterministic across exact, parent, explicit-default, and invalid-request outcomes.
-
-`TimeZoneId` is intentionally an opaque bounded identifier. It does not call OS-specific time-zone lookup APIs, so the reusable boundary remains neutral between IANA, Windows, cloud-provider, and application-owned mapping strategies.
-
-Workbench is the first runtime consumer. It reads `ar-YE` and `UTC` through Settings and proves exact culture resolution, RTL directionality, and the configured time-zone identity through `GET /api/platform-reference` and the SQL integration smoke flow.
-
-Localization v1 does not own resource/translation storage, browser language negotiation, user/tenant preference persistence, date-time conversion, Windows/IANA mapping, or localization administration UI.
-
-See `docs/capabilities/LOCALIZATION.md` for the full boundary and consumer evidence.
-
-## FoundationKit.Caching
-
-Public building blocks:
-
-- `CacheKey`;
-- `CacheEntryOptions`;
-- `CacheReadResult`;
-- `ICacheStore`;
-- `InMemoryCacheOptions`;
-- `InMemoryCacheStore`.
-
-The package is BCL-only and has no direct FoundationKit package dependency. It deliberately stores bytes rather than arbitrary objects, keeping serialization, schema/versioning, compression, encryption, and domain mapping in the consumer.
-
-Keys and in-memory provider limits are bounded; TTL must be finite and positive. Cache reads return explicit hit/miss results, values are defensively copied, cancellation remains cancellation, and remove is idempotent. The reference in-memory provider cleans expired entries and uses deterministic earliest-expiry eviction when capacity is reached.
-
-Workbench is the first runtime consumer. Its existing `CatalogService` uses `ICacheStore` to cache the embedded capability-catalog bytes for 15 minutes. `CatalogCachingTests` proves a miss/fill followed by a cache hit, and the SQL integration smoke flow reads the catalog twice before continuing the user/admin workflow.
-
-Caching v1 does not own Redis/distributed-provider selection, distributed coherence or locks, object serialization conventions, tag invalidation, refresh-ahead, stale-while-revalidate, or product data-classification rules.
-
-See `docs/capabilities/CACHING.md` for the full boundary and consumer evidence.
-
-## Capability catalog contract
-
-The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
-
-The catalog is documentation metadata; it does not change runtime package behavior or add package dependencies.
+Workbench, Athar, and Madar therefore own separate SQL Server contexts and migrations. No reusable package owns those schemas.
+
+## Canonical detailed capability docs
+
+- `docs/capabilities/AUDITING.md`
+- `docs/capabilities/SECURITY.md`
+- `docs/capabilities/IDENTITY.md`
+- `docs/capabilities/AUTHORIZATION.md`
+- `docs/capabilities/WORKFLOW.md`
+- `docs/capabilities/APPROVALS.md`
+- `docs/capabilities/NOTIFICATIONS.md`
+- `docs/capabilities/SMTP-PROVIDER.md`
+- `docs/capabilities/SETTINGS.md`
+- `docs/capabilities/FEATURE-MANAGEMENT.md`
+- `docs/capabilities/LOCALIZATION.md`
+- `docs/capabilities/CACHING.md`
+
+## Catalog contract
+
+`catalog/foundationkit.catalog.json` is the human implemented-package catalog. `catalog/foundationkit.capabilities.json` is the generated composition graph. Do not infer maturity from the human catalog or infer capability contract version from the NuGet package version.

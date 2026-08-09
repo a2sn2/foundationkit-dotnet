@@ -2,56 +2,70 @@
 
 ## Start from repository truth
 
-Before changing code, read `README.md`, `docs/ARCHITECTURE.md`, `docs/PACKAGES.md`, `docs/WORKBENCH.md`, the canonical catalogs, and the relevant tests. Distinguish implemented behavior from design intent and future recommendations.
+Before changing code, read `README.md`, `docs/ARCHITECTURE.md`, `docs/PACKAGES.md`, `docs/CORE-V0.1-BASELINE.md`, the canonical capability catalogs, and the docs/tests for the consumer you are changing.
 
-For Windows local execution, use `docs/LOCAL-RUN-WINDOWS-AR.md` as the canonical first-run sequence.
+Current repository roles are explicit:
+
+```text
+src/             reusable FoundationKit packages
+samples/         executable architecture/reference consumers
+examples/Athar/  complete Arabic reference product
+apps/Madar/      operational case-management product through v0.10
+```
+
+For Windows local execution, use `docs/LOCAL-RUN-WINDOWS-AR.md`.
 
 ## Preserve boundaries
 
-Reusable code belongs under `src/`. Product rules, hosted applications, database providers, connection strings, and migrations do not.
+Reusable provider-neutral code belongs under `src/`. Product rules, Identity configuration, hosted applications, SQL Server selection, product schemas/migrations, Arabic copy, departments/routing, SLA, attachment/search/reporting policy, and deployment configuration remain consumer-owned.
 
-The Workbench under `samples/` and Athar under `examples/Athar/` may reference SQL Server because they are explicit consumers. `scripts/verify-repository.sh` rejects provider references or migration directories inside reusable packages.
+Workbench, Athar, and Madar may reference SQL Server because they are explicit consumers. `scripts/verify-repository.sh` rejects SQL Server provider references or migration directories inside reusable packages and checks client/contract persistence boundaries.
+
+Do not create a new FoundationKit runtime package simply because a product implements the behavior. Extraction requires independently useful provider-neutral semantics and evidence consistent with `CAPABILITY-EXTRACTION-STATUS.md`.
 
 ## Keep the tracked repository clean
 
 Do not commit local/generated/sensitive artifacts such as:
 
-- `bin/`, `obj/`, `artifacts/`, `TestResults/`, coverage output, logs, or NuGet packages;
-- `.local/`, `.env*`, User Secrets, IDE state, or local databases;
-- `.bak`, `.pfx`, `.p12`, `.key`, or other local backup/private-key material.
+- `bin/`, `obj/`, `artifacts/`, `TestResults/`, coverage, logs, packages;
+- `.local/`, local `.env*`, User Secrets, IDE state, local databases;
+- `.bak`, `.pfx`, `.p12`, `.key`, backups/private-key material;
+- temporary audit output or generated files not owned by the canonical generator.
 
-`.gitignore` is the first line of defense. `scripts/repository-hygiene.py` independently checks Git's tracked file set so an accidentally force-added artifact still fails CI.
+`.gitignore` is not the only defense; `scripts/repository-hygiene.py` checks the tracked Git set in CI.
 
-## Capability information
+## Capability/catalog changes
 
-When a public implemented capability changes:
+When public implemented behavior changes:
 
-1. update code and tests;
-2. update `catalog/foundationkit.catalog.json` when the human implemented surface changes;
-3. update `src/FoundationKit.Application/Capabilities/CapabilityModel.cs` when composition metadata changes;
-4. regenerate the generated catalogs/docs;
-5. update `CHANGELOG.md`.
+1. change code/tests;
+2. update `catalog/foundationkit.catalog.json` if the human implemented-package surface changes;
+3. update `CapabilityModel.cs` when composition identity/dependency/maturity changes;
+4. update compatibility/maturity evidence when those contracts change;
+5. run the catalog generator;
+6. update relevant package/capability documentation and `CHANGELOG.md`.
 
 ```bash
 dotnet run --project tools/FoundationKit.CatalogGenerator
 ```
 
-Do not edit `docs/FEATURES.md` or `catalog/foundationkit.capabilities.json` manually. Do not list planned behavior as implemented.
+Do not manually edit generated `docs/FEATURES.md`, `catalog/foundationkit.capabilities.json`, or `catalog/foundationkit.maturity-evidence.json` unless the generator contract explicitly says otherwise.
 
-## Persistence changes
+## Product persistence
 
-EF Core migrations are the schema source of truth for each consuming application.
+EF migrations are the schema source of truth:
 
-- Workbench migrations stay under `samples/FoundationKit.Workbench/Infrastructure/Migrations/`.
-- Athar migrations stay under `examples/Athar/Athar.Infrastructure/Migrations/`.
+```text
+Workbench → samples/FoundationKit.Workbench/Infrastructure/Migrations/
+Athar     → examples/Athar/Athar.Infrastructure/Migrations/
+Madar     → apps/Madar/Madar.Infrastructure/Migrations/
+```
 
-Add and review a migration whenever the mapped schema changes. Do not move product migrations into reusable packages.
+Schema changes require reviewed migrations where applicable and the affected SQL integration path. Never move product migrations into `src/FoundationKit.*`.
 
-Persistence changes must pass the Dockerized SQL Server integration/smoke flow in CI.
+## Verification
 
-## Required verification
-
-On Linux/CI-compatible environments:
+Core local checks:
 
 ```bash
 python3 scripts/repository-hygiene.py
@@ -63,24 +77,24 @@ dotnet test FoundationKit.sln --configuration Release --no-build
 bash scripts/pack.sh
 ```
 
-On Windows, start with:
+Windows:
 
 ```powershell
 .\foundationkit.ps1 doctor
 .\foundationkit.ps1 verify
 ```
 
-The root manager is the preferred Windows entry point. Lower-level scripts remain available for focused troubleshooting and CI parity.
+Meaningful PRs must also pass the repository's exact-head GitHub CI/Security/CodeQL and affected SQL/container gates before merge.
 
 ## Pull requests
 
 Explain:
 
-- what changed;
-- why it belongs in the reusable core, Workbench, Athar, catalog, tooling, or documentation;
-- compatibility and migration impact;
-- tests and runtime verification used;
-- documentation and catalog updates;
-- any deployment/organizational decision deliberately left outside the repository.
+- what changed and why;
+- whether the change belongs to reusable FoundationKit, Workbench, Athar, Madar, tooling, security/operations, or documentation;
+- public API/contract/maturity/schema compatibility impact;
+- tests/runtime/security evidence;
+- generated metadata/docs updates;
+- deployment/organizational controls deliberately left external.
 
-Keep product-specific code outside core packages and avoid unrelated changes.
+The current repository is experimental/pre-production. PRs and exact-head gates are preferred during development; Issue #35 defines the additional protected-branch/independent-review controls required before real Production governance.

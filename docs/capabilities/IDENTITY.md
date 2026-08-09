@@ -1,101 +1,28 @@
 # FoundationKit.Identity
 
-`FoundationKit.Identity` is the provider-neutral account-lifecycle capability above `FoundationKit.Security`.
-
-Its first extraction deliberately does **not** turn FoundationKit into an identity provider and does not move ASP.NET Core Identity, EF stores, SMTP, product copy, or user tables into the reusable kernel.
+`FoundationKit.Identity` is the provider-neutral account-lifecycle policy capability above `FoundationKit.Security`. It does **not** turn FoundationKit into an identity provider.
 
 ## Current v1 surface
 
-### Account security policy
+- `AccountSecurityOptions` + validator for reusable account-policy structure;
+- `IAccountNotificationSender` for confirmation/reset/security-notification delivery intent;
+- `AccountSecurityNotification` event vocabulary;
+- `IdentitySensitiveOperation`, `IdentityStepUpFactor`, and `IdentityStepUpPolicy` for sensitive-operation factor requirements.
 
-`AccountSecurityOptions` owns the reusable decisions currently shared by account consumers:
+The package does not own ASP.NET Core Identity stores, user tables/migrations, OAuth/OIDC server behavior, external IdPs, token generation, SMTP/SMS/push, session persistence, tenant membership, or product copy.
 
-- require confirmed email;
-- require MFA for administrator/privileged policy composition;
-- password required length;
-- digit/lowercase/uppercase/non-alphanumeric requirements.
+## Step-up policy
 
-`AccountSecurityOptionsValidator` validates the supported structural range without selecting an organizational password standard. The consuming product remains responsible for its approved policy values.
+Current reusable requirements include password proof for password change/MFA setup and password + MFA proof for MFA disable/recovery-code regeneration. The package expresses **required factors**, while the consuming identity implementation decides how a password, TOTP, recovery code, passkey, or external assertion is actually verified.
 
-Athar keeps the existing `AccountSecurity` configuration section, but the policy type is now owned by FoundationKit rather than the product.
+## Current consumer evidence
 
-### Notification port
+Athar is the deepest consumer: it binds the reusable policy, uses the notification port, performs fresh factor verification, and keeps ASP.NET Core Identity, Arabic account copy, SMTP mapping, EF persistence, and endpoints in the product.
 
-`IAccountNotificationSender` is the delivery boundary for:
+Madar provides an independent identity-adjacent product composition: it consumes FoundationKit Security/Authorization around its own ASP.NET Core Identity setup and keeps Madar roles, user store, login flow and product permissions inside the product.
 
-- email-confirmation tokens;
-- password-reset tokens;
-- independent account-security notifications.
-
-`AccountSecurityNotification` currently covers:
-
-- password changed;
-- password reset;
-- MFA enabled;
-- MFA disabled;
-- recovery codes regenerated.
-
-FoundationKit.Identity does not implement SMTP and does not format product messages. Athar's `SmtpAccountNotificationSender` remains an adapter and retains the Arabic product copy and fail-closed production TLS configuration.
-
-Tokens and destination addresses are intentionally passed directly to the delivery port and must not be logged by adapters.
-
-### Step-up policy
-
-`IdentityStepUpPolicy` expresses reusable factor requirements for sensitive account operations:
-
-| Operation | Required factors |
-|---|---|
-| Change password | Password |
-| Setup MFA | Password |
-| Disable MFA | Password + MFA |
-| Regenerate recovery codes | Password + MFA |
-
-This is policy vocabulary, not a verifier. The consuming identity adapter still decides how a password, authenticator code, recovery code, passkey, or external IdP assertion is verified.
-
-The existing Athar implementation continues to perform fresh password + MFA verification before disabling MFA or regenerating recovery codes and continues to send independent security notifications.
-
-## Dependency direction
-
-```text
-FoundationKit.Domain
-        ↑
-FoundationKit.Application
-        ↑
-FoundationKit.WebApi
-        ↑
-FoundationKit.Security
-        ↑
-FoundationKit.Identity
-```
-
-No lower package depends on Identity.
-
-## Explicitly out of scope for v1
-
-- user/entity persistence;
-- ASP.NET Core Identity stores;
-- database schema or EF migrations;
-- OAuth/OIDC server implementation;
-- external identity providers;
-- session persistence;
-- token generation algorithms;
-- authenticator enrollment implementation;
-- SMTP/SMS/push providers;
-- tenant membership and authorization;
-- product-specific email wording.
-
-These boundaries keep Identity reusable while allowing later adapters to integrate ASP.NET Core Identity, external IdPs, or other account systems.
-
-## Consumer evidence
-
-Athar is the first real consumer:
-
-- its account policy is bound through `FoundationKit.Identity.AccountSecurityOptions`;
-- its existing endpoints resolve the FoundationKit `IAccountNotificationSender` port;
-- its SMTP implementation remains in `Athar.Infrastructure`;
-- its account-security event names are supplied by FoundationKit.Identity;
-- no database migration or endpoint contract changes are required for this extraction.
+The second product strengthens evidence without implying that FoundationKit now owns a generic IdP or identity schema.
 
 ## Maturity
 
-The capability remains `ReferenceOnly` in Capability Model v1 during this first extraction. Promotion to `Preview` should follow only after the API survives broader consumer/adaptor evidence rather than being inferred from one product.
+Identity remains `ReferenceOnly`. The original “first extraction / one product” wording no longer describes the repository, but broader provider/account-lifecycle compatibility and a long-term support commitment are still insufficient for promotion. Maturity is enforced through Maturity Evidence v1 and is separate from Production Approval.

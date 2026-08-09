@@ -1,97 +1,31 @@
 # FoundationKit.Security
 
-`FoundationKit.Security` is the opt-in HTTP security capability that sits above `FoundationKit.WebApi`.
-
-It exists to centralize security conventions that are reusable across products without pulling authentication, user storage, or provider-specific infrastructure into the kernel.
+`FoundationKit.Security` is the opt-in HTTP/security-convention capability above `FoundationKit.WebApi`. It centralizes reusable security mechanics without owning authentication, users, product roles, or infrastructure providers.
 
 ## Current v1 surface
 
 ### Trusted reverse proxy forwarding
 
-`TrustedProxyOptions` and `TrustedProxySecurity` provide a fail-closed boundary for `X-Forwarded-For` and `X-Forwarded-Proto`.
+`TrustedProxyOptions` / `TrustedProxySecurity` provide a fail-closed boundary for forwarded client address/scheme information. When enabled, explicit trusted proxy IPs are required, trust-all defaults are cleared, forward count is bounded, and only the configured forwarding headers are processed.
 
-When forwarding is enabled:
+Forwarding must execute before security decisions that depend on `RemoteIpAddress` or `Request.Scheme`.
 
-- `KnownProxies` must contain at least one explicit IP address;
-- invalid or duplicate proxy addresses are rejected;
-- `ForwardLimit` is bounded to `1..10`;
-- ASP.NET Core trust-all defaults are cleared;
-- only the configured proxy IPs are trusted;
-- only `X-Forwarded-For` and `X-Forwarded-Proto` are enabled by this helper.
+### Rate-limit partition conventions
 
-Typical registration:
+`FoundationRateLimitPartitions` provides deterministic partition keys for authentication and authenticated writes. It does not choose permit counts, windows, queue behavior, persistence, Redis, or a distributed rate-limit provider.
 
-```csharp
-var reverseProxy = configuration
-    .GetSection(TrustedProxyOptions.SectionName)
-    .Get<TrustedProxyOptions>()
-    ?? new TrustedProxyOptions();
+### Authentication assurance
 
-services.AddFoundationTrustedProxyForwarding(reverseProxy);
-```
+`FoundationAuthenticationAssurance` defines the shared MFA assurance convention (`amr=mfa`) and policy helper. It does not authenticate a user, enroll a factor, issue recovery codes, persist sessions, or perform product step-up flows.
 
-Pipeline placement:
+## Current consumers
 
-```csharp
-app.UseFoundationTrustedProxyForwarding(reverseProxy);
+Athar consumes the boundary for trusted-proxy handling, rate-limit partitioning and administrator MFA assurance. Madar independently consumes FoundationKit security conventions in its product authentication/write-rate-limit composition while keeping product Identity/permissions/configuration inside Madar.
 
-// Security decisions that depend on RemoteIpAddress / Request.Scheme come after this point.
-app.UseRateLimiter();
-app.UseAuthentication();
-app.UseAuthorization();
-```
-
-Do not enable forwarded headers with an empty trust list and do not replace the explicit proxy list with trust-all network settings.
-
-## Rate-limit partition conventions
-
-`FoundationRateLimitPartitions` provides deterministic partition keys only:
-
-- authentication traffic: remote IP;
-- authenticated write traffic: user identifier when available, otherwise remote IP;
-- explicit remote-address helper.
-
-The package deliberately does **not** choose permit counts, window duration, queueing, persistence, Redis, or a distributed rate-limit provider. Those are deployment/product decisions.
-
-Reverse-proxy forwarding must run before rate-limit partitioning when the application is deployed behind a trusted proxy.
-
-## Authentication assurance
-
-`FoundationAuthenticationAssurance` defines the reusable MFA assurance convention:
-
-```text
-amr = mfa
-```
-
-`RequireFoundationMultiFactor()` adds the shared claim requirement to an ASP.NET Core authorization policy.
-
-The Security package only defines and evaluates the assurance signal. It does not:
-
-- authenticate users;
-- enroll authenticators;
-- issue recovery codes;
-- decide how step-up is performed;
-- persist sessions;
-- send account notifications.
-
-Those responsibilities belong to the Identity capability and its adapters.
-
-## Dependency direction
-
-```text
-FoundationKit.Domain
-        ↑
-FoundationKit.Application
-        ↑
-FoundationKit.WebApi
-        ↑
-FoundationKit.Security
-```
-
-The kernel never depends on Security.
-
-Athar is the first repository consumer of this package. Its existing trusted-proxy, rate-limit partition, and administrator MFA policy behavior is routed through the reusable Security primitives rather than duplicated in the product.
+This second product consumer and the automated repository/security gates strengthen evidence beyond the original extraction.
 
 ## Maturity
 
-Catalog maturity remains `Preview` in v1. The package has a real consumer and automated tests, but it should not be promoted to `Stable` until the API shape has survived additional reusable consumers and the later Identity integration.
+Security remains `Preview`. The reason is no longer “waiting for Identity” or “only one consumer”—Identity exists and Athar/Madar provide real use. `Stable` would require a stronger long-term compatibility/support commitment across additional real ingress/deployment topologies and the full Maturity Evidence v1 criteria.
+
+`Preview` is a reusable technical maturity signal, not Production Approval or a statement that a deployment's reverse proxy, edge rate limits, IdP, certificates, SIEM, or network topology are configured correctly.
