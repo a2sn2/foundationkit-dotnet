@@ -51,8 +51,4 @@ public interface ICaseAttachmentContentStore
     Task<Stream?> OpenReadAsync(
         string storageKey,
         CancellationToken cancellationToken = default);
-
-    Task DeleteIfExistsAsync(
-        string storageKey,
-        CancellationToken cancellationToken = default);
 }
