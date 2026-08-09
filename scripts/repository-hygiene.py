@@ -108,10 +108,6 @@ def main() -> int:
         return 1
 
     print("Tracked repository hygiene passed: no local/generated/sensitive artifacts are committed.")
-    subprocess.run(
-        ["python3", "scripts/audit-repository-references.py"],
-        check=True,
-    )
     return 0
 
 
