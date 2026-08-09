@@ -150,6 +150,35 @@ public sealed class ComposerGenerationTests
     }
 
     [Fact]
+    public async Task Generator_force_refuses_modified_generated_content()
+    {
+        var manifest = MinimalManifest("Edited.Product");
+        var destination = NewTempDirectory();
+
+        try
+        {
+            await ComposerProjectGenerator.GenerateAsync(
+                manifest,
+                new ProjectGenerationOptions(destination));
+            var generatedReadme = Path.Combine(destination, "README.md");
+            await File.AppendAllTextAsync(generatedReadme, "\nuser edit\n");
+
+            var exception = await Assert.ThrowsAsync<ComposerGenerationException>(() =>
+                ComposerProjectGenerator.GenerateAsync(
+                    manifest,
+                    new ProjectGenerationOptions(destination, Force: true)));
+
+            Assert.Contains("README.md", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("modified after generation", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("user edit", await File.ReadAllTextAsync(generatedReadme), StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(destination);
+        }
+    }
+
+    [Fact]
     public async Task Generator_force_can_replace_its_own_unchanged_previous_output()
     {
         var manifest = MinimalManifest("Repeatable.Product");
