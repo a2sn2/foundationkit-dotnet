@@ -113,6 +113,139 @@ public sealed class CapabilityModelTests
     }
 
     [Fact]
+    public void Maturity_evidence_catalog_covers_every_capability_and_passes_policy()
+    {
+        var capabilities = FoundationCapabilityCatalog.All;
+        var evidence = FoundationCapabilityMaturityEvidence.All;
+
+        Assert.Equal(capabilities.Count, evidence.Count);
+        Assert.Equal(
+            capabilities.Select(capability => capability.Id).Order(StringComparer.OrdinalIgnoreCase),
+            evidence.Select(item => item.CapabilityId).Order(StringComparer.OrdinalIgnoreCase));
+
+        var results = CapabilityMaturityEvidencePolicy.EvaluateCatalog(capabilities, evidence);
+
+        Assert.Equal(capabilities.Count, results.Count);
+        Assert.All(results, result => Assert.True(result.IsValid));
+    }
+
+    [Fact]
+    public void Planned_maturity_requires_only_a_bounded_rationale()
+    {
+        var capability = TestCapability(CapabilityMaturity.Planned);
+        var evidence = TestEvidence(CapabilityMaturity.Planned);
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.MissingEvidence);
+    }
+
+    [Fact]
+    public void ReferenceOnly_requires_implementation_or_proof_evidence()
+    {
+        var capability = TestCapability(CapabilityMaturity.ReferenceOnly);
+        var evidence = TestEvidence(CapabilityMaturity.ReferenceOnly);
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("implementation-or-proof", result.MissingEvidence);
+    }
+
+    [Fact]
+    public void Preview_requires_implementation_and_quality_evidence()
+    {
+        var capability = TestCapability(CapabilityMaturity.Preview);
+        var evidence = TestEvidence(
+            CapabilityMaturity.Preview,
+            implementation: true);
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.False(result.IsValid);
+        Assert.DoesNotContain("implementation-or-proof", result.MissingEvidence);
+        Assert.Contains("quality-gates", result.MissingEvidence);
+    }
+
+    [Fact]
+    public void Stable_requires_all_four_evidence_signals()
+    {
+        var capability = TestCapability(CapabilityMaturity.Stable);
+        var evidence = TestEvidence(
+            CapabilityMaturity.Stable,
+            implementation: true,
+            quality: true);
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("adoption", result.MissingEvidence);
+        Assert.Contains("compatibility-support", result.MissingEvidence);
+    }
+
+    [Fact]
+    public void Maturity_evidence_must_match_declared_maturity()
+    {
+        var capability = TestCapability(CapabilityMaturity.ReferenceOnly);
+        var evidence = TestEvidence(
+            CapabilityMaturity.Preview,
+            implementation: true,
+            quality: true);
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("declared-maturity-match", result.MissingEvidence);
+    }
+
+    [Fact]
+    public void Maturity_evidence_requires_bounded_rationale()
+    {
+        var capability = TestCapability(CapabilityMaturity.Planned);
+        var evidence = TestEvidence(CapabilityMaturity.Planned, rationale: " ");
+
+        var result = CapabilityMaturityEvidencePolicy.Evaluate(capability, evidence);
+
+        Assert.False(result.IsValid);
+        Assert.Contains("bounded-rationale", result.MissingEvidence);
+    }
+
+    [Fact]
+    public void Catalog_validation_rejects_missing_maturity_evidence()
+    {
+        CapabilityDescriptor[] capabilities = [TestCapability(CapabilityMaturity.Planned)];
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CapabilityMaturityEvidencePolicy.EnsureCatalogValid(
+                capabilities,
+                Array.Empty<CapabilityMaturityEvidenceDescriptor>()));
+
+        Assert.Contains("has no maturity evidence assessment", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Catalog_validation_rejects_maturity_promotion_without_required_evidence()
+    {
+        CapabilityDescriptor[] capabilities = [TestCapability(CapabilityMaturity.Stable)];
+        CapabilityMaturityEvidenceDescriptor[] evidence =
+        [
+            TestEvidence(
+                CapabilityMaturity.Stable,
+                implementation: true,
+                quality: true,
+                adoption: false,
+                compatibility: false)
+        ];
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CapabilityMaturityEvidencePolicy.EnsureCatalogValid(capabilities, evidence));
+
+        Assert.Contains("adoption", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("compatibility-support", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Project_manifest_accepts_compatible_contract_requirement()
     {
         var resolver = CapabilityResolver.CreateDefault();
@@ -199,4 +332,23 @@ public sealed class CapabilityModelTests
         Assert.Equal(CapabilityMaturity.Planned, files.Maturity);
         Assert.Equal(CapabilityMaturity.Stable, kernel.Maturity);
     }
+
+    private static CapabilityDescriptor TestCapability(CapabilityMaturity maturity) =>
+        new("test", "Test", CapabilityKind.Optional, maturity, "Test", "Test capability", Array.Empty<string>());
+
+    private static CapabilityMaturityEvidenceDescriptor TestEvidence(
+        CapabilityMaturity maturity,
+        bool implementation = false,
+        bool quality = false,
+        bool adoption = false,
+        bool compatibility = false,
+        string rationale = "Test evidence rationale") =>
+        new(
+            "test",
+            maturity,
+            implementation,
+            quality,
+            adoption,
+            compatibility,
+            rationale);
 }
