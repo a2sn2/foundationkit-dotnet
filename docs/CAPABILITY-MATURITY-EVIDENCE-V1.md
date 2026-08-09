@@ -26,14 +26,14 @@ v1 deliberately uses four broad Boolean signals instead of inventing a scoring s
 
 | Signal | Meaning |
 |---|---|
-| `hasImplementationEvidence` | A real implementation, reusable boundary, provider/tooling surface, or product/reference proof exists for the stated capability identity. |
+| `hasImplementationEvidence` | A real implementation, reusable boundary, provider/tooling surface, or explicitly recognized repository reference behavior exists **at the declared FoundationKit capability level**. Product-only behavior does not automatically count as reusable capability evidence. |
 | `hasQualityEvidence` | Repository tests, CI, security, or equivalent technical quality evidence exercises the implemented/proven surface. |
-| `hasAdoptionEvidence` | At least one real consumer/product/tooling use demonstrates the surface outside an isolated declaration. |
+| `hasAdoptionEvidence` | At least one real consumer/product/tooling use demonstrates the declared capability surface outside an isolated definition. |
 | `hasCompatibilityEvidence` | The repository has enough compatibility/support evidence to make the stronger supported-surface commitment required by `Stable`. |
 
 Each capability also carries a bounded rationale explaining why the current flags and maturity are conservative.
 
-These signals are intentionally broad. They are not percentages, risk scores, certification controls, or automatically inferred claims.
+These signals are intentionally broad. They are not percentages, risk scores, certification controls, or automatically inferred claims. In particular, Madar implementing attachments or case search is useful product evidence, but it does not make `FoundationKit.Files` or `FoundationKit.Search` implemented while those capability identities remain `Planned`.
 
 ## Policy
 
