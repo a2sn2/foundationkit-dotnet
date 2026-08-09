@@ -172,7 +172,7 @@ public sealed class CaseQueryService(
                             && item.ResolvedUtc > item.SlaTargetUtc)
                         || (item.ResolvedUtc == null
                             && (item.SlaBreachedUtc != null
-                                || evaluatedUtc > item.SlaTargetUtc)))))
+                                || evaluatedUtc > item.SlaTargetUtc))))))
             .SingleOrDefaultAsync(cancellationToken)
             ?? EmptySummary();
 
