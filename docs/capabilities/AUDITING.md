@@ -1,88 +1,39 @@
 # FoundationKit.Auditing
 
-`FoundationKit.Auditing` is the first extracted optional capability in the FoundationKit capability model.
+`FoundationKit.Auditing` is the provider-neutral optional auditing capability. It remains separate from the kernel so products that do not need the reusable audit contract do not take an audit-provider dependency.
 
-It is intentionally separate from the kernel. A project that does not need reusable audit recording does not reference the package.
+## Public boundary
 
-## Purpose
+- `AuditRequest` — caller-owned action/subject/outcome/reason metadata;
+- `AuditContext` / `IAuditContextAccessor` — actor, correlation, tenant and source context supplied by the host;
+- `AuditEvent` — normalized immutable event;
+- `AuditOutcome` — succeeded/failed/denied;
+- `IAuditSink` — provider-neutral persistence/export port;
+- `IAuditRecorder` / `AuditRecorder` — context/time stamping and sink dispatch.
 
-The package provides provider-neutral primitives for recording business/security audit events without deciding where those events are stored.
+The model bounds identifiers/attributes, copies mutable inputs defensively, and rejects common credential/secret attribute names. It intentionally does not accept arbitrary request/response bodies or object snapshots.
 
-The consuming product owns the sink implementation, persistence technology, retention policy, access controls, SIEM integration, and legal/compliance decisions.
+## Ownership boundary
 
-## Public model
+The consuming product/provider owns:
 
-- `AuditRequest` — caller-owned description of the action being recorded.
-- `AuditContext` / `IAuditContextAccessor` — actor, correlation, tenant, and source context supplied by the host.
-- `AuditEvent` — normalized immutable event written to a sink.
-- `AuditOutcome` — `Succeeded`, `Failed`, or `Denied`.
-- `IAuditSink` — provider-neutral persistence/export boundary.
-- `IAuditRecorder` / `AuditRecorder` — stamps the current context and UTC time then writes exactly one event to the sink.
+- SQL/append-only/SIEM sink implementation;
+- retention and legal policy;
+- access control and tamper-evidence strategy;
+- delivery/outbox/retry behavior;
+- data classification and which approved metadata may be recorded.
 
-## Example
+A sink failure is not silently swallowed by the reusable recorder. Whether a business operation must fail closed, retry or continue is a product/risk decision.
 
-```csharp
-var auditEvent = await recorder.RecordAsync(
-    new AuditRequest(
-        Action: "customer.updated",
-        SubjectType: "customer",
-        SubjectId: customerId.ToString(),
-        Outcome: AuditOutcome.Succeeded,
-        ReasonCode: "profile-maintenance",
-        Attributes: new Dictionary<string, string>
-        {
-            ["branch"] = "sanaa"
-        }),
-    cancellationToken);
-```
+## Current consumer evidence
 
-The product supplies an `IAuditSink` implementation, for example SQL, an append-only store, a central security platform, or a fan-out adapter.
+Athar and Madar both consume the reusable auditing contracts while keeping their persistence/action vocabulary inside their products.
 
-## Security-by-default boundaries
+- Athar records its initiative/account/security-oriented audit data through product-owned persistence.
+- Madar records case/routing/approval/attachment/search-related audit evidence through its own SQL-backed sink and product action names.
 
-The reusable event model deliberately does **not** accept arbitrary request/response bodies or before/after object graphs.
+This is stronger adoption evidence than the original single-consumer extraction, but it does not prove a universal production sink, immutable storage, SIEM integration, signing or retention policy.
 
-It also:
+## Maturity
 
-- bounds action, subject, identifier, reason, and attribute lengths;
-- limits the number of attributes per event;
-- rejects control characters in identifier/attribute values;
-- copies attributes before exposing them to prevent later caller mutation;
-- rejects common sensitive attribute names such as password, token, authorization, cookie, secret, connection string, OTP/TOTP, recovery code, and private key variants.
-
-These controls reduce accidental leakage. They are not a substitute for a product-specific data-classification policy. Callers must still avoid placing PII, credentials, payment data, or unapproved free text in audit attributes.
-
-## Provider boundary
-
-The package contains no SQL Server, Redis, cloud, SIEM, or logging-provider dependency.
-
-A provider should implement:
-
-```csharp
-public interface IAuditSink
-{
-    ValueTask WriteAsync(
-        AuditEvent auditEvent,
-        CancellationToken cancellationToken = default);
-}
-```
-
-Future provider packages may add database, OpenTelemetry, SIEM, or message-bus adapters without changing the auditing contract.
-
-## Failure semantics
-
-`AuditRecorder` does not silently swallow sink failures. Whether an audited business operation should fail closed, retry, use an outbox, or continue with degraded audit availability is a product/risk decision and must be made by the consuming workflow.
-
-## What this package does not claim
-
-It does not by itself provide:
-
-- tamper-proof or immutable storage;
-- centralized SIEM retention;
-- regulatory retention periods;
-- cryptographic event signing;
-- legal non-repudiation;
-- production alerting;
-- a full change-data-capture system.
-
-Those belong to provider, deployment, governance, or future capability layers.
+Capability Model v1 keeps Auditing at `ReferenceOnly`. Package implementation and multiple consumers are real evidence, but `Stable` would require the broader quality/adoption/compatibility/support commitment encoded by Maturity Evidence v1; Production Approval remains a separate deployment concern.
