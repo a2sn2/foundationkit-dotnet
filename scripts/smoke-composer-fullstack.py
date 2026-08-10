@@ -16,6 +16,7 @@ ADMIN_HEADERS = {
     "X-Foundation-Roles": "admin",
     "X-Foundation-Email": "phase12@example.com",
 }
+AUTH_SCHEMES = {"FoundationGeneratedUser", "FoundationGeneratedRoles"}
 
 
 @dataclass(frozen=True)
@@ -108,21 +109,41 @@ def header_parameter(operation: dict[str, Any], name: str) -> dict[str, Any]:
     raise AssertionError(f"OpenAPI header parameter not found: {name}")
 
 
+def require_operation_security(operation: dict[str, Any], label: str) -> None:
+    requirements = operation.get("security")
+    if not isinstance(requirements, list) or len(requirements) != 1:
+        raise AssertionError(f"{label}: expected one operation-level security requirement")
+    requirement = requirements[0]
+    if not isinstance(requirement, dict) or set(requirement) != AUTH_SCHEMES:
+        raise AssertionError(f"{label}: unexpected operation-level security requirement {requirement}")
+
+
 def validate_openapi(base_url: str) -> dict[str, Any]:
     response = request(base_url, "GET", "/swagger/v1/swagger.json")
     require_status(response, 200, "OpenAPI")
     document = response.json()
     if not str(document.get("openapi", "")).startswith("3."):
         raise AssertionError("Generated API did not publish OpenAPI 3.x")
+    if document.get("security"):
+        raise AssertionError("Generated OpenAPI must not apply reference authorization globally")
+
+    _, health = normalized_path(document, "/api/foundationkit/health")
+    if health.get("get", {}).get("security"):
+        raise AssertionError("Generated health endpoint is anonymous at runtime and must remain anonymous in OpenAPI")
+
+    _, audit = normalized_path(document, "/api/foundationkit/audit")
+    require_operation_security(audit["get"], "audit OpenAPI")
 
     _, collection = normalized_path(document, "/api/customers")
     _, item = normalized_path(document, "/api/customers/{id}")
     for method in ("get", "post"):
         if method not in collection:
             raise AssertionError(f"Generated OpenAPI missing {method.upper()} /api/customers")
+        require_operation_security(collection[method], f"{method.upper()} /api/customers")
     for method in ("get", "put", "delete"):
         if method not in item:
             raise AssertionError(f"Generated OpenAPI missing {method.upper()} /api/customers/{{id}}")
+        require_operation_security(item[method], f"{method.upper()} /api/customers/{{id}}")
 
     post_key = header_parameter(collection["post"], "Idempotency-Key")
     put_key = header_parameter(item["put"], "Idempotency-Key")
@@ -132,7 +153,7 @@ def validate_openapi(base_url: str) -> dict[str, Any]:
         raise AssertionError("Generated OpenAPI did not preserve required idempotency/concurrency headers")
 
     schemes = document.get("components", {}).get("securitySchemes", {})
-    for scheme in ("FoundationGeneratedUser", "FoundationGeneratedRoles"):
+    for scheme in AUTH_SCHEMES:
         if scheme not in schemes:
             raise AssertionError(f"Generated OpenAPI missing reference auth scheme {scheme}")
 
@@ -362,6 +383,7 @@ def main() -> int:
             "crossProjectDataIsolation": True,
             "sameIdempotencyKeyAcrossProjects": True,
             "openApi": True,
+            "openApiOperationSecurity": True,
         },
     }
     args.evidence.parent.mkdir(parents=True, exist_ok=True)
