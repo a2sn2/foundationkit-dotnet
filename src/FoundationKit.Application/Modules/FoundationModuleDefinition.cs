@@ -15,7 +15,7 @@ public interface IFoundationModuleDefinition
 
     FoundationModuleCapability Capabilities { get; }
 
-    FoundationApiModuleOptions Api { get; }
+    FoundationApiModuleOptions Api => FoundationApiModuleOptions.Default;
 }
 
 public sealed record CrudModuleOptions(
