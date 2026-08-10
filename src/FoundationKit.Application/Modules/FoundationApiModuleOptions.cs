@@ -34,6 +34,10 @@ public sealed class FoundationApiModuleOptionsBuilder
     internal FoundationApiModuleOptions Build()
     {
         var routePrefix = NormalizeRoutePrefix(RoutePrefix);
+        if (!Enum.IsDefined(Idempotency))
+            throw new ArgumentOutOfRangeException(nameof(Idempotency), Idempotency, "Unknown API idempotency mode.");
+        if (!Enum.IsDefined(Concurrency))
+            throw new ArgumentOutOfRangeException(nameof(Concurrency), Concurrency, "Unknown API concurrency mode.");
         if (MaximumFilters is < 0 or > 25)
             throw new ArgumentOutOfRangeException(nameof(MaximumFilters), "Maximum filters must be between 0 and 25.");
         if (MaximumSorts is < 0 or > 10)
@@ -56,11 +60,18 @@ public sealed class FoundationApiModuleOptionsBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var route = value.Trim().Trim('/').ToLowerInvariant();
-        if (route.Length is 0 or > 48 ||
-            route.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '/'))
+        if (route.Length is 0 or > 48)
+            throw new ArgumentException("API route prefix must contain between 1 and 48 characters.", nameof(value));
+
+        var segments = route.Split('/');
+        if (segments.Any(segment =>
+                segment.Length == 0 ||
+                !char.IsAsciiLetterOrDigit(segment[0]) ||
+                !char.IsAsciiLetterOrDigit(segment[^1]) ||
+                segment.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '-')))
         {
             throw new ArgumentException(
-                "API route prefix may contain only ASCII letters, digits, '-' and '/'.",
+                "API route prefix segments must start/end with an ASCII letter or digit and may contain only letters, digits, and '-'.",
                 nameof(value));
         }
 
