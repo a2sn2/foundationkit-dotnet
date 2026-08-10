@@ -5,9 +5,9 @@ FoundationKit currently ships 17 reusable packages. Package version, capability 
 ## Base packages
 
 - `FoundationKit.Domain` — entity/aggregate/value-object/event primitives with no framework dependency.
-- `FoundationKit.Application` — results/errors, validation, pagination, repositories/specifications, UoW/clock/current-user/event ports, capability graph, project isolation contracts, module definitions, and generic CRUD application orchestration.
-- `FoundationKit.Infrastructure` — provider-neutral EF repository/UoW/event adapters plus Core module/EF composition helpers; no SQL Server provider selection or reusable migrations.
-- `FoundationKit.WebApi` — HTTP result/Problem Details/correlation/header helpers plus generic CRUD endpoint mapping.
+- `FoundationKit.Application` — results/errors, validation, pagination, repositories/specifications, UoW/clock/current-user/event ports, capability graph, project isolation contracts, module definitions, generic CRUD application orchestration, and provider-neutral durable-idempotency acquisition/replay contracts.
+- `FoundationKit.Infrastructure` — provider-neutral EF repository/UoW/event adapters, relational EF idempotency adapter/model composition, and Core module/EF composition helpers; no SQL Server/PostgreSQL provider selection and no reusable product migrations.
+- `FoundationKit.WebApi` — HTTP result/Problem Details/correlation/header helpers, generic CRUD endpoint mapping, and opt-in durable idempotency orchestration over endpoint metadata plus `IIdempotencyStore`.
 - `FoundationKit.Blazor` — typed API results/errors, resilient response parsing, async state and ViewModel/client primitives.
 
 ## Optional/reference packages
@@ -28,6 +28,8 @@ FoundationKit currently ships 17 reusable packages. Package version, capability 
 ## Provider/schema rule
 
 The consuming host selects relational/storage providers and owns its schema/migrations. A provider-neutral contract must not silently turn into a global vendor choice.
+
+`FoundationKit.Infrastructure` may depend on EF Core Relational for reusable relational adapters while remaining vendor-neutral. A consuming application that enables the durable idempotency EF adapter must call `AddFoundationIdempotencyStore()` from its own model and own the resulting migration/table. FoundationKit does not ship a reusable SQL Server or PostgreSQL migration for that table.
 
 ## Package count rule
 
