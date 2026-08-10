@@ -28,6 +28,7 @@ public sealed record IdempotencyResponse(
             throw new ArgumentOutOfRangeException(nameof(StatusCode));
         if (maximumBodyBytes < 0)
             throw new ArgumentOutOfRangeException(nameof(maximumBodyBytes));
+        ArgumentNullException.ThrowIfNull(Body);
         if (Body.Length > maximumBodyBytes)
             throw new ArgumentOutOfRangeException(nameof(Body), $"Replay body cannot exceed {maximumBodyBytes} bytes.");
 
@@ -78,7 +79,7 @@ public sealed record IdempotencyAcquireRequest(
         };
     }
 
-    internal static string NormalizeScope(string value)
+    public static string NormalizeScope(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var normalized = value.Trim().ToLowerInvariant();
@@ -91,7 +92,7 @@ public sealed record IdempotencyAcquireRequest(
         return normalized;
     }
 
-    internal static string NormalizeSha256(string value, string parameterName)
+    public static string NormalizeSha256(string value, string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
         var normalized = value.Trim().ToLowerInvariant();
