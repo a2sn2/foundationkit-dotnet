@@ -100,7 +100,7 @@ Optional
 Required
 ```
 
-When required, `Idempotency-Key` is validated at the API boundary and is emitted as a required OpenAPI header. Keys are bounded and control characters are rejected.
+When required, `Idempotency-Key` is validated at the API boundary and is emitted as a required OpenAPI header. Exactly one non-empty bounded header value is accepted.
 
 **Phase 7 does not claim durable request replay or duplicate-result storage.** It establishes the HTTP contract and operation metadata only. Durable/replay-safe idempotency requires a persistence/provider boundary and belongs to the later reliability capability phase.
 
@@ -156,23 +156,25 @@ The generic endpoint mapper provides ApiExplorer metadata for:
 
 Workbench CI captures the real runtime Swagger document and verifies its structure. Phase 8 will make OpenAPI the derivation input for deterministic Postman and later typed-client artifacts so those representations cannot drift independently.
 
-## API impact
+## API impact and compatibility
 
-The Phase 7 changes are additive to the Core API surface except for the Workbench reference DTO, which intentionally moves its version token from JSON to the standards-based `If-Match` header. Workbench is executable reference evidence, not a published application contract.
+Phase 7 is additive to the reusable Core surface. Existing modules that do not call `.Api(...)` retain the default `/api/{route}`, disabled idempotency-header requirement, and application-level concurrency behavior.
 
-Existing modules that do not call `.Api(...)` retain the default `/api/{route}` and application-level concurrency behavior.
+The existing two-argument `ICrudConcurrencyPolicy<TEntity,TUpdate>.Validate(entity, request)` contract is preserved. A new default interface overload accepts `CrudConcurrencyPrecondition?` and forwards to the original method unless the consumer overrides it. This means an existing concurrency policy continues to compile and behave as before, while a module that opts into HTTP preconditions can override the richer overload.
 
-`ICrudConcurrencyPolicy<TEntity,TUpdate>.Validate` gains an optional `CrudConcurrencyPrecondition?` parameter. Existing implementations require the mechanical signature update when compiling against this Core vNext branch; the compatibility record for the eventual release must classify this public contract change before publication.
+The Workbench reference DTO intentionally moves its version token from JSON to the standards-based `If-Match` header. Workbench is executable reference evidence, not a published application contract.
 
 ## Contract versioning and migration
 
 The current packages remain pre-1.0 `0.1.0`; Core vNext is still an unreleased compatibility surface. No stable 1.0 guarantee is claimed by this phase.
 
-Migration for a module adopting HTTP preconditions:
+No migration is required for an existing module that keeps its current API defaults and two-argument concurrency policy.
+
+Migration for a module **choosing** HTTP preconditions:
 
 1. remove duplicated expected-version fields from the transport DTO when they only represent HTTP concurrency;
 2. configure `api.Concurrency = RequireIfMatch`;
-3. update the module concurrency policy to consume `CrudConcurrencyPrecondition`;
+3. override the richer concurrency-policy overload that receives `CrudConcurrencyPrecondition`;
 4. register an `IFoundationApiEntityTagProvider<TRead>` when ETags should be returned;
 5. send the ETag back through `If-Match` on updates.
 
@@ -181,6 +183,7 @@ Migration for a module adopting HTTP preconditions:
 Tests focus on FoundationKit boundaries rather than retesting framework annotations. Required evidence includes:
 
 - module API option bounds;
+- legacy two-argument concurrency-policy source compatibility;
 - generic application-service compatibility;
 - Problem Details/error-type mapping;
 - runtime OpenAPI structure;
