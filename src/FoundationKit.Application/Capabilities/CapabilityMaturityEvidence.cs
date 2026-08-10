@@ -48,7 +48,7 @@ public static class FoundationCapabilityMaturityEvidence
         E(FoundationCapabilityIds.Caching, CapabilityMaturity.ReferenceOnly, true, true, true, false, "Caching v1 is implemented, tested, and exercised by Workbench; distributed-provider consistency/compatibility remain unclaimed."),
         P(FoundationCapabilityIds.Search, "Provider-neutral cross-resource search and indexing contracts are not yet implemented."),
         P(FoundationCapabilityIds.Reporting, "Reusable report-definition, grouping, export, and provider contracts are not yet implemented."),
-        P(FoundationCapabilityIds.Idempotency, "A reusable reservation/completion/replay idempotency contract is not implemented in the active Core surface."),
+        E(FoundationCapabilityIds.Idempotency, CapabilityMaturity.ReferenceOnly, true, true, true, false, "Durable HTTP idempotency now has provider-neutral contracts, a relational EF adapter, bounded WebApi replay orchestration, Workbench SQL proof, and two generated-project isolation/replay proofs; broader provider compatibility and long-term support remain unclaimed."),
         E(FoundationCapabilityIds.Concurrency, CapabilityMaturity.ReferenceOnly, true, true, true, false, "Core vNext adds provider-neutral CRUD concurrency policy plus EF conflict translation and Workbench SQL proof; broader precondition/provider compatibility remains limited."),
         P(FoundationCapabilityIds.Money, "Currency-aware reusable money semantics and conversion boundaries are not yet implemented."),
         P(FoundationCapabilityIds.Numbering, "Reusable business sequence semantics and explicit scoping are not yet implemented."),
