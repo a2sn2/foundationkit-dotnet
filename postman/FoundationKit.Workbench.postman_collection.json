@@ -1,155 +1,115 @@
 {
   "info": {
     "_postman_id": "4f6c2d31-93ec-4d6e-b247-2f6ecb359b11",
-    "name": "FoundationKit Dual Full-Stack API",
-    "description": "The same user and admin request contracts consumed by the Blazor portals. Run User/Create, then Admin/Queue and Admin/Review, then User/Get Status to see the integration boundary.",
+    "name": "FoundationKit Workbench API",
+    "description": "Executable Core reference requests. The Core CRUD folder mirrors the same request/response contracts used by the generic Workbench endpoints.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5057"
-    },
-    {
-      "key": "userRequestId",
-      "value": ""
-    }
+    { "key": "baseUrl", "value": "http://localhost:5057" },
+    { "key": "userRequestId", "value": "" },
+    { "key": "coreCrudId", "value": "" }
   ],
   "item": [
     {
       "name": "Shared Platform",
       "item": [
+        { "name": "Runtime", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/runtime" } },
+        { "name": "Health", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/health" } },
+        { "name": "Capability Catalog", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/catalog" } },
+        { "name": "OpenAPI", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/swagger/v1/swagger.json" } }
+      ]
+    },
+    {
+      "name": "Core CRUD Engine",
+      "item": [
         {
-          "name": "Runtime",
+          "name": "Create",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json();",
+            "pm.collectionVariables.set('coreCrudId', body.id);",
+            "pm.test('Initial version', () => pm.expect(body.version).to.eql(1));"
+          ] } }],
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/runtime"
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Core Record\"\n}" },
+            "url": "{{baseUrl}}/api/core-crud",
+            "description": "CoreCrudCreateRequest -> generic CRUD service -> Workbench EF/SQL -> CoreCrudResponse."
           }
         },
         {
-          "name": "Health",
+          "name": "List",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/core-crud?page=1&pageSize=20" }
+        },
+        {
+          "name": "Get",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}" }
+        },
+        {
+          "name": "Update",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Updated', () => pm.response.to.have.status(200));",
+            "pm.test('Version advanced', () => pm.expect(pm.response.json().version).to.eql(2));"
+          ] } }],
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/health"
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Core Record Updated\",\n  \"expectedVersion\": 1\n}" },
+            "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}",
+            "description": "CoreCrudUpdateRequest includes the expected version used by the host concurrency policy."
           }
         },
         {
-          "name": "Capability Catalog",
+          "name": "Stale Update Returns Conflict",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Conflict', () => pm.response.to.have.status(409));"
+          ] } }],
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/catalog"
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Stale Update\",\n  \"expectedVersion\": 1\n}" },
+            "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}"
           }
+        },
+        {
+          "name": "Delete",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Deleted', () => pm.response.to.have.status(204));"
+          ] } }],
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}" }
         }
       ]
     },
     {
-      "name": "User Full Stack",
+      "name": "Connected User/Admin Reference",
       "item": [
         {
           "name": "Create User Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Created', function () { pm.response.to.have.status(201); });",
-                  "const response = pm.response.json();",
-                  "pm.collectionVariables.set('userRequestId', response.id);",
-                  "pm.test('Starts submitted', function () { pm.expect(response.status).to.eql('submitted'); });"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json();",
+            "pm.collectionVariables.set('userRequestId', body.id);"
+          ] } }],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Correlation-ID",
-                "value": "postman-user-001"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"projectName\": \"نظام إدارة مراسلات\",\n  \"projectType\": \"نظام خدمة عملاء\",\n  \"audience\": \"موظفو خدمة العملاء والمشرفون\",\n  \"goal\": \"إدارة المحادثات والمهام والتصعيد من واجهة داخلية موحدة\",\n  \"selectedCapabilityIds\": [\n    \"aggregate-domain-events\",\n    \"commands-queries\",\n    \"repository-ports\",\n    \"ef-repository\",\n    \"result-http-mapping\",\n    \"typed-api-results\"\n  ],\n  \"priorities\": \"الصلاحيات، سجل التدقيق، سرعة الاستجابة\",\n  \"notes\": \"مثال عام غير سري مطابق لعقد CreateUserRequest.\"\n}"
-            },
-            "url": "{{baseUrl}}/api/user/requests",
-            "description": "Creates the user-side SQL Server record using CreateUserRequest."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"projectName\": \"Reference System\",\n  \"projectType\": \"Internal platform\",\n  \"audience\": \"Engineering team\",\n  \"goal\": \"Verify the executable architecture reference against SQL Server.\",\n  \"selectedCapabilityIds\": [\"commands-queries\", \"ef-repository\"],\n  \"priorities\": \"Correctness and maintainability\",\n  \"notes\": \"Public-safe Workbench example\"\n}" },
+            "url": "{{baseUrl}}/api/user/requests"
           }
         },
+        { "name": "Submitted Queue", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/requests?status=submitted" } },
         {
-          "name": "Get User Request Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/user/requests/{{userRequestId}}",
-            "description": "Returns the current state after the admin workflow processes the request."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin Full Stack",
-      "item": [
-        {
-          "name": "Get Submitted Queue",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/admin/requests?status=submitted",
-            "description": "Reads the SQL-backed admin work queue."
-          }
-        },
-        {
-          "name": "Approve User Request",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Reviewed', function () { pm.response.to.have.status(200); });",
-                  "const response = pm.response.json();",
-                  "pm.test('Approved', function () { pm.expect(response.status).to.eql('approved'); });"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Approve",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Correlation-ID",
-                "value": "postman-admin-001"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"decision\": \"approve\",\n  \"reviewedBy\": \"Admin User\",\n  \"notes\": \"تمت مراجعة الطلب واعتماده من لوحة الإدارة.\"\n}"
-            },
-            "url": "{{baseUrl}}/api/admin/requests/{{userRequestId}}/review",
-            "description": "Writes AdminReviews and changes the linked user request status in one unit of work."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"decision\": \"approve\",\n  \"reviewedBy\": \"Reference Admin\",\n  \"notes\": \"Validated from Workbench Postman collection\"\n}" },
+            "url": "{{baseUrl}}/api/admin/requests/{{userRequestId}}/review"
           }
         },
-        {
-          "name": "Get Approved Queue",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/admin/requests?status=approved"
-          }
-        }
+        { "name": "Get User Status", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/requests/{{userRequestId}}" } }
       ]
     }
   ]
