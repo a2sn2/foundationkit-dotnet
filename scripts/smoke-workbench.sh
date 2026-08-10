@@ -10,9 +10,9 @@ method_status="$(curl --silent --output /tmp/foundation-http-method.json --write
 test "$method_status" = "405"
 grep -q 'Foundation.Http.MethodNotAllowed' /tmp/foundation-http-method.json
 grep -q 'correlationId' /tmp/foundation-http-method.json
+grep -q 'foundationkit-workbench' /tmp/foundation-http-method.json
 
 # Existing reference paths.
-curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 
 platform_reference="$(curl --fail --silent "$base_url/api/platform-reference")"
@@ -49,11 +49,12 @@ curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"statu
 # DataAnnotations are the default structural validator; no module-specific validator is registered.
 annotation_status="$(curl --silent --output /tmp/core-crud-annotation.json --write-out '%{http_code}' \
   -H 'Content-Type: application/json' \
-  -d '{"name":""}' \
+  -d '{"name":"   "}' \
   "$base_url/api/core-crud")"
 test "$annotation_status" = "400"
 grep -q 'Foundation.Crud.Validation' /tmp/core-crud-annotation.json
 grep -q 'Name' /tmp/core-crud-annotation.json
+grep -q 'foundationkit-workbench' /tmp/core-crud-annotation.json
 
 # Core vNext generic CRUD engine: request -> endpoint -> generic application service -> EF -> SQL.
 crud_create="$(curl --fail --silent \
