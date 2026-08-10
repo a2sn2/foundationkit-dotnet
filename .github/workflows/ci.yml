@@ -143,8 +143,17 @@ jobs:
         run: |
           curl --fail --silent http://localhost:8080/ | grep -q "blazor.webassembly.js"
           swagger="$(curl --fail --silent http://localhost:8080/swagger/v1/swagger.json)"
-          grep -q 'core-crud' <<< "$swagger"
-          grep -q 'CoreCrudCreateRequest' <<< "$swagger"
+          printf '%s' "$swagger" > /tmp/workbench-swagger.json
+          if ! grep -q 'core-crud' <<< "$swagger"; then
+            echo "Swagger is missing the generic core-crud path." >&2
+            cat /tmp/workbench-swagger.json >&2
+            exit 1
+          fi
+          if ! grep -q 'CoreCrudCreateRequest' <<< "$swagger"; then
+            echo "Swagger is missing the CoreCrudCreateRequest schema." >&2
+            cat /tmp/workbench-swagger.json >&2
+            exit 1
+          fi
 
       - name: Run SQL integration smoke
         run: bash scripts/smoke-workbench.sh
