@@ -4,6 +4,51 @@
 
 Madar is intentionally product-owned. Its case model, SQL schema, Identity configuration, permissions, Arabic UI, departments/routing, SLA policy, attachments, search/reporting semantics, and deployment topology stay under `apps/Madar`. FoundationKit is reused only where a provider-neutral contract already fits.
 
+## Start here — local acceptance
+
+For the full real product on Windows, use Docker:
+
+```powershell
+.\foundationkit.ps1 doctor
+.\foundationkit.ps1 start -Target Madar -Mode Docker
+.\scripts\madar-product.ps1 credentials
+.\foundationkit.ps1 open -Target Madar
+```
+
+Default URL:
+
+```text
+http://localhost:8100
+```
+
+After the manual product review:
+
+```powershell
+.\foundationkit.ps1 stop -Target Madar
+```
+
+To produce a framework-dependent .NET 10 Release artifact:
+
+```powershell
+.\scripts\madar-product.ps1 publish
+```
+
+Outputs:
+
+```text
+artifacts/madar/publish/
+artifacts/madar/Madar-net10.0-Release.zip
+artifacts/madar/Madar-net10.0-Release.zip.sha256
+```
+
+The static GitHub Pages demo is under `site/madar-demo/`. It is intentionally **not** the real ASP.NET Core/SQL runtime and does not persist data.
+
+Canonical handoff documents:
+
+- [`../../docs/MADAR-SPECIFICATION-AR.md`](../../docs/MADAR-SPECIFICATION-AR.md) — current v0.10 product specification.
+- [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) — local run, credentials and publish steps.
+- [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md) — the manual Administrator/Operator acceptance round for the user's turn.
+
 ## Product structure
 
 ```text
@@ -76,6 +121,9 @@ Routing is contextual rather than a workflow state. Transfer moves active work t
 
 Detailed product documents:
 
+- [`../../docs/MADAR-SPECIFICATION-AR.md`](../../docs/MADAR-SPECIFICATION-AR.md)
+- [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md)
+- [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md)
 - [`../../docs/MADAR-OPERATIONS-AR.md`](../../docs/MADAR-OPERATIONS-AR.md)
 - [`../../docs/MADAR-COMMENTS-AR.md`](../../docs/MADAR-COMMENTS-AR.md)
 - [`../../docs/MADAR-APPROVALS-AR.md`](../../docs/MADAR-APPROVALS-AR.md)
@@ -111,7 +159,7 @@ Madar consumes the five base FoundationKit packages plus reusable Security, Auth
 
 Madar does **not** create `FoundationKit.Organization`, `FoundationKit.Files`, `FoundationKit.Storage`, `FoundationKit.Search`, `FoundationKit.Reporting`, or `FoundationKit.Jobs`. Departments/routing, attachments, SLA, and search/reporting remain product-owned until independent reuse evidence proves a general boundary.
 
-## Local run
+## Local operation
 
 Canonical manager flow:
 
@@ -126,9 +174,11 @@ Specialized launcher:
 
 ```powershell
 .\scripts\madar-product.ps1 start
+.\scripts\madar-product.ps1 credentials
+.\scripts\madar-product.ps1 publish
 ```
 
-Development/CI bootstrap data is test topology, not a Production organization policy.
+Development/CI bootstrap data is test topology, not a Production organization policy. See [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) for the complete handoff flow and [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md) for the manual acceptance round.
 
 ## Main API/UI surfaces
 
@@ -169,6 +219,8 @@ GET/POST /api/admin/departments
 
 The normal repository gate builds, tests, publishes, packages, scans, and runs SQL-backed Workbench/Athar/Madar regressions. Madar tests cover authorization, lifecycle, SLA, comments, approvals, routing/administration, transfer/reassignment, attachments, and v0.10 search/reporting privacy boundaries.
 
+The local `publish` action produces a Release folder/ZIP and SHA-256 checksum; it deliberately contains no deployment-specific secrets and does not claim to deploy Production automatically.
+
 Production still requires deployment-specific decisions for organization/tenancy, object storage/KMS/malware scanning/retention, durable notification delivery/background scheduling, ingress/TLS, secrets, SQL identities, observability, backup, legal/privacy policy, performance acceptance, and repository governance.
 
 ## Tracking
@@ -184,6 +236,7 @@ Production still requires deployment-specific decisions for organization/tenancy
 - #88 — v0.8: complete.
 - #92 — v0.9: complete.
 - #94 / PR #95 — v0.10 authorized case search/reporting: complete and merged.
+- #115 — local handoff, publish, Pages demo, specification, and documentation readiness.
 
 ## Product rule
 
