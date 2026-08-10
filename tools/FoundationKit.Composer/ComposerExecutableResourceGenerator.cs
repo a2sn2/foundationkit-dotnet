@@ -281,7 +281,7 @@ internal static class ComposerExecutableResourceGenerator
         IReadOnlyList<(ComposerModuleDefinition Module, ComposerResourceDefinition Resource)> executable)
     {
         var dbSets = string.Join("\n", executable.Select(item =>
-            $"    public DbSet<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}> {item.Module.Name}_{item.Resource.Name} => Set<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}>();"));
+            $"    public DbSet<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}> {item.Module.Name}{item.Resource.Name} => Set<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}>();"));
         var hasIdempotency = executable.Any(item => item.Resource.Api.Idempotency != ComposerApiIdempotencyMode.Disabled);
         var idempotency = hasIdempotency
             ? $"\n        modelBuilder.AddFoundationIdempotencyStore({JsonSerializer.Serialize(IdempotencyTableName(manifest))});"
@@ -659,7 +659,9 @@ internal static class ComposerExecutableResourceGenerator
             ? "app.UseAuthentication();\napp.UseAuthorization();"
             : string.Empty;
         var auditEndpoint = usesAudit
-            ? "app.MapGet(\"/api/foundationkit/audit\", (GeneratedAuditSink sink) => Results.Ok(new { count = sink.Events.Count, events = sink.Events.Select(item => new { item.Action, item.SubjectType, item.SubjectId, item.ActorId }) }));"
+            ? usesAuthorization
+                ? "app.MapGet(\"/api/foundationkit/audit\", (GeneratedAuditSink sink) => Results.Ok(new { count = sink.Events.Count, events = sink.Events.Select(item => new { item.Action, item.SubjectType, item.SubjectId, item.ActorId }) })).RequireAuthorization(GeneratedAuthentication.AdminPolicy);"
+                : "app.MapGet(\"/api/foundationkit/audit\", (GeneratedAuditSink sink) => Results.Ok(new { count = sink.Events.Count, events = sink.Events.Select(item => new { item.Action, item.SubjectType, item.SubjectId, item.ActorId }) }));"
             : string.Empty;
         var swaggerSecurity = usesAuthorization
             ? """
