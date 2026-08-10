@@ -337,29 +337,34 @@ public static class CrudEndpointExtensions
     }
 
     private static MethodInfo GetCreateMarker<TCreate>(FoundationApiIdempotencyMode mode) =>
-        GetMarker(
-            mode == FoundationApiIdempotencyMode.Required
-                ? nameof(CreateRequiredIdempotencyApiMarker)
-                : nameof(CreateApiMarker),
-            typeof(TCreate));
+        GetMarker(mode switch
+        {
+            FoundationApiIdempotencyMode.Disabled => nameof(CreateNoIdempotencyApiMarker),
+            FoundationApiIdempotencyMode.Optional => nameof(CreateOptionalIdempotencyApiMarker),
+            FoundationApiIdempotencyMode.Required => nameof(CreateRequiredIdempotencyApiMarker),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        }, typeof(TCreate));
 
     private static MethodInfo GetDeleteMarker<TId>(FoundationApiIdempotencyMode mode) =>
-        GetMarker(
-            mode == FoundationApiIdempotencyMode.Required
-                ? nameof(DeleteRequiredIdempotencyApiMarker)
-                : nameof(DeleteApiMarker),
-            typeof(TId));
+        GetMarker(mode switch
+        {
+            FoundationApiIdempotencyMode.Disabled => nameof(DeleteNoIdempotencyApiMarker),
+            FoundationApiIdempotencyMode.Optional => nameof(DeleteOptionalIdempotencyApiMarker),
+            FoundationApiIdempotencyMode.Required => nameof(DeleteRequiredIdempotencyApiMarker),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        }, typeof(TId));
 
     private static MethodInfo GetUpdateMarker<TId, TUpdate>(FoundationApiModuleOptions api)
     {
-        var idempotencyRequired = api.Idempotency == FoundationApiIdempotencyMode.Required;
-        var ifMatchRequired = api.Concurrency == FoundationApiConcurrencyMode.RequireIfMatch;
-        var methodName = (idempotencyRequired, ifMatchRequired) switch
+        var methodName = (api.Idempotency, api.Concurrency) switch
         {
-            (true, true) => nameof(UpdateRequiredHeadersApiMarker),
-            (true, false) => nameof(UpdateRequiredIdempotencyApiMarker),
-            (false, true) => nameof(UpdateRequiredIfMatchApiMarker),
-            _ => nameof(UpdateApiMarker)
+            (FoundationApiIdempotencyMode.Disabled, FoundationApiConcurrencyMode.ApplicationPolicy) => nameof(UpdateNoHeadersApiMarker),
+            (FoundationApiIdempotencyMode.Optional, FoundationApiConcurrencyMode.ApplicationPolicy) => nameof(UpdateOptionalIdempotencyApiMarker),
+            (FoundationApiIdempotencyMode.Required, FoundationApiConcurrencyMode.ApplicationPolicy) => nameof(UpdateRequiredIdempotencyApiMarker),
+            (FoundationApiIdempotencyMode.Disabled, FoundationApiConcurrencyMode.RequireIfMatch) => nameof(UpdateRequiredIfMatchApiMarker),
+            (FoundationApiIdempotencyMode.Optional, FoundationApiConcurrencyMode.RequireIfMatch) => nameof(UpdateRequiredIfMatchOptionalIdempotencyApiMarker),
+            (FoundationApiIdempotencyMode.Required, FoundationApiConcurrencyMode.RequireIfMatch) => nameof(UpdateRequiredHeadersApiMarker),
+            _ => throw new ArgumentOutOfRangeException(nameof(api), "Unknown API header mode combination.")
         };
         return GetMarker(methodName, typeof(TId), typeof(TUpdate));
     }
@@ -372,7 +377,9 @@ public static class CrudEndpointExtensions
 
     private static void GetApiMarker<TId>([FromRoute] TId id) { }
 
-    private static void CreateApiMarker<TCreate>(
+    private static void CreateNoIdempotencyApiMarker<TCreate>([FromBody] TCreate request) { }
+
+    private static void CreateOptionalIdempotencyApiMarker<TCreate>(
         [FromBody] TCreate request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
 
@@ -380,23 +387,30 @@ public static class CrudEndpointExtensions
         [FromBody] TCreate request,
         [FromHeader(Name = "Idempotency-Key")] string idempotencyKey) { }
 
-    private static void UpdateApiMarker<TId, TUpdate>(
+    private static void UpdateNoHeadersApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request) { }
+
+    private static void UpdateOptionalIdempotencyApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
         [FromBody] TUpdate request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null,
-        [FromHeader(Name = "If-Match")] string? ifMatch = null) { }
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
 
     private static void UpdateRequiredIdempotencyApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
         [FromBody] TUpdate request,
-        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
-        [FromHeader(Name = "If-Match")] string? ifMatch = null) { }
+        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey) { }
 
     private static void UpdateRequiredIfMatchApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
         [FromBody] TUpdate request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         [FromHeader(Name = "If-Match")] string ifMatch) { }
+
+    private static void UpdateRequiredIfMatchOptionalIdempotencyApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request,
+        [FromHeader(Name = "If-Match")] string ifMatch,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
 
     private static void UpdateRequiredHeadersApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
@@ -404,7 +418,9 @@ public static class CrudEndpointExtensions
         [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
         [FromHeader(Name = "If-Match")] string ifMatch) { }
 
-    private static void DeleteApiMarker<TId>(
+    private static void DeleteNoIdempotencyApiMarker<TId>([FromRoute] TId id) { }
+
+    private static void DeleteOptionalIdempotencyApiMarker<TId>(
         [FromRoute] TId id,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
 
