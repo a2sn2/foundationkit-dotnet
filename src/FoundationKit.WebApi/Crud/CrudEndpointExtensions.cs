@@ -69,7 +69,8 @@ public static class CrudEndpointExtensions
 
             var service = Resolve<TEntity, TId, TCreate, TUpdate, TRead>(context);
             var result = await service.ListAsync(request, context.RequestAborted).ConfigureAwait(false);
-            await result.ToHttpResult(Results.Ok).ExecuteAsync(context).ConfigureAwait(false);
+            await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
+                .ExecuteAsync(context).ConfigureAwait(false);
         })
         .WithName($"{module.Name}.List")
         .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(ListApiMarker))))
@@ -97,7 +98,8 @@ public static class CrudEndpointExtensions
             var result = await service.GetAsync(id, context.RequestAborted).ConfigureAwait(false);
             if (result.IsSuccess)
                 ApplyEntityTag(context, result.Value);
-            await result.ToHttpResult(Results.Ok).ExecuteAsync(context).ConfigureAwait(false);
+            await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
+                .ExecuteAsync(context).ConfigureAwait(false);
         })
         .WithName($"{module.Name}.Get")
         .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(GetApiMarker), typeof(TId))))
@@ -130,11 +132,12 @@ public static class CrudEndpointExtensions
             var result = await service.CreateAsync(request.Value!, context.RequestAborted).ConfigureAwait(false);
             if (result.IsSuccess)
                 ApplyEntityTag(context, result.Value.Item);
-            await result.ToHttpResult(created => Results.Created($"{routeBase}/{created.Id}", created.Item))
+            await result.ToHttpResult(created =>
+                    global::Microsoft.AspNetCore.Http.Results.Created($"{routeBase}/{created.Id}", created.Item))
                 .ExecuteAsync(context).ConfigureAwait(false);
         })
         .WithName($"{module.Name}.Create")
-        .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(CreateApiMarker), typeof(TCreate))))
+        .WithMetadata(ApiExplorerMetadata(GetCreateMarker<TCreate>(module.Api.Idempotency)))
         .WithMetadata(OperationMetadata(module, CrudOperation.Create, HttpMethods.Post, routeBase))
         .WithMetadata(
             JsonRequest(typeof(TCreate)),
@@ -184,10 +187,11 @@ public static class CrudEndpointExtensions
             var result = await service.UpdateAsync(id, request.Value!, precondition, context.RequestAborted).ConfigureAwait(false);
             if (result.IsSuccess)
                 ApplyEntityTag(context, result.Value);
-            await result.ToHttpResult(Results.Ok).ExecuteAsync(context).ConfigureAwait(false);
+            await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
+                .ExecuteAsync(context).ConfigureAwait(false);
         })
         .WithName($"{module.Name}.Update")
-        .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(UpdateApiMarker), typeof(TId), typeof(TUpdate))))
+        .WithMetadata(ApiExplorerMetadata(GetUpdateMarker<TId, TUpdate>(module.Api)))
         .WithMetadata(OperationMetadata(module, CrudOperation.Update, HttpMethods.Put, $"{routeBase}/{{id}}"))
         .WithMetadata(
             JsonRequest(typeof(TUpdate)),
@@ -224,7 +228,7 @@ public static class CrudEndpointExtensions
             await result.ToHttpResult().ExecuteAsync(context).ConfigureAwait(false);
         })
         .WithName($"{module.Name}.Delete")
-        .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(DeleteApiMarker), typeof(TId))))
+        .WithMetadata(ApiExplorerMetadata(GetDeleteMarker<TId>(module.Api.Idempotency)))
         .WithMetadata(OperationMetadata(module, CrudOperation.Delete, HttpMethods.Delete, $"{routeBase}/{{id}}"))
         .WithMetadata(
             new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent, typeof(void), []),
@@ -332,6 +336,34 @@ public static class CrudEndpointExtensions
         return method.IsGenericMethodDefinition ? method.MakeGenericMethod(genericArguments) : method;
     }
 
+    private static MethodInfo GetCreateMarker<TCreate>(FoundationApiIdempotencyMode mode) =>
+        GetMarker(
+            mode == FoundationApiIdempotencyMode.Required
+                ? nameof(CreateRequiredIdempotencyApiMarker)
+                : nameof(CreateApiMarker),
+            typeof(TCreate));
+
+    private static MethodInfo GetDeleteMarker<TId>(FoundationApiIdempotencyMode mode) =>
+        GetMarker(
+            mode == FoundationApiIdempotencyMode.Required
+                ? nameof(DeleteRequiredIdempotencyApiMarker)
+                : nameof(DeleteApiMarker),
+            typeof(TId));
+
+    private static MethodInfo GetUpdateMarker<TId, TUpdate>(FoundationApiModuleOptions api)
+    {
+        var idempotencyRequired = api.Idempotency == FoundationApiIdempotencyMode.Required;
+        var ifMatchRequired = api.Concurrency == FoundationApiConcurrencyMode.RequireIfMatch;
+        var methodName = (idempotencyRequired, ifMatchRequired) switch
+        {
+            (true, true) => nameof(UpdateRequiredHeadersApiMarker),
+            (true, false) => nameof(UpdateRequiredIdempotencyApiMarker),
+            (false, true) => nameof(UpdateRequiredIfMatchApiMarker),
+            _ => nameof(UpdateApiMarker)
+        };
+        return GetMarker(methodName, typeof(TId), typeof(TUpdate));
+    }
+
     private static void ListApiMarker(
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
@@ -344,15 +376,41 @@ public static class CrudEndpointExtensions
         [FromBody] TCreate request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
 
+    private static void CreateRequiredIdempotencyApiMarker<TCreate>(
+        [FromBody] TCreate request,
+        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey) { }
+
     private static void UpdateApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
         [FromBody] TUpdate request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null,
         [FromHeader(Name = "If-Match")] string? ifMatch = null) { }
 
+    private static void UpdateRequiredIdempotencyApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request,
+        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
+        [FromHeader(Name = "If-Match")] string? ifMatch = null) { }
+
+    private static void UpdateRequiredIfMatchApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        [FromHeader(Name = "If-Match")] string ifMatch) { }
+
+    private static void UpdateRequiredHeadersApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request,
+        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
+        [FromHeader(Name = "If-Match")] string ifMatch) { }
+
     private static void DeleteApiMarker<TId>(
         [FromRoute] TId id,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null) { }
+
+    private static void DeleteRequiredIdempotencyApiMarker<TId>(
+        [FromRoute] TId id,
+        [FromHeader(Name = "Idempotency-Key")] string idempotencyKey) { }
 
     private static AcceptsMetadata JsonRequest(Type requestType) => new(["application/json"], requestType, isOptional: false);
     private static ProducesResponseTypeMetadata JsonResponse(int statusCode, Type responseType) => new(statusCode, responseType, ["application/json"]);
