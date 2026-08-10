@@ -59,7 +59,24 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>
+    /// Adds the complete FoundationKit HTTP request pipeline in its compatibility order:
+    /// diagnostics/security first, followed by durable-idempotency orchestration.
+    /// </summary>
     public static IApplicationBuilder UseFoundationRequestPipeline(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        app.UseFoundationRequestDiagnostics();
+        app.UseFoundationIdempotency();
+        return app;
+    }
+
+    /// <summary>
+    /// Adds correlation, exception/Problem Details handling, status-code Problem Details,
+    /// and security headers without adding idempotency. Register this before authentication
+    /// when authentication failures must retain the FoundationKit diagnostics/security envelope.
+    /// </summary>
+    public static IApplicationBuilder UseFoundationRequestDiagnostics(this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
@@ -90,6 +107,17 @@ public static class DependencyInjection
             }
         });
         app.UseMiddleware<SecurityHeadersMiddleware>();
+        return app;
+    }
+
+    /// <summary>
+    /// Adds FoundationKit durable-idempotency orchestration only. Hosts that authenticate
+    /// requests should normally register this after authentication/authorization so a replay
+    /// can never bypass the current request's authorization gate.
+    /// </summary>
+    public static IApplicationBuilder UseFoundationIdempotency(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
         app.UseMiddleware<FoundationIdempotencyMiddleware>();
         return app;
     }

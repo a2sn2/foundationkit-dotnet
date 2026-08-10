@@ -304,9 +304,9 @@
       "id": "idempotency",
       "displayName": "Idempotency",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Reliability",
-      "description": "Reusable duplicate-write reservation, completion, and replay contracts.",
+      "description": "Provider-neutral reservation/completion/replay contracts with relational EF and HTTP orchestration reference proof.",
       "dependencies": [
         "web-api"
       ]

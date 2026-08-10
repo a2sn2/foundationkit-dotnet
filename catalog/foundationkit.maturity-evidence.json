@@ -246,12 +246,12 @@
     },
     {
       "capabilityId": "idempotency",
-      "assessedMaturity": "planned",
-      "hasImplementationEvidence": false,
-      "hasQualityEvidence": false,
-      "hasAdoptionEvidence": false,
+      "assessedMaturity": "referenceOnly",
+      "hasImplementationEvidence": true,
+      "hasQualityEvidence": true,
+      "hasAdoptionEvidence": true,
       "hasCompatibilityEvidence": false,
-      "rationale": "A reusable reservation/completion/replay idempotency contract is not implemented in the active Core surface."
+      "rationale": "Durable HTTP idempotency now has provider-neutral contracts, a relational EF adapter, bounded WebApi replay orchestration, Workbench SQL proof, and two generated-project isolation/replay proofs; broader provider compatibility and long-term support remain unclaimed."
     },
     {
       "capabilityId": "concurrency",

@@ -1,0 +1,278 @@
+name: FoundationKit Composer Full-Stack Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-composer-fullstack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generated-fullstack:
+    name: Generated A/B SQL, API, OpenAPI, Postman, isolation proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Generate temporary SQL credential
+        shell: bash
+        run: |
+          password="Fkit!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Validate proof tooling
+        run: |
+          python3 -m py_compile scripts/smoke-composer-fullstack.py
+          python3 -m py_compile scripts/generate-postman-from-openapi.py
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-b.json >/dev/null
+
+      - name: Restore and build Composer
+        run: |
+          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
+
+      - name: Generate projects A and B from the same executable model shape
+        run: |
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- \
+            new docs/examples/foundationkit.project.fullstack-a.json \
+            --output artifacts/composer-fullstack-a \
+            --foundation-root "$GITHUB_WORKSPACE"
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- \
+            new docs/examples/foundationkit.project.fullstack-b.json \
+            --output artifacts/composer-fullstack-b \
+            --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Restore and build generated projects A and B
+        run: |
+          dotnet restore artifacts/composer-fullstack-a/ComposerFullStackA.sln
+          dotnet build artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-build
+          dotnet restore artifacts/composer-fullstack-b/ComposerFullStackB.sln
+          dotnet build artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-build
+
+      - name: Start shared SQL Server
+        shell: bash
+        run: |
+          docker run --detach \
+            --name foundationkit-generated-sql \
+            --publish 127.0.0.1:14334:1433 \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for shared SQL Server
+        shell: bash
+        run: |
+          sqlcmd_path=""
+          for attempt in {1..120}; do
+            if [ -z "$sqlcmd_path" ]; then
+              sqlcmd_path="$(docker exec foundationkit-generated-sql sh -lc 'if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then echo /opt/mssql-tools18/bin/sqlcmd; elif [ -x /opt/mssql-tools/bin/sqlcmd ]; then echo /opt/mssql-tools/bin/sqlcmd; fi' 2>/dev/null || true)"
+            fi
+            if [ -n "$sqlcmd_path" ] && docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-generated-sql \
+              "$sqlcmd_path" -S localhost -U sa -C -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "SQL Server ready with $sqlcmd_path"
+              echo "FOUNDATIONKIT_SQLCMD_PATH=$sqlcmd_path" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs foundationkit-generated-sql --tail 300
+          exit 1
+
+      - name: Start generated project A
+        shell: bash
+        run: |
+          mkdir -p artifacts/fullstack-proof/logs
+          connection="Server=127.0.0.1,14334;Database=FoundationKitGeneratedProof;User Id=sa;Password=$FOUNDATIONKIT_SQL_PASSWORD;TrustServerCertificate=True;Encrypt=False"
+          echo "::add-mask::$connection"
+          ASPNETCORE_URLS="http://127.0.0.1:8201" \
+          ConnectionStrings__Generated="$connection" \
+          dotnet run \
+            --project artifacts/composer-fullstack-a/src/ComposerFullStackA.Api/ComposerFullStackA.Api.csproj \
+            --configuration Release --no-build --no-restore \
+            > artifacts/fullstack-proof/logs/project-a.log 2>&1 &
+          echo $! > /tmp/foundationkit-project-a.pid
+
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8201/api/foundationkit/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/foundationkit-project-a.pid)" 2>/dev/null; then
+              cat artifacts/fullstack-proof/logs/project-a.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/fullstack-proof/logs/project-a.log
+          exit 1
+
+      - name: Start generated project B concurrently on the same database
+        shell: bash
+        run: |
+          connection="Server=127.0.0.1,14334;Database=FoundationKitGeneratedProof;User Id=sa;Password=$FOUNDATIONKIT_SQL_PASSWORD;TrustServerCertificate=True;Encrypt=False"
+          echo "::add-mask::$connection"
+          ASPNETCORE_URLS="http://127.0.0.1:8202" \
+          ConnectionStrings__Generated="$connection" \
+          dotnet run \
+            --project artifacts/composer-fullstack-b/src/ComposerFullStackB.Api/ComposerFullStackB.Api.csproj \
+            --configuration Release --no-build --no-restore \
+            > artifacts/fullstack-proof/logs/project-b.log 2>&1 &
+          echo $! > /tmp/foundationkit-project-b.pid
+
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8202/api/foundationkit/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/foundationkit-project-b.pid)" 2>/dev/null; then
+              cat artifacts/fullstack-proof/logs/project-b.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/fullstack-proof/logs/project-b.log
+          exit 1
+
+      - name: Prove CRUD, validation, authorization, audit, replay, concurrency, and A/B isolation
+        run: |
+          python3 scripts/smoke-composer-fullstack.py \
+            --a-url http://127.0.0.1:8201 \
+            --b-url http://127.0.0.1:8202 \
+            --evidence artifacts/fullstack-proof/runtime-proof.json
+
+      - name: Capture runtime OpenAPI and derive deterministic Postman
+        shell: bash
+        run: |
+          mkdir -p artifacts/fullstack-proof/openapi artifacts/fullstack-proof/postman
+          curl --fail --silent http://127.0.0.1:8201/swagger/v1/swagger.json \
+            > artifacts/fullstack-proof/openapi/project-a.openapi.json
+          curl --fail --silent http://127.0.0.1:8202/swagger/v1/swagger.json \
+            > artifacts/fullstack-proof/openapi/project-b.openapi.json
+          python3 -m json.tool artifacts/fullstack-proof/openapi/project-a.openapi.json >/dev/null
+          python3 -m json.tool artifacts/fullstack-proof/openapi/project-b.openapi.json >/dev/null
+
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/fullstack-proof/openapi/project-a.openapi.json \
+            artifacts/fullstack-proof/postman/project-a.postman.json \
+            --base-url http://127.0.0.1:8201
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/fullstack-proof/openapi/project-a.openapi.json \
+            artifacts/fullstack-proof/postman/project-a.postman.json \
+            --base-url http://127.0.0.1:8201 --check
+
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/fullstack-proof/openapi/project-b.openapi.json \
+            artifacts/fullstack-proof/postman/project-b.postman.json \
+            --base-url http://127.0.0.1:8202
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/fullstack-proof/openapi/project-b.openapi.json \
+            artifacts/fullstack-proof/postman/project-b.postman.json \
+            --base-url http://127.0.0.1:8202 --check
+
+          python3 -m json.tool artifacts/fullstack-proof/postman/project-a.postman.json >/dev/null
+          python3 -m json.tool artifacts/fullstack-proof/postman/project-b.postman.json >/dev/null
+
+      - name: Prove shared-database schema and persistence isolation directly in SQL
+        shell: bash
+        run: |
+          ns_a="$(python3 -c 'import json; print(json.load(open("artifacts/fullstack-proof/runtime-proof.json"))["projectA"]["databaseNamespace"])')"
+          ns_b="$(python3 -c 'import json; print(json.load(open("artifacts/fullstack-proof/runtime-proof.json"))["projectB"]["databaseNamespace"])')"
+          test "$ns_a" != "$ns_b"
+          case "$ns_a$ns_b" in *[!a-z0-9_]*) echo "Unsafe generated SQL namespace"; exit 1;; esac
+
+          sql_scalar() {
+            docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-generated-sql \
+              "$FOUNDATIONKIT_SQLCMD_PATH" \
+              -S localhost -U sa -C -d FoundationKitGeneratedProof -h -1 -W \
+              -Q "SET NOCOUNT ON; $1" \
+              | tr -d '\r' | sed '/^[[:space:]]*$/d' | tail -n 1 | xargs
+          }
+
+          for table in \
+            "${ns_a}_customers" "${ns_a}_idempotency" "${ns_a}_migrations" \
+            "${ns_b}_customers" "${ns_b}_idempotency" "${ns_b}_migrations"; do
+            test "$(sql_scalar "SELECT COUNT(*) FROM sys.tables WHERE name = N'$table';")" = "1"
+          done
+
+          a_rows="$(sql_scalar "SELECT COUNT(*) FROM [${ns_a}_customers];")"
+          b_rows="$(sql_scalar "SELECT COUNT(*) FROM [${ns_b}_customers];")"
+          a_idempotency="$(sql_scalar "SELECT COUNT(*) FROM [${ns_a}_idempotency];")"
+          b_idempotency="$(sql_scalar "SELECT COUNT(*) FROM [${ns_b}_idempotency];")"
+          a_migrations="$(sql_scalar "SELECT COUNT(*) FROM [${ns_a}_migrations];")"
+          b_migrations="$(sql_scalar "SELECT COUNT(*) FROM [${ns_b}_migrations];")"
+
+          test "$a_rows" = "1"
+          test "$b_rows" = "1"
+          test "$a_idempotency" -ge 4
+          test "$b_idempotency" -ge 1
+          test "$a_migrations" = "1"
+          test "$b_migrations" = "1"
+
+          cat > artifacts/fullstack-proof/sql-proof.txt <<EOF
+          Database: FoundationKitGeneratedProof
+          Project A namespace: $ns_a
+          Project B namespace: $ns_b
+          Project A resource rows: $a_rows
+          Project B resource rows: $b_rows
+          Project A idempotency rows: $a_idempotency
+          Project B idempotency rows: $b_idempotency
+          Project A migrations: $a_migrations
+          Project B migrations: $b_migrations
+          Distinct resource/idempotency/migration-history tables: verified
+          EOF
+          cat artifacts/fullstack-proof/sql-proof.txt
+
+      - name: Upload generated full-stack evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: composer-fullstack-proof
+          path: artifacts/fullstack-proof
+          if-no-files-found: error
+
+      - name: Print generated app logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "--- Project A ---"
+          cat artifacts/fullstack-proof/logs/project-a.log 2>/dev/null || true
+          echo "--- Project B ---"
+          cat artifacts/fullstack-proof/logs/project-b.log 2>/dev/null || true
+          echo "--- SQL Server ---"
+          docker logs foundationkit-generated-sql --tail 300 2>/dev/null || true
+
+      - name: Stop generated apps and SQL Server
+        if: always()
+        shell: bash
+        run: |
+          for pidfile in /tmp/foundationkit-project-a.pid /tmp/foundationkit-project-b.pid; do
+            if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" 2>/dev/null || true
+            fi
+          done
+          docker rm -f foundationkit-generated-sql >/dev/null 2>&1 || true

@@ -22,7 +22,13 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added Phase 10 durable replay-safe HTTP idempotency behind the existing Phase 7 contract: provider-neutral Application contracts, relational EF acquisition/replay storage, project-scoped hashed keys, request fingerprints including `If-Match`, bounded response replay, fail-closed indeterminate outcomes, and consumer-owned schema/migrations.
 - Added Workbench SQL evidence proving create/update/delete replay, duplicate-side-effect prevention, and fingerprint conflicts while retaining the same 17-package boundary.
 - Added Phase 11 Composer schema v2: strict Project → Modules → Resources → Behaviors → Overrides → API intent, canonical capability reuse, bounded safe identifiers/routes/ID types, deterministic normalized v2 manifests and inspectable resource descriptors, while preserving schema-v1 generator contract and generated-project compatibility.
-- Expanded Composer CI to independently generate, force-regenerate, restore, build, and test both v1 and v2 scaffolds on the same exact head.
+- Expanded Composer CI to independently generate, force-regenerate, restore, build, and test both v1 and descriptor-only v2 scaffolds on the same exact head.
+- Added Phase 12 bounded executable schema-v2 `fields` generation for product-owned Domain entities, contracts, DataAnnotations validation, generic CRUD wiring, semantic admin authorization, audit, optimistic concurrency, durable idempotency, SQL Server DbContext/migrations, API endpoints, runtime OpenAPI, and deterministic Postman derivation.
+- Added additive `UseFoundationRequestDiagnostics()` and `UseFoundationIdempotency()` WebApi helpers so authenticated hosts can preserve the Foundation security/Problem Details envelope while placing authorization before idempotency replay; the existing combined pipeline remains compatible.
+- Added deterministic project-scoped SQL resource/idempotency/migration-history naming and an A/B generated-project CI proof that runs two generated APIs concurrently on one SQL Server database without data or replay-state collision.
+- Added exact generated-project compatibility gates for schema v1, descriptor-only schema v2, and executable full-stack A/B, including deterministic force regeneration and generated-secret checks.
+- Added dedicated generated runtime evidence covering validation, authorization, audit, create/update/delete replay, fingerprint conflicts, ETag/If-Match behavior, auth-before-replay, operation-level OpenAPI security, deterministic Postman, and direct SQL isolation checks.
+- Advanced Idempotency maturity from Planned to ReferenceOnly based on implementation, quality, Workbench adoption, and generated A/B adoption evidence while explicitly withholding broader provider/compatibility claims.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0
