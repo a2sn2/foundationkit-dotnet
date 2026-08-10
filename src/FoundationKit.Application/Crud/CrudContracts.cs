@@ -8,6 +8,18 @@ namespace FoundationKit.Application.Crud;
 public sealed record CrudItemResult<TId, TRead>(TId Id, TRead Item)
     where TId : notnull;
 
+public sealed record CrudConcurrencyPrecondition(string Token)
+{
+    public CrudConcurrencyPrecondition Normalize()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Token);
+        var normalized = Token.Trim();
+        if (normalized.Length > 256 || normalized.Any(char.IsControl))
+            throw new ArgumentException("Concurrency token is too long or contains control characters.", nameof(Token));
+        return new CrudConcurrencyPrecondition(normalized);
+    }
+}
+
 public sealed record CrudAuthorizationContext<TEntity, TId>(
     CrudOperation Operation,
     bool HasId,
@@ -61,12 +73,18 @@ public sealed class DenyAllCrudAuthorizationPolicy<TEntity, TId> : ICrudAuthoriz
 
 public interface ICrudConcurrencyPolicy<TEntity, in TUpdate>
 {
-    Result Validate(TEntity entity, TUpdate request);
+    Result Validate(
+        TEntity entity,
+        TUpdate request,
+        CrudConcurrencyPrecondition? precondition = null);
 }
 
 public sealed class NoOpCrudConcurrencyPolicy<TEntity, TUpdate> : ICrudConcurrencyPolicy<TEntity, TUpdate>
 {
-    public Result Validate(TEntity entity, TUpdate request) => Result.Success();
+    public Result Validate(
+        TEntity entity,
+        TUpdate request,
+        CrudConcurrencyPrecondition? precondition = null) => Result.Success();
 }
 
 public interface ICrudManager<TEntity, TId, in TCreate, in TUpdate>
