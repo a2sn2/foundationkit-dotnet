@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('start', 'status', 'logs', 'stop')]
+    [ValidateSet('start', 'status', 'logs', 'stop', 'credentials', 'publish')]
     [string]$Action,
 
     [switch]$Reset,
@@ -17,6 +17,10 @@ $ComposeFile = Join-Path $RepoRoot 'deploy\madar-compose.yml'
 $ComposeProject = 'madar-product'
 $LocalRoot = Join-Path $RepoRoot '.local'
 $ConfigPath = Join-Path $LocalRoot 'madar-product.env'
+$MadarProject = Join-Path $RepoRoot 'apps\Madar\Madar.Api\Madar.Api.csproj'
+$PublishRoot = Join-Path $RepoRoot 'artifacts\madar\publish'
+$PublishZip = Join-Path $RepoRoot 'artifacts\madar\Madar-net10.0-Release.zip'
+$PublishHash = "$PublishZip.sha256"
 
 function New-RandomSecret {
     param([int]$Bytes = 24)
@@ -237,6 +241,65 @@ function Show-Status {
     Write-Host "URL: $BaseUrl"
 }
 
+function Show-Credentials {
+    $config = Get-LocalConfig
+    if ($null -eq $config) {
+        throw "Madar local credentials do not exist yet. Run 'start' once to create the local development configuration."
+    }
+
+    Protect-LocalFile -Path $ConfigPath
+    Write-Host 'Madar local development credentials' -ForegroundColor Cyan
+    Write-Host ("  Administrator email:    {0}" -f $config['MADAR_ADMIN_EMAIL'])
+    Write-Host ("  Administrator password: {0}" -f $config['MADAR_ADMIN_PASSWORD'])
+    Write-Host ("  Operator email:         {0}" -f $config['MADAR_OPERATOR_EMAIL'])
+    Write-Host ("  Operator password:      {0}" -f $config['MADAR_OPERATOR_PASSWORD'])
+    Write-Host ''
+    Write-Host "Stored locally at $ConfigPath. Do not commit or share these development credentials." -ForegroundColor Yellow
+}
+
+function Publish-Madar {
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw '.NET 10 SDK is required to publish Madar.'
+    }
+
+    if (-not (Test-Path $MadarProject)) {
+        throw "Madar project was not found: $MadarProject"
+    }
+
+    $sdkVersion = (& dotnet --version).Trim()
+    if ($sdkVersion -notmatch '^10\.') {
+        throw "Madar publish requires the .NET 10 SDK selected by global.json. Active SDK: $sdkVersion"
+    }
+
+    $artifactRoot = Split-Path -Parent $PublishRoot
+    New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
+    Remove-Item -LiteralPath $PublishRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PublishZip -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PublishHash -Force -ErrorAction SilentlyContinue
+
+    & dotnet publish $MadarProject `
+        --configuration Release `
+        --framework net10.0 `
+        --no-self-contained `
+        --output $PublishRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "Madar Release publish failed with exit code $LASTEXITCODE."
+    }
+
+    Compress-Archive -Path (Join-Path $PublishRoot '*') -DestinationPath $PublishZip -CompressionLevel Optimal
+    $hash = (Get-FileHash -LiteralPath $PublishZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    [System.IO.File]::WriteAllText(
+        $PublishHash,
+        "$hash  $([System.IO.Path]::GetFileName($PublishZip))`n",
+        [System.Text.UTF8Encoding]::new($false))
+
+    Write-Host 'Madar Release publish completed.' -ForegroundColor Green
+    Write-Host "  Folder: $PublishRoot"
+    Write-Host "  ZIP:    $PublishZip"
+    Write-Host "  SHA256: $PublishHash"
+    Write-Host 'The package contains no production database credentials or deployment-specific secrets.' -ForegroundColor Yellow
+}
+
 if (-not (Test-Path $ComposeFile)) {
     throw "Madar compose file not found: $ComposeFile"
 }
@@ -265,6 +328,7 @@ switch ($Action) {
         Write-Host ("  Operator:      {0}" -f $config['MADAR_OPERATOR_EMAIL'])
         Write-Host ("  SLA enabled:   {0}" -f $config['MADAR_SLA_ENABLED'])
         Write-Host "Settings are stored in $ConfigPath with local-only ACLs on Windows."
+        Write-Host "Run '.\foundationkit.ps1 credentials -Target Madar' to display the generated passwords."
     }
 
     'status' {
@@ -278,6 +342,14 @@ switch ($Action) {
 
         $config = Get-ComposeEnvironment
         Invoke-MadarCompose -Values $config -Arguments @('logs', '--no-color', '--tail=250')
+    }
+
+    'credentials' {
+        Show-Credentials
+    }
+
+    'publish' {
+        Publish-Madar
     }
 
     'stop' {
