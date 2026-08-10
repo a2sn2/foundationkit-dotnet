@@ -13,7 +13,8 @@ Workbench is the executable architecture/reference consumer for FoundationKit Co
 - API Engine pagination/filter/sort/header/error/OpenAPI behavior;
 - declared versus dependency-expanded effective module capability composition;
 - runtime OpenAPI as the canonical serialized transport contract;
-- deterministic Postman derivation from that OpenAPI contract.
+- deterministic Postman derivation from that OpenAPI contract;
+- opt-in relational durable idempotency through a Workbench-owned SQL migration and FoundationKit's existing Application/Infrastructure/WebApi packages.
 
 ## Core CRUD reference
 
@@ -31,7 +32,21 @@ DELETE /api/core-crud/{id}
 
 The Workbench host supplies request/response contracts, mapper, semantic authorization policy, concurrency policy, query policy, manager override, SQL entity configuration/migration, ETag provider, and audit sink. Simple structural request validation uses the Core default `DataAnnotationsValidator<T>`. FoundationKit supplies the generic orchestration and endpoint plumbing.
 
-The reference API requires `Idempotency-Key` on mutations and `If-Match` on update so the Workbench can prove those API Engine contracts. The update JSON body contains business update data only; its concurrency token is the HTTP precondition rather than a duplicate request property.
+The reference API requires `Idempotency-Key` on mutations and `If-Match` on update. Workbench registers `AddFoundationEfIdempotencyStore<WorkbenchDbContext>()`, includes `AddFoundationIdempotencyStore()` in its model, and owns the `FoundationIdempotencyEntries` migration. The update JSON body contains business update data only; its concurrency token remains the HTTP precondition rather than a duplicate request property.
+
+## Durable replay proof
+
+The SQL smoke proves the Phase 10 behavior against the real Workbench SQL Server database:
+
+- first create executes normally and returns ID/version/ETag;
+- exact create retry with the same key returns the same ID/version/ETag rather than inserting again;
+- reusing that key with a changed body returns `409 Foundation.Api.Idempotency.FingerprintConflict`;
+- first update with `If-Match: "1"` advances the resource to version 2;
+- exact update retry replays version 2 even though the original precondition is now stale, proving the application mutation did not run twice;
+- changing `If-Match` under the same update key is a fingerprint conflict because the precondition is part of the request fingerprint;
+- first delete returns 204 and the exact retry also returns the replayed 204 instead of executing again and becoming 404.
+
+The durable reference is intentionally fail-closed. It does not claim distributed exactly-once semantics; see `DURABLE-IDEMPOTENCY.md`.
 
 ## Module composition discovery
 
@@ -41,7 +56,7 @@ Workbench exposes architecture evidence at:
 GET /api/modules
 ```
 
-The snapshot distinguishes `declaredCapabilities` from `effectiveCapabilities`. The latter is the deterministic dependency closure used by FoundationKit composition. For example, Authorization contributes the Identity/Security dependency intent and Feature Management contributes Settings. This does not claim that an environment-specific identity store, transport, or production provider has been provisioned.
+The snapshot distinguishes `declaredCapabilities` from `effectiveCapabilities`. The latter is the deterministic dependency closure used by FoundationKit composition. For example, Authorization contributes Identity/Security dependency intent and Feature Management contributes Settings. This does not claim that an environment-specific identity store, transport, or production provider has been provisioned.
 
 ## Contract source of truth
 
@@ -72,4 +87,4 @@ Swagger UI: `/swagger`
 Health: `/api/health`
 Module composition: `/api/modules`
 
-The SQL integration smoke exercises the existing user/admin reference plus module composition discovery, generic CRUD create/read/list/update/delete, DataAnnotations, required/ambiguous idempotency headers, ETag emission, missing/malformed/stale `If-Match`, module-owned filtering/sorting, custom manager rejection, Problem Details, and post-delete not-found behavior.
+The SQL integration smoke exercises the user/admin reference, module composition discovery, generic CRUD, DataAnnotations, durable replay-safe idempotency, ETag/If-Match concurrency, module-owned filtering/sorting, manager overrides, Problem Details, runtime OpenAPI, and generated Postman contract synchronization.
