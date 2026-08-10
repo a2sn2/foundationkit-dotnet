@@ -6,6 +6,7 @@ using FoundationKit.Application.Modules;
 using FoundationKit.Application.Pagination;
 using FoundationKit.Application.Results;
 using FoundationKit.Domain.Primitives;
+using FoundationKit.WebApi.Api;
 using FoundationKit.WebApi.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -34,21 +35,26 @@ public static class CrudEndpointExtensions
         var options = module.Crud ?? throw new InvalidOperationException(
             $"Module '{module.Name}' does not enable CRUD.");
 
-        var group = endpoints.MapGroup($"/api/{module.Route}").WithTags(module.Name);
+        var routeBase = $"/{module.Api.RoutePrefix}/{module.Route}";
+        var group = endpoints.MapGroup(routeBase).WithTags(module.Name);
         if (module.HasCapability(FoundationModuleCapability.Authorization) &&
             !string.IsNullOrWhiteSpace(module.AuthorizationPolicyPrefix))
         {
             group.RequireAuthorization(module.AuthorizationPolicyPrefix);
         }
 
+        if (!string.IsNullOrWhiteSpace(module.Api.RateLimitPolicyName))
+            group.RequireRateLimiting(module.Api.RateLimitPolicyName);
+
         if (options.ListEnabled)
         {
             group.MapMethods(
                     "/",
                     [HttpMethods.Get],
-                    CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(options))
+                    CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module, options))
                 .WithName($"{module.Name}.List")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(ListApiMarker))))
+                .WithMetadata(OperationMetadata(module, CrudOperation.List, HttpMethods.Get, routeBase))
                 .WithMetadata(
                     JsonResponse(StatusCodes.Status200OK, typeof(PagedResult<TRead>)),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -63,6 +69,7 @@ public static class CrudEndpointExtensions
                     CreateGetDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Get")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(GetApiMarker), typeof(TId))))
+                .WithMetadata(OperationMetadata(module, CrudOperation.Read, HttpMethods.Get, $"{routeBase}/{{id}}"))
                 .WithMetadata(
                     JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -78,6 +85,7 @@ public static class CrudEndpointExtensions
                     CreatePostDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module))
                 .WithName($"{module.Name}.Create")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(CreateApiMarker), typeof(TCreate))))
+                .WithMetadata(OperationMetadata(module, CrudOperation.Create, HttpMethods.Post, routeBase))
                 .WithMetadata(
                     JsonRequest(typeof(TCreate)),
                     JsonResponse(StatusCodes.Status201Created, typeof(TRead)),
@@ -91,9 +99,10 @@ public static class CrudEndpointExtensions
             group.MapMethods(
                     "/{id}",
                     [HttpMethods.Put],
-                    CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
+                    CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module))
                 .WithName($"{module.Name}.Update")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(UpdateApiMarker), typeof(TId), typeof(TUpdate))))
+                .WithMetadata(OperationMetadata(module, CrudOperation.Update, HttpMethods.Put, $"{routeBase}/{{id}}"))
                 .WithMetadata(
                     JsonRequest(typeof(TUpdate)),
                     JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
@@ -101,7 +110,9 @@ public static class CrudEndpointExtensions
                     ProblemResponse(StatusCodes.Status403Forbidden),
                     ProblemResponse(StatusCodes.Status404NotFound),
                     ProblemResponse(StatusCodes.Status409Conflict),
-                    ProblemResponse(StatusCodes.Status422UnprocessableEntity));
+                    ProblemResponse(StatusCodes.Status412PreconditionFailed),
+                    ProblemResponse(StatusCodes.Status422UnprocessableEntity),
+                    ProblemResponse(StatusCodes.Status428PreconditionRequired));
         }
 
         if (options.DeleteEnabled)
@@ -109,9 +120,10 @@ public static class CrudEndpointExtensions
             group.MapMethods(
                     "/{id}",
                     [HttpMethods.Delete],
-                    CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
+                    CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module))
                 .WithName($"{module.Name}.Delete")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(DeleteApiMarker), typeof(TId))))
+                .WithMetadata(OperationMetadata(module, CrudOperation.Delete, HttpMethods.Delete, $"{routeBase}/{{id}}"))
                 .WithMetadata(
                     new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent, typeof(void), []),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -122,27 +134,25 @@ public static class CrudEndpointExtensions
         return group;
     }
 
-    private static RequestDelegate CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(CrudModuleOptions options)
+    private static RequestDelegate CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(
+        FoundationModuleDefinition<TEntity, TId> module,
+        CrudModuleOptions options)
         where TEntity : Entity<TId>
         where TId : notnull =>
         async context =>
         {
-            if (!TryReadPositiveInt(context.Request.Query["page"], 1, out var page) ||
-                !TryReadPositiveInt(
-                    context.Request.Query["pageSize"],
-                    PageRequest.DefaultPageSize,
-                    out var requestedPageSize))
-            {
-                await WriteProblemAsync(
+            if (!FoundationApiQueryParser.TryParseCrudList(
                     context,
-                    Error.Validation(
-                        "Foundation.Crud.Pagination.Invalid",
-                        "Page and pageSize must be positive integers."));
+                    options,
+                    module.Api,
+                    out var request,
+                    out var error))
+            {
+                await WriteProblemAsync(context, error).ConfigureAwait(false);
                 return;
             }
 
             var service = ResolveService<TEntity, TId, TCreate, TUpdate, TRead>(context);
-            var request = new PageRequest(page, Math.Min(requestedPageSize, options.MaximumPageSize));
             var result = await service.ListAsync(request, context.RequestAborted).ConfigureAwait(false);
             await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
                 .ExecuteAsync(context)
@@ -156,12 +166,15 @@ public static class CrudEndpointExtensions
         {
             if (!TryReadId(context, out TId id))
             {
-                await WriteInvalidIdAsync(context);
+                await WriteInvalidIdAsync(context).ConfigureAwait(false);
                 return;
             }
 
             var service = ResolveService<TEntity, TId, TCreate, TUpdate, TRead>(context);
             var result = await service.GetAsync(id, context.RequestAborted).ConfigureAwait(false);
+            if (result.IsSuccess)
+                ApplyEntityTag<TUpdate, TRead>(context, result.Value);
+
             await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
                 .ExecuteAsync(context)
                 .ConfigureAwait(false);
@@ -173,28 +186,50 @@ public static class CrudEndpointExtensions
         where TId : notnull =>
         async context =>
         {
+            if (!FoundationApiQueryParser.TryValidateIdempotencyKey(
+                    context,
+                    module.Api.Idempotency,
+                    out var idempotencyError))
+            {
+                await WriteProblemAsync(context, idempotencyError).ConfigureAwait(false);
+                return;
+            }
+
             var request = await TryReadJsonAsync<TCreate>(context).ConfigureAwait(false);
             if (!request.Success)
                 return;
 
             var service = ResolveService<TEntity, TId, TCreate, TUpdate, TRead>(context);
             var result = await service.CreateAsync(request.Value!, context.RequestAborted).ConfigureAwait(false);
+            if (result.IsSuccess)
+                ApplyEntityTag<TUpdate, TRead>(context, result.Value.Item);
+
             await result.ToHttpResult(created =>
                     global::Microsoft.AspNetCore.Http.Results.Created(
-                        $"/api/{module.Route}/{created.Id}",
+                        $"/{module.Api.RoutePrefix}/{module.Route}/{created.Id}",
                         created.Item))
                 .ExecuteAsync(context)
                 .ConfigureAwait(false);
         };
 
-    private static RequestDelegate CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>()
+    private static RequestDelegate CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>(
+        FoundationModuleDefinition<TEntity, TId> module)
         where TEntity : Entity<TId>
         where TId : notnull =>
         async context =>
         {
+            if (!FoundationApiQueryParser.TryValidateIdempotencyKey(
+                    context,
+                    module.Api.Idempotency,
+                    out var idempotencyError))
+            {
+                await WriteProblemAsync(context, idempotencyError).ConfigureAwait(false);
+                return;
+            }
+
             if (!TryReadId(context, out TId id))
             {
-                await WriteInvalidIdAsync(context);
+                await WriteInvalidIdAsync(context).ConfigureAwait(false);
                 return;
             }
 
@@ -202,21 +237,62 @@ public static class CrudEndpointExtensions
             if (!request.Success)
                 return;
 
+            var updateRequest = request.Value!;
+            if (module.Api.Concurrency == FoundationApiConcurrencyMode.RequireIfMatch)
+            {
+                var ifMatch = context.Request.Headers.IfMatch.ToString();
+                if (string.IsNullOrWhiteSpace(ifMatch))
+                {
+                    await WriteProblemAsync(
+                        context,
+                        Error.PreconditionRequired(
+                            "Foundation.Api.IfMatch.Required",
+                            "The If-Match header is required for this operation.")).ConfigureAwait(false);
+                    return;
+                }
+
+                var adapter = context.RequestServices
+                    .GetService<IFoundationApiConcurrencyAdapter<TUpdate, TRead>>()
+                    ?? throw new InvalidOperationException(
+                        $"Module '{module.Name}' requires If-Match but no {typeof(IFoundationApiConcurrencyAdapter<TUpdate, TRead>).Name} is registered.");
+                var adapted = adapter.ApplyIfMatch(updateRequest, ifMatch.Trim());
+                if (adapted.IsFailure)
+                {
+                    await WriteProblemAsync(context, adapted.Error).ConfigureAwait(false);
+                    return;
+                }
+
+                updateRequest = adapted.Value;
+            }
+
             var service = ResolveService<TEntity, TId, TCreate, TUpdate, TRead>(context);
-            var result = await service.UpdateAsync(id, request.Value!, context.RequestAborted).ConfigureAwait(false);
+            var result = await service.UpdateAsync(id, updateRequest, context.RequestAborted).ConfigureAwait(false);
+            if (result.IsSuccess)
+                ApplyEntityTag<TUpdate, TRead>(context, result.Value);
+
             await result.ToHttpResult(global::Microsoft.AspNetCore.Http.Results.Ok)
                 .ExecuteAsync(context)
                 .ConfigureAwait(false);
         };
 
-    private static RequestDelegate CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>()
+    private static RequestDelegate CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>(
+        FoundationModuleDefinition<TEntity, TId> module)
         where TEntity : Entity<TId>
         where TId : notnull =>
         async context =>
         {
+            if (!FoundationApiQueryParser.TryValidateIdempotencyKey(
+                    context,
+                    module.Api.Idempotency,
+                    out var idempotencyError))
+            {
+                await WriteProblemAsync(context, idempotencyError).ConfigureAwait(false);
+                return;
+            }
+
             if (!TryReadId(context, out TId id))
             {
-                await WriteInvalidIdAsync(context);
+                await WriteInvalidIdAsync(context).ConfigureAwait(false);
                 return;
             }
 
@@ -234,6 +310,14 @@ public static class CrudEndpointExtensions
         where TEntity : Entity<TId>
         where TId : notnull =>
         context.RequestServices.GetRequiredService<CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead>>();
+
+    private static void ApplyEntityTag<TUpdate, TRead>(HttpContext context, TRead response)
+    {
+        var adapter = context.RequestServices.GetService<IFoundationApiConcurrencyAdapter<TUpdate, TRead>>();
+        var entityTag = adapter?.GetEntityTag(response);
+        if (!string.IsNullOrWhiteSpace(entityTag))
+            context.Response.Headers.ETag = entityTag;
+    }
 
     private static bool TryReadId<TId>(HttpContext context, out TId id)
         where TId : notnull
@@ -273,22 +357,6 @@ public static class CrudEndpointExtensions
         return false;
     }
 
-    private static bool TryReadPositiveInt(string? raw, int fallback, out int value)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            value = fallback;
-            return true;
-        }
-
-        return int.TryParse(
-                   raw,
-                   System.Globalization.NumberStyles.None,
-                   System.Globalization.CultureInfo.InvariantCulture,
-                   out value) &&
-               value > 0;
-    }
-
     private static async Task<(bool Success, T? Value)> TryReadJsonAsync<T>(HttpContext context)
     {
         try
@@ -309,7 +377,7 @@ public static class CrudEndpointExtensions
             context,
             Error.Validation(
                 "Foundation.Crud.Request.Invalid",
-                "The JSON request body is missing or invalid."));
+                "The JSON request body is missing or invalid.")).ConfigureAwait(false);
         return (false, default);
     }
 
@@ -322,6 +390,28 @@ public static class CrudEndpointExtensions
 
     private static Task WriteProblemAsync(HttpContext context, Error error) =>
         error.ToProblem().ExecuteAsync(context);
+
+    private static FoundationApiOperationMetadata OperationMetadata<TEntity, TId>(
+        FoundationModuleDefinition<TEntity, TId> module,
+        CrudOperation operation,
+        string method,
+        string route)
+        where TEntity : Entity<TId>
+        where TId : notnull =>
+        new(
+            module.Name,
+            operation,
+            method,
+            route,
+            operation is CrudOperation.Create or CrudOperation.Update or CrudOperation.Delete
+                ? module.Api.Idempotency
+                : FoundationApiIdempotencyMode.Disabled,
+            operation == CrudOperation.Update
+                ? module.Api.Concurrency
+                : FoundationApiConcurrencyMode.ApplicationPolicy,
+            module.HasCapability(FoundationModuleCapability.Authorization),
+            module.AuthorizationPolicyPrefix,
+            module.Api.RateLimitPolicyName);
 
     private static object[] ApiExplorerMetadata(MethodInfo methodInfo)
     {
@@ -347,7 +437,9 @@ public static class CrudEndpointExtensions
 
     private static void ListApiMarker(
         [FromQuery] int? page,
-        [FromQuery] int? pageSize)
+        [FromQuery] int? pageSize,
+        [FromQuery] string[]? filter = null,
+        [FromQuery] string[]? sort = null)
     {
     }
 
@@ -355,17 +447,23 @@ public static class CrudEndpointExtensions
     {
     }
 
-    private static void CreateApiMarker<TCreate>([FromBody] TCreate request)
+    private static void CreateApiMarker<TCreate>(
+        [FromBody] TCreate request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
     {
     }
 
     private static void UpdateApiMarker<TId, TUpdate>(
         [FromRoute] TId id,
-        [FromBody] TUpdate request)
+        [FromBody] TUpdate request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null,
+        [FromHeader(Name = "If-Match")] string? ifMatch = null)
     {
     }
 
-    private static void DeleteApiMarker<TId>([FromRoute] TId id)
+    private static void DeleteApiMarker<TId>(
+        [FromRoute] TId id,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
     {
     }
 
@@ -396,6 +494,7 @@ public static class CrudEndpointExtensions
         {
             var effectiveType = Nullable.GetUnderlyingType(type) ?? type;
             return effectiveType == typeof(string) ||
+                   effectiveType.IsArray ||
                    effectiveType.IsEnum ||
                    TypeDescriptor.GetConverter(effectiveType).CanConvertFrom(typeof(string));
         }
