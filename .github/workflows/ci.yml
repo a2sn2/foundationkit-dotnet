@@ -144,17 +144,60 @@ jobs:
           curl --fail --silent http://localhost:8080/ | grep -q "blazor.webassembly.js"
           mkdir -p artifacts/openapi
           curl --fail --silent http://localhost:8080/swagger/v1/swagger.json > artifacts/openapi/workbench-swagger.json
-          swagger="$(cat artifacts/openapi/workbench-swagger.json)"
-          if ! grep -q 'core-crud' <<< "$swagger"; then
-            echo "Swagger is missing the generic core-crud path." >&2
-            cat artifacts/openapi/workbench-swagger.json >&2
-            exit 1
-          fi
-          if ! grep -q 'CoreCrudCreateRequest' <<< "$swagger"; then
-            echo "Swagger is missing the CoreCrudCreateRequest schema." >&2
-            cat artifacts/openapi/workbench-swagger.json >&2
-            exit 1
-          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("artifacts/openapi/workbench-swagger.json")
+          document = json.loads(path.read_text(encoding="utf-8"))
+          paths = document.get("paths", {})
+          collection = paths.get("/api/core-crud")
+          item = paths.get("/api/core-crud/{id}")
+          if not isinstance(collection, dict) or not isinstance(item, dict):
+              raise SystemExit("OpenAPI is missing the generic CRUD collection/item paths")
+
+          for method in ("get", "post"):
+              if method not in collection:
+                  raise SystemExit(f"OpenAPI is missing {method.upper()} /api/core-crud")
+          for method in ("get", "put", "delete"):
+              if method not in item:
+                  raise SystemExit(f"OpenAPI is missing {method.upper()} /api/core-crud/{{id}}")
+
+          query_names = {parameter.get("name") for parameter in collection["get"].get("parameters", []) if parameter.get("in") == "query"}
+          if query_names != {"page", "pageSize"}:
+              raise SystemExit(f"Unexpected CRUD list query parameters: {sorted(query_names)}")
+
+          for method in ("get", "put", "delete"):
+              path_parameters = [parameter for parameter in item[method].get("parameters", []) if parameter.get("in") == "path"]
+              if len(path_parameters) != 1 or path_parameters[0].get("name") != "id" or not path_parameters[0].get("required"):
+                  raise SystemExit(f"CRUD {method.upper()} must expose one required id path parameter")
+
+          create_schema = collection["post"]["requestBody"]["content"]["application/json"]["schema"].get("$ref", "")
+          update_schema = item["put"]["requestBody"]["content"]["application/json"]["schema"].get("$ref", "")
+          if not create_schema.endswith("/CoreCrudCreateRequest"):
+              raise SystemExit(f"Unexpected create schema: {create_schema}")
+          if not update_schema.endswith("/CoreCrudUpdateRequest"):
+              raise SystemExit(f"Unexpected update schema: {update_schema}")
+
+          if "409" not in item["put"].get("responses", {}):
+              raise SystemExit("CRUD update OpenAPI contract must advertise 409 concurrency conflict")
+          if "204" not in item["delete"].get("responses", {}):
+              raise SystemExit("CRUD delete OpenAPI contract must advertise 204 No Content")
+
+          required_schemas = {
+              "CoreCrudCreateRequest",
+              "CoreCrudUpdateRequest",
+              "CoreCrudResponse",
+              "CoreCrudResponsePagedResult",
+              "ProblemDetails",
+          }
+          schemas = set(document.get("components", {}).get("schemas", {}))
+          missing = required_schemas - schemas
+          if missing:
+              raise SystemExit(f"OpenAPI is missing required schemas: {sorted(missing)}")
+
+          print("Generic CRUD OpenAPI contract structure verified.")
+          PY
 
       - name: Upload OpenAPI contract evidence
         if: always()
