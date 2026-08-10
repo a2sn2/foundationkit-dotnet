@@ -1,7 +1,6 @@
 using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Crud;
 using FoundationKit.Application.Results;
-using FoundationKit.Application.Validation;
 using FoundationKit.Workbench.Contracts;
 using FoundationKit.Workbench.Domain;
 
@@ -21,53 +20,6 @@ public sealed class CoreCrudMapper(IClock clock)
 
     public CoreCrudResponse ToReadModel(CoreCrudRecord entity) =>
         new(entity.Id, entity.Name, entity.Version, entity.CreatedUtc);
-}
-
-public sealed class CoreCrudValidator :
-    IValidator<CoreCrudCreateRequest>,
-    IValidator<CoreCrudUpdateRequest>
-{
-    public ValueTask<IReadOnlyList<ValidationFailure>> ValidateAsync(
-        CoreCrudCreateRequest instance,
-        CancellationToken cancellationToken = default) =>
-        ValueTask.FromResult<IReadOnlyList<ValidationFailure>>(ValidateName(instance.Name));
-
-    public ValueTask<IReadOnlyList<ValidationFailure>> ValidateAsync(
-        CoreCrudUpdateRequest instance,
-        CancellationToken cancellationToken = default)
-    {
-        var failures = ValidateName(instance.Name).ToList();
-        if (instance.ExpectedVersion < 1)
-        {
-            failures.Add(new ValidationFailure(
-                nameof(instance.ExpectedVersion),
-                "CoreCrud.Version.Invalid",
-                "ExpectedVersion must be at least 1."));
-        }
-
-        return ValueTask.FromResult<IReadOnlyList<ValidationFailure>>(failures);
-    }
-
-    private static ValidationFailure[] ValidateName(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return [new ValidationFailure(
-                "Name",
-                "CoreCrud.Name.Required",
-                "Name is required.")];
-        }
-
-        if (name.Trim().Length > 120)
-        {
-            return [new ValidationFailure(
-                "Name",
-                "CoreCrud.Name.TooLong",
-                "Name cannot exceed 120 characters.")];
-        }
-
-        return [];
-    }
 }
 
 public sealed class CoreCrudAuthorizationPolicy : ICrudAuthorizationPolicy<CoreCrudRecord, Guid>
