@@ -37,8 +37,36 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         ICrudManager<TEntity, TId, TCreate, TUpdate> manager,
         IEnumerable<ICrudOperationObserver<TEntity, TId>> observers,
         FoundationModuleDefinition<TEntity, TId> module,
+        IFoundationProjectContext projectContext)
+        : this(
+            repository,
+            unitOfWork,
+            mapper,
+            createValidator,
+            updateValidator,
+            authorization,
+            concurrency,
+            manager,
+            observers,
+            module,
+            projectContext,
+            new DefaultCrudQueryPolicy<TEntity, TId>())
+    {
+    }
+
+    public CrudApplicationService(
+        IRepository<TEntity, TId> repository,
+        IUnitOfWork unitOfWork,
+        ICrudMapper<TEntity, TId, TCreate, TUpdate, TRead> mapper,
+        IValidator<TCreate> createValidator,
+        IValidator<TUpdate> updateValidator,
+        ICrudAuthorizationPolicy<TEntity, TId> authorization,
+        ICrudConcurrencyPolicy<TEntity, TUpdate> concurrency,
+        ICrudManager<TEntity, TId, TCreate, TUpdate> manager,
+        IEnumerable<ICrudOperationObserver<TEntity, TId>> observers,
+        FoundationModuleDefinition<TEntity, TId> module,
         IFoundationProjectContext projectContext,
-        ICrudQueryPolicy<TEntity, TId>? queryPolicy = null)
+        ICrudQueryPolicy<TEntity, TId> queryPolicy)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -48,7 +76,7 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
         _concurrency = concurrency ?? throw new ArgumentNullException(nameof(concurrency));
         _manager = manager ?? throw new ArgumentNullException(nameof(manager));
-        _queryPolicy = queryPolicy ?? new DefaultCrudQueryPolicy<TEntity, TId>();
+        _queryPolicy = queryPolicy ?? throw new ArgumentNullException(nameof(queryPolicy));
         _observers = (observers ?? throw new ArgumentNullException(nameof(observers))).ToArray();
         _module = module ?? throw new ArgumentNullException(nameof(module));
         _projectContext = projectContext ?? throw new ArgumentNullException(nameof(projectContext));
