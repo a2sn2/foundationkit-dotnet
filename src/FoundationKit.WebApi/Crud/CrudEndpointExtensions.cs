@@ -8,6 +8,8 @@ using FoundationKit.Domain.Primitives;
 using FoundationKit.WebApi.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -45,9 +47,10 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Get],
                     CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(options))
                 .WithName($"{module.Name}.List")
-                .Produces<PagedResult<TRead>>(StatusCodes.Status200OK)
-                .ProducesProblem(StatusCodes.Status400BadRequest)
-                .ProducesProblem(StatusCodes.Status403Forbidden);
+                .WithMetadata(
+                    JsonResponse(StatusCodes.Status200OK, typeof(PagedResult<TRead>)),
+                    ProblemResponse(StatusCodes.Status400BadRequest),
+                    ProblemResponse(StatusCodes.Status403Forbidden));
         }
 
         if (options.ReadEnabled)
@@ -57,10 +60,11 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Get],
                     CreateGetDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Get")
-                .Produces<TRead>(StatusCodes.Status200OK)
-                .ProducesProblem(StatusCodes.Status400BadRequest)
-                .ProducesProblem(StatusCodes.Status403Forbidden)
-                .ProducesProblem(StatusCodes.Status404NotFound);
+                .WithMetadata(
+                    JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
+                    ProblemResponse(StatusCodes.Status400BadRequest),
+                    ProblemResponse(StatusCodes.Status403Forbidden),
+                    ProblemResponse(StatusCodes.Status404NotFound));
         }
 
         if (options.CreateEnabled)
@@ -70,11 +74,12 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Post],
                     CreatePostDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module))
                 .WithName($"{module.Name}.Create")
-                .Accepts<TCreate>("application/json")
-                .Produces<TRead>(StatusCodes.Status201Created)
-                .ProducesProblem(StatusCodes.Status400BadRequest)
-                .ProducesProblem(StatusCodes.Status403Forbidden)
-                .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+                .WithMetadata(
+                    JsonRequest(typeof(TCreate)),
+                    JsonResponse(StatusCodes.Status201Created, typeof(TRead)),
+                    ProblemResponse(StatusCodes.Status400BadRequest),
+                    ProblemResponse(StatusCodes.Status403Forbidden),
+                    ProblemResponse(StatusCodes.Status422UnprocessableEntity));
         }
 
         if (options.UpdateEnabled)
@@ -84,13 +89,14 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Put],
                     CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Update")
-                .Accepts<TUpdate>("application/json")
-                .Produces<TRead>(StatusCodes.Status200OK)
-                .ProducesProblem(StatusCodes.Status400BadRequest)
-                .ProducesProblem(StatusCodes.Status403Forbidden)
-                .ProducesProblem(StatusCodes.Status404NotFound)
-                .ProducesProblem(StatusCodes.Status409Conflict)
-                .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+                .WithMetadata(
+                    JsonRequest(typeof(TUpdate)),
+                    JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
+                    ProblemResponse(StatusCodes.Status400BadRequest),
+                    ProblemResponse(StatusCodes.Status403Forbidden),
+                    ProblemResponse(StatusCodes.Status404NotFound),
+                    ProblemResponse(StatusCodes.Status409Conflict),
+                    ProblemResponse(StatusCodes.Status422UnprocessableEntity));
         }
 
         if (options.DeleteEnabled)
@@ -100,10 +106,11 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Delete],
                     CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Delete")
-                .Produces(StatusCodes.Status204NoContent)
-                .ProducesProblem(StatusCodes.Status400BadRequest)
-                .ProducesProblem(StatusCodes.Status403Forbidden)
-                .ProducesProblem(StatusCodes.Status404NotFound);
+                .WithMetadata(
+                    new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent),
+                    ProblemResponse(StatusCodes.Status400BadRequest),
+                    ProblemResponse(StatusCodes.Status403Forbidden),
+                    ProblemResponse(StatusCodes.Status404NotFound));
         }
 
         return group;
@@ -225,7 +232,9 @@ public static class CrudEndpointExtensions
     private static bool TryReadId<TId>(HttpContext context, out TId id)
         where TId : notnull
     {
-        var raw = Convert.ToString(context.Request.RouteValues["id"], System.Globalization.CultureInfo.InvariantCulture);
+        var raw = Convert.ToString(
+            context.Request.RouteValues["id"],
+            System.Globalization.CultureInfo.InvariantCulture);
         if (string.IsNullOrWhiteSpace(raw))
         {
             id = default!;
@@ -307,4 +316,13 @@ public static class CrudEndpointExtensions
 
     private static Task WriteProblemAsync(HttpContext context, Error error) =>
         error.ToProblem().ExecuteAsync(context);
+
+    private static AcceptsMetadata JsonRequest(Type requestType) =>
+        new(["application/json"], requestType, isOptional: false);
+
+    private static ProducesResponseTypeMetadata JsonResponse(int statusCode, Type responseType) =>
+        new(statusCode, responseType, ["application/json"]);
+
+    private static ProducesResponseTypeMetadata ProblemResponse(int statusCode) =>
+        new(statusCode, typeof(ProblemDetails), ["application/problem+json"]);
 }
