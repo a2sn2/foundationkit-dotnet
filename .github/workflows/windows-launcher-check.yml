@@ -7,9 +7,6 @@ on:
       - "scripts/athar-product.ps1"
       - "scripts/madar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
-      - "START-ATHAR.cmd"
-      - "STOP-ATHAR.cmd"
-      - "EXPOSE-ATHAR.cmd"
       - ".github/workflows/windows-launcher-check.yml"
   push:
     branches: [main]
@@ -18,9 +15,6 @@ on:
       - "scripts/athar-product.ps1"
       - "scripts/madar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
-      - "START-ATHAR.cmd"
-      - "STOP-ATHAR.cmd"
-      - "EXPOSE-ATHAR.cmd"
       - ".github/workflows/windows-launcher-check.yml"
   workflow_dispatch:
 
@@ -165,6 +159,33 @@ jobs:
           if ($output -notmatch "Madar: STOPPED or unreachable") {
             throw "Madar status smoke did not report the expected bounded stopped state."
           }
+
+      - name: Verify Madar Release publish wrapper
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" publish
+
+          $publishDirectory = ".\artifacts\madar\publish"
+          $zipPath = ".\artifacts\madar\Madar-net10.0-Release.zip"
+          $hashPath = "$zipPath.sha256"
+
+          if (-not (Test-Path (Join-Path $publishDirectory "Madar.Api.dll"))) {
+            throw "Madar publish folder does not contain Madar.Api.dll."
+          }
+          if (-not (Test-Path $zipPath)) {
+            throw "Madar Release ZIP was not created."
+          }
+          if (-not (Test-Path $hashPath)) {
+            throw "Madar Release SHA-256 sidecar was not created."
+          }
+
+          $recorded = ((Get-Content $hashPath -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($recorded -ne $actual) {
+            throw "Madar Release SHA-256 sidecar does not match the ZIP."
+          }
+
+          Write-Host "Madar Release publish wrapper produced a verified ZIP: $actual"
 
       - name: Verify unified Madar target is discoverable
         shell: powershell
