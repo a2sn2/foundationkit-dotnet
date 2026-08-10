@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825d36e96c2741363c05434 # v7.0.1
 
       - name: Verify portal manifest against Blazor routes
         run: python3 scripts/verify-pages.py
@@ -30,14 +30,22 @@ jobs:
         run: |
           node --check site/app.js
           node --check site/athar-demo/app.js
+          node --check site/madar-demo/app.js
 
-      - name: Verify free Athar demo assets
+      - name: Verify static product demo assets
         run: |
           test -f site/athar-demo/index.html
           test -f site/athar-demo/styles.css
           test -f site/athar-demo/app.js
           grep -q "DEMO · بدون خادم" site/athar-demo/index.html
           grep -q "athar-demo/" site/index.html
+
+          test -f site/madar-demo/index.html
+          test -f site/madar-demo/styles.css
+          test -f site/madar-demo/app.js
+          grep -q "DEMO · بدون خادم أو SQL" site/madar-demo/index.html
+          grep -q "madar-demo/" site/index.html
+          grep -q "MADAR-LOCAL-RUN-PUBLISH-AR.md" site/madar-demo/index.html
 
       - name: Prepare GitHub Pages artifact
         run: |
@@ -55,6 +63,9 @@ jobs:
           test -f release/athar-demo/index.html
           test -f release/athar-demo/styles.css
           test -f release/athar-demo/app.js
+          test -f release/madar-demo/index.html
+          test -f release/madar-demo/styles.css
+          test -f release/madar-demo/app.js
           grep -q '<base href="/foundationkit-dotnet/">' release/index.html
           grep -q 'FoundationKit Atlas' release/index.html
 
