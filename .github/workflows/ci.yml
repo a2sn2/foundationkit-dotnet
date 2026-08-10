@@ -139,21 +139,30 @@ jobs:
           docker compose -f deploy/docker-compose.yml logs --no-color --tail=300
           exit 1
 
-      - name: Verify API and Swagger
+      - name: Capture and verify API contract
         run: |
           curl --fail --silent http://localhost:8080/ | grep -q "blazor.webassembly.js"
-          swagger="$(curl --fail --silent http://localhost:8080/swagger/v1/swagger.json)"
-          printf '%s' "$swagger" > /tmp/workbench-swagger.json
+          mkdir -p artifacts/openapi
+          curl --fail --silent http://localhost:8080/swagger/v1/swagger.json > artifacts/openapi/workbench-swagger.json
+          swagger="$(cat artifacts/openapi/workbench-swagger.json)"
           if ! grep -q 'core-crud' <<< "$swagger"; then
             echo "Swagger is missing the generic core-crud path." >&2
-            cat /tmp/workbench-swagger.json >&2
+            cat artifacts/openapi/workbench-swagger.json >&2
             exit 1
           fi
           if ! grep -q 'CoreCrudCreateRequest' <<< "$swagger"; then
             echo "Swagger is missing the CoreCrudCreateRequest schema." >&2
-            cat /tmp/workbench-swagger.json >&2
+            cat artifacts/openapi/workbench-swagger.json >&2
             exit 1
           fi
+
+      - name: Upload OpenAPI contract evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workbench-openapi-contract
+          path: artifacts/openapi/workbench-swagger.json
+          if-no-files-found: ignore
 
       - name: Run SQL integration smoke
         run: bash scripts/smoke-workbench.sh
