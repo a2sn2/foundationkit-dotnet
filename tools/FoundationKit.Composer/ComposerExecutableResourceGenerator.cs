@@ -23,6 +23,7 @@ internal static class ComposerExecutableResourceGenerator
         if (executable.Length == 0)
             return new Dictionary<string, string>(StringComparer.Ordinal);
 
+        var usesAudit = executable.Any(item => Has(item.Resource, ComposerResourceBehavior.Auditing));
         var files = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var item in executable)
         {
@@ -37,8 +38,11 @@ internal static class ComposerExecutableResourceGenerator
                 BuildEntityConfiguration(manifest, projectPrefix, item.Module, item.Resource);
         }
 
-        files[$"src/{projectPrefix}.Application/GeneratedPlatform/GeneratedAuditSupport.cs"] =
-            BuildAuditSupport(projectPrefix);
+        if (usesAudit)
+        {
+            files[$"src/{projectPrefix}.Application/GeneratedPlatform/GeneratedAuditSupport.cs"] =
+                BuildAuditSupport(projectPrefix);
+        }
         files[$"src/{projectPrefix}.Infrastructure/GeneratedPlatform/GeneratedDbContext.cs"] =
             BuildDbContext(manifest, projectPrefix, executable);
         files[$"src/{projectPrefix}.Infrastructure/GeneratedPlatform/Migrations/{InitialMigrationId}.cs"] =
@@ -49,7 +53,6 @@ internal static class ComposerExecutableResourceGenerator
             BuildApiSupport(projectPrefix, executable);
         files[$"src/{projectPrefix}.Api/Program.cs"] =
             BuildProgram(manifest, projectPrefix, executable);
-        files[$"src/{projectPrefix}.Api/appsettings.json"] = BuildAppSettings();
         files["GENERATED-FULLSTACK.md"] = BuildFullStackReport(manifest, executable);
         return files;
     }
@@ -69,13 +72,11 @@ internal static class ComposerExecutableResourceGenerator
             $"        {field.Name} = {Camel(field.Name)};"));
         var properties = string.Join("\n", resource.Fields.Select(field =>
             $"    public {FieldClrType(field)} {field.Name} {{ get; private set; }}"));
-        var updateParameters = constructorParameters;
-        var updateAssignments = assignments;
         var concurrencyProperty = Has(resource, ComposerResourceBehavior.Concurrency)
             ? "\n    public int Version { get; private set; } = 1;\n"
             : string.Empty;
         var versionIncrement = Has(resource, ComposerResourceBehavior.Concurrency)
-            ? "\n        Version++;"
+            ? "\n        Version = checked(Version + 1);"
             : string.Empty;
 
         return $$"""
@@ -87,7 +88,7 @@ internal static class ComposerExecutableResourceGenerator
 
             public sealed class {{resource.Name}} : Entity<Guid>
             {
-                private {{resource.Name}}() : base(Guid.Empty)
+                private {{resource.Name}}()
                 {
             {{string.Join("\n", requiredInitializers)}}
                 }
@@ -102,9 +103,9 @@ internal static class ComposerExecutableResourceGenerator
                 public static {{resource.Name}} Create({{constructorParameters}}) =>
                     new(Guid.NewGuid(), {{string.Join(", ", resource.Fields.Select(field => Camel(field.Name)))}});
 
-                public void ApplyUpdate({{updateParameters}})
+                public void ApplyUpdate({{constructorParameters}})
                 {
-            {{updateAssignments}}{{versionIncrement}}
+            {{assignments}}{{versionIncrement}}
                 }
             }
             """;
@@ -168,15 +169,15 @@ internal static class ComposerExecutableResourceGenerator
             namespace {{projectPrefix}}.Application.GeneratedModules.{{module.Name}};
 
             public sealed class {{resource.Name}}Mapper
-                : ICrudMapper<{{entity}}, {{resource.Name}}CreateRequest, {{resource.Name}}UpdateRequest, {{resource.Name}}Response>
+                : ICrudMapper<{{entity}}, Guid, {{resource.Name}}CreateRequest, {{resource.Name}}UpdateRequest, {{resource.Name}}Response>
             {
-                public {{entity}} ToEntity({{resource.Name}}CreateRequest request) =>
+                public {{entity}} Create({{resource.Name}}CreateRequest request) =>
                     {{entity}}.Create({{createArgs}});
 
                 public void ApplyUpdate({{entity}} entity, {{resource.Name}}UpdateRequest request) =>
                     entity.ApplyUpdate({{createArgs}});
 
-                public {{resource.Name}}Response ToResponse({{entity}} entity) =>
+                public {{resource.Name}}Response ToReadModel({{entity}} entity) =>
                     new({{string.Join(", ", responseArgs)}});
             }
 
@@ -192,16 +193,12 @@ internal static class ComposerExecutableResourceGenerator
         {
             private readonly ICurrentUser _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
 
-            public ValueTask<Result> AuthorizeListAsync(CancellationToken cancellationToken) => Authorize();
-            public ValueTask<Result> AuthorizeReadAsync(Guid id, CancellationToken cancellationToken) => Authorize();
-            public ValueTask<Result> AuthorizeCreateAsync(CancellationToken cancellationToken) => Authorize();
-            public ValueTask<Result> AuthorizeUpdateAsync({{entity}} entity, CancellationToken cancellationToken) => Authorize();
-            public ValueTask<Result> AuthorizeDeleteAsync({{entity}} entity, CancellationToken cancellationToken) => Authorize();
-
-            private ValueTask<Result> Authorize()
+            public ValueTask<Result> AuthorizeAsync(
+                CrudAuthorizationContext<{{entity}}, Guid> context,
+                CancellationToken cancellationToken = default)
             {
-                var allowed = _currentUser.IsAuthenticated &&
-                    _currentUser.Roles.Contains("admin", StringComparer.OrdinalIgnoreCase);
+                ArgumentNullException.ThrowIfNull(context);
+                var allowed = _currentUser.IsAuthenticated && _currentUser.IsInRole("admin");
                 return ValueTask.FromResult(allowed
                     ? Result.Success()
                     : Result.Failure(Error.Forbidden(
@@ -215,7 +212,10 @@ internal static class ComposerExecutableResourceGenerator
         public sealed class {{resource.Name}}ConcurrencyPolicy
             : ICrudConcurrencyPolicy<{{entity}}, {{resource.Name}}UpdateRequest>
         {
-            public Result Validate({{entity}} entity, {{resource.Name}}UpdateRequest request) => Result.Success();
+            public Result Validate({{entity}} entity, {{resource.Name}}UpdateRequest request) =>
+                Result.Failure(Error.PreconditionRequired(
+                    "Generated.Version.Required",
+                    "An If-Match concurrency token is required."));
 
             public Result Validate(
                 {{entity}} entity,
@@ -223,7 +223,8 @@ internal static class ComposerExecutableResourceGenerator
                 CrudConcurrencyPrecondition? precondition)
             {
                 if (precondition is null)
-                    return Result.Success();
+                    return Validate(entity, request);
+
                 var expected = $"\"{entity.Version}\"";
                 return string.Equals(precondition.Token, expected, StringComparison.Ordinal)
                     ? Result.Success()
@@ -280,7 +281,7 @@ internal static class ComposerExecutableResourceGenerator
         IReadOnlyList<(ComposerModuleDefinition Module, ComposerResourceDefinition Resource)> executable)
     {
         var dbSets = string.Join("\n", executable.Select(item =>
-            $"    public DbSet<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}> {item.Module.Name}{item.Resource.Name} => Set<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}>();"));
+            $"    public DbSet<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}> {item.Module.Name}_{item.Resource.Name} => Set<{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{item.Resource.Name}>();"));
         var hasIdempotency = executable.Any(item => item.Resource.Api.Idempotency != ComposerApiIdempotencyMode.Disabled);
         var idempotency = hasIdempotency
             ? $"\n        modelBuilder.AddFoundationIdempotencyStore({JsonSerializer.Serialize(IdempotencyTableName(manifest))});"
@@ -420,6 +421,11 @@ internal static class ComposerExecutableResourceGenerator
 
         namespace {{projectPrefix}}.Application.GeneratedPlatform;
 
+        public sealed class GeneratedClock : IClock
+        {
+            public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+        }
+
         public sealed class GeneratedAuditSink : IAuditSink
         {
             private readonly ConcurrentQueue<AuditEvent> _events = new();
@@ -437,14 +443,11 @@ internal static class ComposerExecutableResourceGenerator
         {
             private readonly ICurrentUser _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
 
-            public AuditContext Capture() => new(
-                _currentUser.UserId,
-                _currentUser.IsAuthenticated,
-                null,
-                null,
-                null,
-                null,
-                null);
+            public AuditContext Current => new(
+                ActorId: _currentUser.UserId?.ToString("D") ?? _currentUser.Email,
+                CorrelationId: null,
+                TenantId: null,
+                Source: "generated-reference");
         }
         """;
 
@@ -473,15 +476,23 @@ internal static class ComposerExecutableResourceGenerator
         {
             protected override Task<AuthenticateResult> HandleAuthenticateAsync()
             {
-                var userId = Request.Headers["X-Foundation-User"].ToString().Trim();
-                if (string.IsNullOrWhiteSpace(userId))
+                var rawUserId = Request.Headers["X-Foundation-User"].ToString().Trim();
+                if (string.IsNullOrWhiteSpace(rawUserId))
                     return Task.FromResult(AuthenticateResult.NoResult());
+                if (!Guid.TryParse(rawUserId, out var userId) || userId == Guid.Empty)
+                {
+                    return Task.FromResult(AuthenticateResult.Fail(
+                        "X-Foundation-User must contain a non-empty GUID for the generated reference adapter."));
+                }
 
                 var claims = new List<Claim>
                 {
-                    new(ClaimTypes.NameIdentifier, userId),
-                    new(ClaimTypes.Name, userId)
+                    new(ClaimTypes.NameIdentifier, userId.ToString("D")),
+                    new(ClaimTypes.Name, userId.ToString("D"))
                 };
+                var email = Request.Headers["X-Foundation-Email"].ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(email))
+                    claims.Add(new Claim(ClaimTypes.Email, email));
                 foreach (var role in Request.Headers["X-Foundation-Roles"].ToString()
                              .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
@@ -498,10 +509,29 @@ internal static class ComposerExecutableResourceGenerator
         {
             private readonly IHttpContextAccessor _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
             private ClaimsPrincipal? User => _accessor.HttpContext?.User;
-            public string? UserId => User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
             public bool IsAuthenticated => User?.Identity?.IsAuthenticated == true;
-            public IReadOnlyCollection<string> Roles => User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray()
-                ?? Array.Empty<string>();
+
+            public Guid? UserId =>
+                Guid.TryParse(User?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+                    ? userId
+                    : null;
+
+            public string? Email => User?.FindFirstValue(ClaimTypes.Email);
+
+            public bool IsInRole(string role)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(role);
+                return User?.IsInRole(role) == true;
+            }
+        }
+
+        public sealed class GeneratedAnonymousCurrentUser : ICurrentUser
+        {
+            public bool IsAuthenticated => false;
+            public Guid? UserId => null;
+            public string? Email => null;
+            public bool IsInRole(string role) => false;
         }
         """;
 
@@ -544,69 +574,111 @@ internal static class ComposerExecutableResourceGenerator
 
         foreach (var item in executable)
         {
-            var r = item.Resource;
-            var domain = $"{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{r.Name}";
-            var app = $"{projectPrefix}.Application.GeneratedModules.{item.Module.Name}";
-            if (Has(r, ComposerResourceBehavior.Authorization))
-                registrations.AppendLine($"builder.Services.AddScoped<ICrudAuthorizationPolicy<{domain}, Guid>, {app}.{r.Name}AuthorizationPolicy>();");
-            if (Has(r, ComposerResourceBehavior.Concurrency))
+            var resource = item.Resource;
+            var domain = $"{projectPrefix}.Domain.GeneratedModules.{item.Module.Name}.{resource.Name}";
+            var application = $"{projectPrefix}.Application.GeneratedModules.{item.Module.Name}";
+            if (Has(resource, ComposerResourceBehavior.Authorization))
             {
-                registrations.AppendLine($"builder.Services.AddScoped<ICrudConcurrencyPolicy<{domain}, {app}.{r.Name}UpdateRequest>, {app}.{r.Name}ConcurrencyPolicy>();");
-                registrations.AppendLine($"builder.Services.AddSingleton<IFoundationApiEntityTagProvider<{app}.{r.Name}Response>, {projectPrefix}.Api.GeneratedPlatform.{r.Name}EntityTagProvider>();");
+                registrations.AppendLine(
+                    $"builder.Services.AddScoped<ICrudAuthorizationPolicy<{domain}, Guid>, {application}.{resource.Name}AuthorizationPolicy>();");
             }
-            registrations.AppendLine($"builder.Services.AddFoundationEfCrudModule<{domain}, Guid, {app}.{r.Name}CreateRequest, {app}.{r.Name}UpdateRequest, {app}.{r.Name}Response, {app}.{r.Name}Mapper, GeneratedDbContext>(module => module");
-            registrations.AppendLine($"    .Named({JsonSerializer.Serialize(r.Name)}, {JsonSerializer.Serialize(r.Route)})");
-            registrations.AppendLine("    .Crud(options => { options.MaximumPageSize = 100; })");
+            if (Has(resource, ComposerResourceBehavior.Concurrency))
+            {
+                registrations.AppendLine(
+                    $"builder.Services.AddScoped<ICrudConcurrencyPolicy<{domain}, {application}.{resource.Name}UpdateRequest>, {application}.{resource.Name}ConcurrencyPolicy>();");
+                registrations.AppendLine(
+                    $"builder.Services.AddSingleton<IFoundationApiEntityTagProvider<{application}.{resource.Name}Response>, {projectPrefix}.Api.GeneratedPlatform.{resource.Name}EntityTagProvider>();");
+            }
+
+            registrations.AppendLine(
+                $"builder.Services.AddFoundationEfCrudModule<{domain}, Guid, {application}.{resource.Name}CreateRequest, {application}.{resource.Name}UpdateRequest, {application}.{resource.Name}Response, {application}.{resource.Name}Mapper, GeneratedDbContext>(module => module");
+            registrations.AppendLine($"    .Named({JsonSerializer.Serialize(resource.Name)}, {JsonSerializer.Serialize(resource.Route)})");
+            registrations.AppendLine("    .Crud(options => options.MaximumPageSize = 100)");
             registrations.AppendLine("    .Api(api =>");
             registrations.AppendLine("    {");
-            registrations.AppendLine($"        api.RoutePrefix = {JsonSerializer.Serialize(r.Api.RoutePrefix)};");
-            registrations.AppendLine($"        api.Idempotency = FoundationApiIdempotencyMode.{ApiIdempotencyEnum(r.Api.Idempotency)};");
-            registrations.AppendLine($"        api.Concurrency = FoundationApiConcurrencyMode.{ApiConcurrencyEnum(r.Api.Concurrency)};");
-            registrations.AppendLine($"        api.MaximumFilters = {r.Api.MaximumFilters};");
-            registrations.AppendLine($"        api.MaximumSorts = {r.Api.MaximumSorts};");
+            registrations.AppendLine($"        api.RoutePrefix = {JsonSerializer.Serialize(resource.Api.RoutePrefix)};");
+            registrations.AppendLine($"        api.Idempotency = FoundationApiIdempotencyMode.{ApiIdempotencyEnum(resource.Api.Idempotency)};");
+            registrations.AppendLine($"        api.Concurrency = FoundationApiConcurrencyMode.{ApiConcurrencyEnum(resource.Api.Concurrency)};");
+            registrations.AppendLine($"        api.MaximumFilters = {resource.Api.MaximumFilters};");
+            registrations.AppendLine($"        api.MaximumSorts = {resource.Api.MaximumSorts};");
             registrations.AppendLine("    })");
-            if (Has(r, ComposerResourceBehavior.Auditing))
+            if (Has(resource, ComposerResourceBehavior.Auditing))
                 registrations.AppendLine("    .Auditing()");
-            if (Has(r, ComposerResourceBehavior.Authorization))
+            if (Has(resource, ComposerResourceBehavior.Authorization))
                 registrations.AppendLine("    .Authorization(GeneratedAuthentication.AdminPolicy)");
-            if (Has(r, ComposerResourceBehavior.Concurrency))
+            if (Has(resource, ComposerResourceBehavior.Concurrency))
                 registrations.AppendLine("    .Concurrency()");
             registrations.AppendLine("    );");
-            if (Has(r, ComposerResourceBehavior.Auditing))
-                registrations.AppendLine($"builder.Services.AddScoped<ICrudOperationObserver<{domain}, Guid>, CrudAuditObserver<{domain}, Guid>>();");
 
-            mappings.AppendLine($"var {Camel(r.Name)}Module = app.Services.GetRequiredService<FoundationModuleDefinition<{domain}, Guid>>();");
-            mappings.AppendLine($"app.MapFoundationCrud<{domain}, Guid, {app}.{r.Name}CreateRequest, {app}.{r.Name}UpdateRequest, {app}.{r.Name}Response>({Camel(r.Name)}Module);");
+            if (Has(resource, ComposerResourceBehavior.Auditing))
+            {
+                registrations.AppendLine(
+                    $"builder.Services.AddScoped<ICrudOperationObserver<{domain}, Guid>, CrudAuditObserver<{domain}, Guid>>();");
+            }
+
+            mappings.AppendLine(
+                $"var {Camel(resource.Name)}Module = app.Services.GetRequiredService<FoundationModuleDefinition<{domain}, Guid>>();");
+            mappings.AppendLine(
+                $"app.MapFoundationCrud<{domain}, Guid, {application}.{resource.Name}CreateRequest, {application}.{resource.Name}UpdateRequest, {application}.{resource.Name}Response>({Camel(resource.Name)}Module);");
         }
 
-        var authServices = usesAuthorization ? $$"""
-            builder.Services.AddHttpContextAccessor();
-            builder.Services.AddScoped<ICurrentUser, GeneratedClaimsCurrentUser>();
-            builder.Services.AddAuthentication(GeneratedAuthentication.Scheme)
-                .AddScheme<AuthenticationSchemeOptions, GeneratedHeaderAuthenticationHandler>(GeneratedAuthentication.Scheme, _ => { });
-            builder.Services.AddAuthorization(options =>
-            {
-                options.AddPolicy(GeneratedAuthentication.AdminPolicy, policy =>
+        var identityServices = usesAuthorization
+            ? $$"""
+                builder.Services.AddHttpContextAccessor();
+                builder.Services.AddScoped<ICurrentUser, GeneratedClaimsCurrentUser>();
+                builder.Services.AddAuthentication(GeneratedAuthentication.Scheme)
+                    .AddScheme<AuthenticationSchemeOptions, GeneratedHeaderAuthenticationHandler>(GeneratedAuthentication.Scheme, _ => { });
+                builder.Services.AddAuthorization(options =>
                 {
-                    policy.AddAuthenticationSchemes(GeneratedAuthentication.Scheme);
-                    policy.RequireAuthenticatedUser();
-                    policy.RequireRole("admin");
+                    options.AddPolicy(GeneratedAuthentication.AdminPolicy, policy =>
+                    {
+                        policy.AddAuthenticationSchemes(GeneratedAuthentication.Scheme);
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireRole("admin");
+                    });
                 });
-            });
-            """ : "builder.Services.AddSingleton<ICurrentUser, AnonymousCurrentUser>();";
+                """
+            : "builder.Services.AddSingleton<ICurrentUser, GeneratedAnonymousCurrentUser>();";
 
-        var auditServices = usesAudit ? $$"""
-            builder.Services.AddSingleton<GeneratedAuditSink>();
-            builder.Services.AddSingleton<IAuditSink>(services => services.GetRequiredService<GeneratedAuditSink>());
-            builder.Services.AddScoped<IAuditContextAccessor, GeneratedAuditContextAccessor>();
-            builder.Services.AddScoped<IAuditRecorder, AuditRecorder>();
-            """ : string.Empty;
+        var auditServices = usesAudit
+            ? $$"""
+                builder.Services.AddSingleton<GeneratedClock>();
+                builder.Services.AddSingleton<IClock>(services => services.GetRequiredService<GeneratedClock>());
+                builder.Services.AddSingleton<GeneratedAuditSink>();
+                builder.Services.AddSingleton<IAuditSink>(services => services.GetRequiredService<GeneratedAuditSink>());
+                builder.Services.AddScoped<IAuditContextAccessor, GeneratedAuditContextAccessor>();
+                builder.Services.AddScoped<IAuditRecorder, AuditRecorder>();
+                """
+            : string.Empty;
 
         var idempotencyServices = usesIdempotency
             ? "builder.Services.AddFoundationEfIdempotencyStore<GeneratedDbContext>();"
             : string.Empty;
-        var authPipeline = usesAuthorization ? "app.UseAuthentication();\napp.UseAuthorization();" : string.Empty;
-        var auditEndpoint = usesAudit ? "app.MapGet(\"/api/foundationkit/audit\", (GeneratedAuditSink sink) => Results.Ok(new { count = sink.Events.Count, events = sink.Events.Select(item => new { item.Action, item.ResourceType, item.ResourceId, item.ActorId }) }));" : string.Empty;
+        var auditUsing = usesAudit ? "using FoundationKit.Auditing;" : string.Empty;
+        var authPipeline = usesAuthorization
+            ? "app.UseAuthentication();\napp.UseAuthorization();"
+            : string.Empty;
+        var auditEndpoint = usesAudit
+            ? "app.MapGet(\"/api/foundationkit/audit\", (GeneratedAuditSink sink) => Results.Ok(new { count = sink.Events.Count, events = sink.Events.Select(item => new { item.Action, item.SubjectType, item.SubjectId, item.ActorId }) }));"
+            : string.Empty;
+        var swaggerSecurity = usesAuthorization
+            ? """
+                options.AddSecurityDefinition("FoundationGeneratedUser", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Name = "X-Foundation-User",
+                    Description = "Generated reference adapter only: non-empty GUID user identifier."
+                });
+                options.AddSecurityDefinition("FoundationGeneratedRoles", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Name = "X-Foundation-Roles",
+                    Description = "Generated reference adapter only: include admin for protected CRUD routes."
+                });
+                """
+            : string.Empty;
 
         return $$"""
             #nullable enable
@@ -614,7 +686,7 @@ internal static class ComposerExecutableResourceGenerator
             using FoundationKit.Application.Abstractions;
             using FoundationKit.Application.Crud;
             using FoundationKit.Application.Modules;
-            using FoundationKit.Auditing;
+            {{auditUsing}}
             using FoundationKit.Infrastructure;
             using FoundationKit.Infrastructure.Idempotency;
             using FoundationKit.Infrastructure.Platform;
@@ -622,7 +694,7 @@ internal static class ComposerExecutableResourceGenerator
             using FoundationKit.WebApi.Api;
             using FoundationKit.WebApi.Crud;
             using {{projectPrefix}}.Api.GeneratedPlatform;
-            using {{projectPrefix}}.Application.GeneratedPlatform;
+            {{(usesAudit ? $"using {projectPrefix}.Application.GeneratedPlatform;" : string.Empty)}}
             using {{projectPrefix}}.Infrastructure.GeneratedPlatform;
             using Microsoft.AspNetCore.Authentication;
             using Microsoft.EntityFrameworkCore;
@@ -642,13 +714,15 @@ internal static class ComposerExecutableResourceGenerator
                     Version = "v1",
                     Description = "FoundationKit Composer generated pre-frontend full-stack proof API."
                 });
+                {{swaggerSecurity}}
             });
 
-            {{authServices}}
+            {{identityServices}}
             {{auditServices}}
 
             var connectionString = builder.Configuration.GetConnectionString("Generated")
-                ?? throw new InvalidOperationException("Connection string 'Generated' is required.");
+                ?? throw new InvalidOperationException(
+                    "Connection string 'Generated' is required. Supply it at runtime, for example through ConnectionStrings__Generated.");
             builder.Services.AddDbContext<GeneratedDbContext>(options =>
                 options.UseSqlServer(connectionString, sql =>
                 {
@@ -660,10 +734,10 @@ internal static class ComposerExecutableResourceGenerator
             {{registrations.ToString().TrimEnd()}}
 
             var app = builder.Build();
-            app.UseFoundationRequestPipeline();
             app.UseSwagger();
             app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Generated API v1"));
             {{authPipeline}}
+            app.UseFoundationRequestPipeline();
 
             await using (var scope = app.Services.CreateAsyncScope())
             {
@@ -685,20 +759,6 @@ internal static class ComposerExecutableResourceGenerator
             """;
     }
 
-    private static string BuildAppSettings() => """
-        {
-          "ConnectionStrings": {
-            "Generated": "Server=localhost,1433;Database=FoundationKitGeneratedProof;User Id=sa;Password=ChangeMe!123456;TrustServerCertificate=True;Encrypt=False"
-          },
-          "Logging": {
-            "LogLevel": {
-              "Default": "Information",
-              "Microsoft.AspNetCore": "Warning"
-            }
-          }
-        }
-        """;
-
     private static string BuildFullStackReport(
         ComposerManifest manifest,
         IReadOnlyList<(ComposerModuleDefinition Module, ComposerResourceDefinition Resource)> executable)
@@ -708,6 +768,7 @@ internal static class ComposerExecutableResourceGenerator
         builder.AppendLine();
         builder.Append("Project identity: `").Append(ProjectIdentity(manifest)).AppendLine("`");
         builder.Append("Database namespace: `").Append(SqlNamespace(manifest)).AppendLine("`");
+        builder.Append("Migration history table: `").Append(MigrationHistoryTableName(manifest)).AppendLine("`");
         builder.AppendLine();
         builder.AppendLine("Executable resources:");
         foreach (var item in executable)
@@ -716,8 +777,10 @@ internal static class ComposerExecutableResourceGenerator
                 .Append("` → `/").Append(item.Resource.Api.RoutePrefix).Append('/').Append(item.Resource.Route).AppendLine("`");
         }
         builder.AppendLine();
-        builder.AppendLine("Generated proof authentication uses `X-Foundation-User` and `X-Foundation-Roles: admin`; it is a reference adapter, not a production identity system.");
-        builder.AppendLine("Runtime Postman must be derived from `/swagger/v1/swagger.json` through the FoundationKit OpenAPI-to-Postman generator; it is intentionally not hand-authored here.");
+        builder.AppendLine("- Supply the SQL Server connection string at runtime through `ConnectionStrings__Generated`; Composer does not emit database credentials.");
+        builder.AppendLine("- Generated proof authentication uses `X-Foundation-User` plus `X-Foundation-Roles: admin`; it is a bounded reference adapter, not a production identity system.");
+        builder.AppendLine("- Authentication/authorization execute before FoundationKit durable-idempotency replay in the generated host pipeline.");
+        builder.AppendLine("- Runtime Postman must be derived from `/swagger/v1/swagger.json` through the FoundationKit OpenAPI-to-Postman generator; it is intentionally not hand-authored here.");
         return builder.ToString();
     }
 
@@ -727,8 +790,7 @@ internal static class ComposerExecutableResourceGenerator
         if (field.Required)
             attributes.Add("Required");
         attributes.Add($"StringLength({field.MaximumLength})");
-        var attributeText = string.Join(", ", attributes);
-        return $"[property: {attributeText}] {FieldClrType(field)} {field.Name}";
+        return $"[property: {string.Join(", ", attributes)}] {FieldClrType(field)} {field.Name}";
     }
 
     private static string FieldClrType(ComposerResourceField field) => field.Type switch
@@ -745,14 +807,14 @@ internal static class ComposerExecutableResourceGenerator
         ComposerApiIdempotencyMode.Disabled => "Disabled",
         ComposerApiIdempotencyMode.Optional => "Optional",
         ComposerApiIdempotencyMode.Required => "Required",
-        _ => throw new InvalidOperationException()
+        _ => throw new InvalidOperationException($"Unsupported API idempotency mode '{value}'.")
     };
 
     private static string ApiConcurrencyEnum(ComposerApiConcurrencyMode value) => value switch
     {
         ComposerApiConcurrencyMode.ApplicationPolicy => "ApplicationPolicy",
         ComposerApiConcurrencyMode.RequireIfMatch => "RequireIfMatch",
-        _ => throw new InvalidOperationException()
+        _ => throw new InvalidOperationException($"Unsupported API concurrency mode '{value}'.")
     };
 
     private static string Camel(string value) => char.ToLowerInvariant(value[0]) + value[1..];
@@ -781,8 +843,13 @@ internal static class ComposerExecutableResourceGenerator
         return $"{normalized}_{ShortHash(manifest.Name)}";
     }
 
-    private static string TableName(ComposerManifest manifest, ComposerResourceDefinition resource) =>
-        $"{SqlNamespace(manifest)}_{SqlIdentifier(resource.Route)}";
+    private static string TableName(ComposerManifest manifest, ComposerResourceDefinition resource)
+    {
+        var suffix = SqlIdentifier(resource.Route);
+        if (suffix.Length > 56)
+            suffix = $"{suffix[..47].TrimEnd('_')}_{ShortHash(resource.Route)}";
+        return $"{SqlNamespace(manifest)}_{suffix}";
+    }
 
     private static string IdempotencyTableName(ComposerManifest manifest) =>
         $"{SqlNamespace(manifest)}_idempotency";
