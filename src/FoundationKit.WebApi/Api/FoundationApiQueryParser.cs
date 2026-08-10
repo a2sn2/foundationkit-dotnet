@@ -11,6 +11,7 @@ internal static class FoundationApiQueryParser
     private const int MaximumFieldLength = 64;
     private const int MaximumFilterValueLength = 512;
     private const int MaximumIdempotencyKeyLength = 128;
+    private const int MaximumConcurrencyTokenLength = 256;
 
     public static bool TryParseCrudList(
         HttpContext context,
@@ -27,10 +28,7 @@ internal static class FoundationApiQueryParser
         error = Error.None;
 
         if (!TryReadPositiveInt(context.Request.Query["page"], 1, out var page) ||
-            !TryReadPositiveInt(
-                context.Request.Query["pageSize"],
-                PageRequest.DefaultPageSize,
-                out var requestedPageSize))
+            !TryReadPositiveInt(context.Request.Query["pageSize"], PageRequest.DefaultPageSize, out var requestedPageSize))
         {
             error = Error.Validation(
                 "Foundation.Api.Pagination.Invalid",
@@ -57,7 +55,6 @@ internal static class FoundationApiQueryParser
                     "Each filter must use 'field|operator|value' with a supported operator.");
                 return false;
             }
-
             parsedFilters.Add(filter);
         }
 
@@ -81,7 +78,6 @@ internal static class FoundationApiQueryParser
                     "Each sort must use 'field|asc' or 'field|desc', and a field may only appear once.");
                 return false;
             }
-
             parsedSorts.Add(sort);
         }
 
@@ -133,6 +129,45 @@ internal static class FoundationApiQueryParser
             return false;
         }
 
+        return true;
+    }
+
+    public static bool TryReadIfMatch(
+        HttpContext context,
+        out CrudConcurrencyPrecondition precondition,
+        out Error error)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        precondition = default!;
+        error = Error.None;
+
+        var values = context.Request.Headers["If-Match"];
+        if (values.Count == 0 || values.All(string.IsNullOrWhiteSpace))
+        {
+            error = Error.PreconditionRequired(
+                "Foundation.Api.IfMatch.Required",
+                "The If-Match header is required for this operation.");
+            return false;
+        }
+
+        if (values.Count != 1 || string.IsNullOrWhiteSpace(values[0]))
+        {
+            error = Error.Validation(
+                "Foundation.Api.IfMatch.Invalid",
+                "Exactly one non-empty If-Match header value is allowed.");
+            return false;
+        }
+
+        var token = values[0]!.Trim();
+        if (token.Length > MaximumConcurrencyTokenLength || token.Any(char.IsControl) || token.Contains(','))
+        {
+            error = Error.Validation(
+                "Foundation.Api.IfMatch.Invalid",
+                $"If-Match must contain one token of at most {MaximumConcurrencyTokenLength} characters and no control characters.");
+            return false;
+        }
+
+        precondition = new CrudConcurrencyPrecondition(token);
         return true;
     }
 
@@ -206,8 +241,7 @@ internal static class FoundationApiQueryParser
     private static bool IsValidField(string value) =>
         value.Length is > 0 and <= MaximumFieldLength &&
         char.IsAsciiLetter(value[0]) &&
-        value.All(character =>
-            char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.');
+        value.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.');
 
     private static bool IsValidValue(string value) =>
         value.Length <= MaximumFilterValueLength &&
