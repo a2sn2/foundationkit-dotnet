@@ -159,6 +159,135 @@ jobs:
             throw "Madar Native status smoke did not report the expected bounded stopped state."
           }
 
+      - name: Exercise Madar Native launcher lifecycle with bounded runtime stub
+        shell: powershell
+        run: |
+          $fakeDirectory = Join-Path $env:RUNNER_TEMP "fake-dotnet"
+          New-Item -ItemType Directory -Force -Path $fakeDirectory | Out-Null
+          $fakeDotnet = Join-Path $fakeDirectory "dotnet.exe"
+
+          $source = @'
+          using System;
+          using System.IO;
+          using System.Net;
+          using System.Net.Sockets;
+          using System.Text;
+
+          public static class FakeDotNet
+          {
+              public static int Main(string[] args)
+              {
+                  if (args.Length == 1 && args[0] == "--version")
+                  {
+                      Console.WriteLine("10.0.999");
+                      return 0;
+                  }
+
+                  if (args.Length > 0 && args[0] == "publish")
+                  {
+                      string output = null;
+                      for (int index = 0; index < args.Length - 1; index++)
+                      {
+                          if (args[index] == "--output")
+                          {
+                              output = args[index + 1];
+                              break;
+                          }
+                      }
+
+                      if (String.IsNullOrWhiteSpace(output))
+                          return 2;
+
+                      Directory.CreateDirectory(output);
+                      File.WriteAllText(Path.Combine(output, "Madar.Api.dll"), "stub");
+                      return 0;
+                  }
+
+                  if (args.Length == 1 && args[0] == "Madar.Api.dll")
+                  {
+                      string rawUrl = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://127.0.0.1:18010";
+                      Uri url = new Uri(rawUrl);
+                      TcpListener listener = new TcpListener(IPAddress.Loopback, url.Port);
+                      listener.Start();
+
+                      while (true)
+                      {
+                          using (TcpClient client = listener.AcceptTcpClient())
+                          using (NetworkStream stream = client.GetStream())
+                          using (StreamReader reader = new StreamReader(stream, Encoding.ASCII, false, 1024, true))
+                          {
+                              string requestLine = reader.ReadLine();
+                              string path = "/";
+                              if (!String.IsNullOrWhiteSpace(requestLine))
+                              {
+                                  string[] parts = requestLine.Split(' ');
+                                  if (parts.Length > 1)
+                                      path = parts[1];
+                              }
+
+                              string header;
+                              while (!String.IsNullOrEmpty(header = reader.ReadLine())) { }
+
+                              string body = path.Contains("/health/ready")
+                                  ? "{\"status\":\"ready\",\"service\":\"madar-api\"}"
+                                  : path.Contains("/health/live")
+                                      ? "{\"status\":\"live\",\"service\":\"madar-api\"}"
+                                      : "{}";
+                              byte[] payload = Encoding.UTF8.GetBytes(body);
+                              string responseHeaders =
+                                  "HTTP/1.1 200 OK\r\n" +
+                                  "Content-Type: application/json; charset=utf-8\r\n" +
+                                  "Content-Length: " + payload.Length + "\r\n" +
+                                  "Connection: close\r\n\r\n";
+                              byte[] headerBytes = Encoding.ASCII.GetBytes(responseHeaders);
+                              stream.Write(headerBytes, 0, headerBytes.Length);
+                              stream.Write(payload, 0, payload.Length);
+                              stream.Flush();
+                          }
+                      }
+                  }
+
+                  return 0;
+              }
+          }
+          '@
+
+          Add-Type -TypeDefinition $source -OutputAssembly $fakeDotnet -OutputType ConsoleApplication
+
+          $originalPath = $env:PATH
+          $baseUrl = "http://127.0.0.1:18010"
+          try {
+            $env:PATH = "$fakeDirectory;$originalPath"
+            powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" start -Mode Native -BaseUrl $baseUrl -Reset
+
+            $status = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status -Mode Native -BaseUrl $baseUrl 2>&1 | Out-String)
+            Write-Host $status
+            if ($status -notmatch "Madar: READY") {
+              throw "Madar Native lifecycle smoke did not reach READY."
+            }
+            if (-not (Test-Path ".local\madar-native.pid")) {
+              throw "Madar Native lifecycle smoke did not persist its PID."
+            }
+
+            powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" stop -Mode Native -BaseUrl $baseUrl
+            $stopped = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status -Mode Native -BaseUrl $baseUrl 2>&1 | Out-String)
+            Write-Host $stopped
+            if ($stopped -notmatch "Madar: STOPPED or unreachable") {
+              throw "Madar Native lifecycle smoke did not stop cleanly."
+            }
+          }
+          finally {
+            $env:PATH = $originalPath
+            if (Test-Path ".local\madar-native.pid") {
+              $pidText = (Get-Content ".local\madar-native.pid" -Raw).Trim()
+              $processId = 0
+              if ([int]::TryParse($pidText, [ref]$processId)) {
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+              }
+              Remove-Item ".local\madar-native.pid" -Force -ErrorAction SilentlyContinue
+            }
+          }
+
       - name: Verify Madar Native and UAT sharing launcher contract
         shell: powershell
         run: |
