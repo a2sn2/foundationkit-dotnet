@@ -8,6 +8,7 @@ public static class ComposerProjectModelGenerator
     public const string GeneratorContractVersion = "2";
 
     private const string MarkerFile = ".foundationkit-generated.json";
+    private const string SwashbuckleVersion = "6.5.0";
     private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
 
     public static async Task<GeneratedProjectResult> GenerateAsync(
@@ -31,6 +32,16 @@ public static class ComposerProjectModelGenerator
 
         var projectPrefix = Path.GetFileNameWithoutExtension(baseResult.SolutionPath);
         var overlay = BuildOverlayFiles(analysis.Manifest, projectPrefix);
+        if (analysis.Manifest.ProjectModel.Resources.Any(resource => resource.IsExecutable))
+        {
+            AddExecutableProjectBuildFiles(
+                overlay,
+                baseResult.OutputDirectory,
+                projectPrefix);
+            foreach (var file in ComposerExecutableResourceGenerator.BuildFiles(analysis.Manifest, projectPrefix))
+                overlay[file.Key] = file.Value;
+        }
+
         foreach (var file in overlay)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -93,26 +104,7 @@ public static class ComposerProjectModelGenerator
                 name = module.Name,
                 resources = module.Resources
                     .OrderBy(resource => resource.Name, StringComparer.OrdinalIgnoreCase)
-                    .Select(resource => new
-                    {
-                        name = resource.Name,
-                        route = resource.Route,
-                        idType = IdTypeName(resource.IdType),
-                        behaviors = resource.Behaviors.Select(BehaviorName).ToArray(),
-                        overrides = new
-                        {
-                            manager = resource.Overrides.Manager
-                        },
-                        api = new
-                        {
-                            routePrefix = resource.Api.RoutePrefix,
-                            idempotency = IdempotencyName(resource.Api.Idempotency),
-                            concurrency = ConcurrencyName(resource.Api.Concurrency),
-                            maximumFilters = resource.Api.MaximumFilters,
-                            maximumSorts = resource.Api.MaximumSorts,
-                            rateLimitPolicyName = resource.Api.RateLimitPolicyName
-                        }
-                    })
+                    .Select(BuildNormalizedResource)
                     .ToArray()
             })
             .ToArray();
@@ -130,6 +122,50 @@ public static class ComposerProjectModelGenerator
         };
 
         return JsonSerializer.Serialize(normalized, IndentedJsonOptions);
+    }
+
+    private static object BuildNormalizedResource(ComposerResourceDefinition resource)
+    {
+        var overrides = new { manager = resource.Overrides.Manager };
+        var api = new
+        {
+            routePrefix = resource.Api.RoutePrefix,
+            idempotency = IdempotencyName(resource.Api.Idempotency),
+            concurrency = ConcurrencyName(resource.Api.Concurrency),
+            maximumFilters = resource.Api.MaximumFilters,
+            maximumSorts = resource.Api.MaximumSorts,
+            rateLimitPolicyName = resource.Api.RateLimitPolicyName
+        };
+
+        if (!resource.IsExecutable)
+        {
+            return new
+            {
+                name = resource.Name,
+                route = resource.Route,
+                idType = IdTypeName(resource.IdType),
+                behaviors = resource.Behaviors.Select(BehaviorName).ToArray(),
+                overrides,
+                api
+            };
+        }
+
+        return new
+        {
+            name = resource.Name,
+            route = resource.Route,
+            idType = IdTypeName(resource.IdType),
+            behaviors = resource.Behaviors.Select(BehaviorName).ToArray(),
+            fields = resource.Fields.Select(field => new
+            {
+                name = field.Name,
+                type = FieldTypeName(field.Type),
+                required = field.Required,
+                maximumLength = field.MaximumLength
+            }).ToArray(),
+            overrides,
+            api
+        };
     }
 
     private static SortedDictionary<string, string> BuildOverlayFiles(
@@ -154,6 +190,45 @@ public static class ComposerProjectModelGenerator
         }
 
         return files;
+    }
+
+    private static void AddExecutableProjectBuildFiles(
+        SortedDictionary<string, string> overlay,
+        string outputDirectory,
+        string projectPrefix)
+    {
+        var packagesPath = Path.Combine(outputDirectory, "Directory.Packages.props");
+        var apiProjectRelativePath = $"src/{projectPrefix}.Api/{projectPrefix}.Api.csproj";
+        var apiProjectPath = Path.Combine(outputDirectory, ToPlatformPath(apiProjectRelativePath));
+        if (!File.Exists(packagesPath) || !File.Exists(apiProjectPath))
+        {
+            throw new ComposerGenerationException(
+                "Executable resources require the generated Web API project and central package file.");
+        }
+
+        var packages = File.ReadAllText(packagesPath);
+        if (!packages.Contains("Swashbuckle.AspNetCore", StringComparison.Ordinal))
+        {
+            const string itemGroupEnd = "  </ItemGroup>";
+            var index = packages.IndexOf(itemGroupEnd, StringComparison.Ordinal);
+            if (index < 0)
+                throw new ComposerGenerationException("Generated central package file has an unexpected shape.");
+            var insertion = $"    <PackageVersion Include=\"Swashbuckle.AspNetCore\" Version=\"{SwashbuckleVersion}\" />\n";
+            packages = packages.Insert(index, insertion);
+        }
+        overlay["Directory.Packages.props"] = packages;
+
+        var apiProject = File.ReadAllText(apiProjectPath);
+        if (!apiProject.Contains("Swashbuckle.AspNetCore", StringComparison.Ordinal))
+        {
+            const string projectEnd = "</Project>";
+            var index = apiProject.LastIndexOf(projectEnd, StringComparison.Ordinal);
+            if (index < 0)
+                throw new ComposerGenerationException("Generated API project has an unexpected shape.");
+            var insertion = "  <ItemGroup>\n    <PackageReference Include=\"Swashbuckle.AspNetCore\" />\n  </ItemGroup>\n";
+            apiProject = apiProject.Insert(index, insertion);
+        }
+        overlay[apiProjectRelativePath] = apiProject;
     }
 
     private static string BuildResourceDescriptor(
@@ -208,12 +283,15 @@ public static class ComposerProjectModelGenerator
     {
         var model = manifest.ProjectModel
             ?? throw new ComposerGenerationException("Schema v2 manifest is missing its project model.");
+        var hasExecutable = model.Resources.Any(resource => resource.IsExecutable);
         var builder = new StringBuilder();
         builder.Append("# ").AppendLine(manifest.Name);
         builder.AppendLine();
         builder.AppendLine("## Composer v2 project model");
         builder.AppendLine();
-        builder.AppendLine("This file is generated from `foundationkit.project.json`. It records project/module/resource intent; it does not synthesize product business rules.");
+        builder.AppendLine(hasExecutable
+            ? "This file is generated from `foundationkit.project.json`. Resources with explicit `fields` have the bounded Phase 12 executable full-stack overlay; resources without fields remain configuration descriptors."
+            : "This file is generated from `foundationkit.project.json`. It records project/module/resource intent; it does not synthesize product business rules.");
         builder.AppendLine();
         builder.AppendLine("| Module | Resource | Route | ID | Behaviors | Manager | API | Idempotency | Concurrency |");
         builder.AppendLine("|---|---|---|---|---|---|---|---|---|");
@@ -234,13 +312,31 @@ public static class ComposerProjectModelGenerator
             }
         }
 
+        if (hasExecutable)
+        {
+            builder.AppendLine();
+            builder.AppendLine("## Executable fields");
+            builder.AppendLine();
+            foreach (var module in model.Modules)
+            {
+                foreach (var resource in module.Resources.Where(resource => resource.IsExecutable))
+                {
+                    builder.Append("- `").Append(module.Name).Append('.').Append(resource.Name).Append("`: ")
+                        .AppendLine(string.Join(", ", resource.Fields.Select(field =>
+                            $"`{field.Name}:{FieldTypeName(field.Type)}:{(field.Required ? "required" : "optional")}:max={field.MaximumLength}`")));
+                }
+            }
+        }
+
         builder.AppendLine();
         builder.AppendLine("## Boundary");
         builder.AppendLine();
         builder.AppendLine("- Global FoundationKit capability/provider resolution still uses the canonical Core capability graph.");
         builder.AppendLine("- Resource `behaviors` are module intent and map onto existing runtime capabilities where one exists.");
         builder.AppendLine("- `manager` is a safe identifier only; Composer does not accept or inject arbitrary C# source from the manifest.");
-        builder.AppendLine("- Concrete database fields, business validation, authorization semantics, external integrations, and secrets remain explicit project code/configuration.");
+        builder.AppendLine(hasExecutable
+            ? "- Phase 12 executable resources are deliberately bounded: explicit text fields, Guid IDs, SQL Server, CRUD/validation/authorization/audit/concurrency/idempotency surfaces only when declared and supported."
+            : "- Concrete database fields, business validation, authorization semantics, external integrations, and secrets remain explicit project code/configuration.");
         return builder.ToString();
     }
 
@@ -251,6 +347,12 @@ public static class ComposerProjectModelGenerator
         ComposerResourceIdType.Long => "long",
         ComposerResourceIdType.Int => "int",
         _ => throw new InvalidOperationException($"Unsupported resource ID type '{value}'.")
+    };
+
+    private static string FieldTypeName(ComposerResourceFieldType value) => value switch
+    {
+        ComposerResourceFieldType.Text => "text",
+        _ => throw new InvalidOperationException($"Unsupported resource field type '{value}'.")
     };
 
     private static string BehaviorName(ComposerResourceBehavior value) => value switch
