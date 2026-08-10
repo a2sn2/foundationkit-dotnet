@@ -141,7 +141,7 @@ public sealed class ErrorHandlingAndValidationTests
         [property: Required] string Name,
         [property: Range(1, 10)] int Count);
 
-    private enum ExceptionScenario
+    public enum ExceptionScenario
     {
         Validation,
         BadRequest,
