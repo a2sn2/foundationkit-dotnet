@@ -5,23 +5,31 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   snapshot:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: core-vnext/foundation-platform-phase-1-6
+          fetch-depth: 0
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: "10.0.x"
       - run: dotnet restore tools/FoundationKit.CatalogGenerator/FoundationKit.CatalogGenerator.csproj
       - run: dotnet run --project tools/FoundationKit.CatalogGenerator --configuration Release
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: generated-catalog-snapshot
-          path: |
-            catalog/foundationkit.capabilities.json
-            catalog/foundationkit.maturity-evidence.json
-            docs/FEATURES.md
-          if-no-files-found: error
+      - name: Commit canonical generated projections when changed
+        shell: bash
+        run: |
+          if git diff --quiet -- catalog/foundationkit.capabilities.json catalog/foundationkit.maturity-evidence.json docs/FEATURES.md; then
+            echo "Generated projections already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalog/foundationkit.capabilities.json catalog/foundationkit.maturity-evidence.json docs/FEATURES.md
+          git commit -m "Regenerate canonical capability projections"
+          git push origin HEAD:core-vnext/foundation-platform-phase-1-6
