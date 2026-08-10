@@ -146,9 +146,16 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
             new PagedResult<TRead>(items, boundedPage.Page, boundedPage.PageSize, total));
     }
 
+    public Task<Result<TRead>> UpdateAsync(
+        TId id,
+        TUpdate request,
+        CancellationToken cancellationToken = default) =>
+        UpdateAsync(id, request, null, cancellationToken);
+
     public async Task<Result<TRead>> UpdateAsync(
         TId id,
         TUpdate request,
+        CrudConcurrencyPrecondition? precondition,
         CancellationToken cancellationToken = default)
     {
         if (!_module.Crud!.UpdateEnabled)
@@ -168,7 +175,8 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         if (authorization.IsFailure)
             return Result<TRead>.Failure(authorization.Error);
 
-        var concurrency = _concurrency.Validate(entity, request);
+        var normalizedPrecondition = precondition?.Normalize();
+        var concurrency = _concurrency.Validate(entity, request, normalizedPrecondition);
         if (concurrency.IsFailure)
             return Result<TRead>.Failure(concurrency.Error);
 
