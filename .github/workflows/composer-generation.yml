@@ -31,6 +31,12 @@ jobs:
             **/*.csproj
             Directory.Packages.props
 
+      - name: Validate Composer schema and examples as JSON
+        run: |
+          python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.golden.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.v2.json >/dev/null
+
       - name: Restore Composer
         run: dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
 
