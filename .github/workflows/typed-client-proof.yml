@@ -1,0 +1,297 @@
+name: FoundationKit Typed Client Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-typed-client-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typed-client:
+    name: Live OpenAPI to deterministic C# client proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Validate typed-client tooling
+        run: |
+          python3 -m py_compile scripts/generate-csharp-client-from-openapi.py
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
+
+      - name: Generate temporary SQL credential
+        shell: bash
+        run: |
+          password="Fkit!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Restore and build Composer
+        run: |
+          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
+
+      - name: Generate executable reference product
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.fullstack-a.json
+          --output artifacts/typed-client-product
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Restore build and test generated reference product
+        run: |
+          dotnet restore artifacts/typed-client-product/ComposerFullStackA.sln
+          dotnet build artifacts/typed-client-product/ComposerFullStackA.sln --configuration Release --no-restore
+          dotnet test artifacts/typed-client-product/ComposerFullStackA.sln --configuration Release --no-build
+
+      - name: Start SQL Server
+        shell: bash
+        run: |
+          mkdir -p artifacts/typed-client-proof/logs
+          docker run --detach \
+            --name foundationkit-typed-client-sql \
+            --publish 127.0.0.1:14335:1433 \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server
+        shell: bash
+        run: |
+          sqlcmd_path=""
+          for attempt in {1..120}; do
+            if [ -z "$sqlcmd_path" ]; then
+              sqlcmd_path="$(docker exec foundationkit-typed-client-sql sh -lc 'if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then echo /opt/mssql-tools18/bin/sqlcmd; elif [ -x /opt/mssql-tools/bin/sqlcmd ]; then echo /opt/mssql-tools/bin/sqlcmd; fi' 2>/dev/null || true)"
+            fi
+            if [ -n "$sqlcmd_path" ] && docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-typed-client-sql \
+              "$sqlcmd_path" -S localhost -U sa -C -Q "SELECT 1" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs foundationkit-typed-client-sql --tail 300
+          exit 1
+
+      - name: Start generated API
+        shell: bash
+        run: |
+          connection="Server=127.0.0.1,14335;Database=FoundationKitTypedClientProof;User Id=sa;Password=$FOUNDATIONKIT_SQL_PASSWORD;TrustServerCertificate=True;Encrypt=False"
+          echo "::add-mask::$connection"
+          ASPNETCORE_URLS="http://127.0.0.1:8301" \
+          ConnectionStrings__Generated="$connection" \
+          dotnet run \
+            --project artifacts/typed-client-product/src/ComposerFullStackA.Api/ComposerFullStackA.Api.csproj \
+            --configuration Release --no-build --no-restore \
+            > artifacts/typed-client-proof/logs/api.log 2>&1 &
+          echo $! > /tmp/foundationkit-typed-client-api.pid
+
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8301/api/foundationkit/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/foundationkit-typed-client-api.pid)" 2>/dev/null; then
+              cat artifacts/typed-client-proof/logs/api.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/typed-client-proof/logs/api.log
+          exit 1
+
+      - name: Capture live OpenAPI
+        shell: bash
+        run: |
+          mkdir -p artifacts/typed-client-proof/client
+          curl --fail --silent http://127.0.0.1:8301/swagger/v1/swagger.json \
+            > artifacts/typed-client-proof/openapi.json
+          python3 -m json.tool artifacts/typed-client-proof/openapi.json >/dev/null
+          grep -Fq 'x-foundation-module' artifacts/typed-client-proof/openapi.json
+          grep -Fq 'x-foundation-operation' artifacts/typed-client-proof/openapi.json
+
+      - name: Generate and reproduce deterministic C# client
+        shell: bash
+        run: |
+          python3 scripts/generate-csharp-client-from-openapi.py \
+            artifacts/typed-client-proof/openapi.json \
+            artifacts/typed-client-proof/client/GeneratedApiClient.g.cs \
+            --namespace FoundationKit.GeneratedProof.Client \
+            --class-name GeneratedApiClient
+          sha256sum artifacts/typed-client-proof/client/GeneratedApiClient.g.cs \
+            > /tmp/typed-client-before.sha256
+          python3 scripts/generate-csharp-client-from-openapi.py \
+            artifacts/typed-client-proof/openapi.json \
+            artifacts/typed-client-proof/client/GeneratedApiClient.g.cs \
+            --namespace FoundationKit.GeneratedProof.Client \
+            --class-name GeneratedApiClient
+          sha256sum artifacts/typed-client-proof/client/GeneratedApiClient.g.cs \
+            > /tmp/typed-client-after.sha256
+          diff -u /tmp/typed-client-before.sha256 /tmp/typed-client-after.sha256
+          python3 scripts/generate-csharp-client-from-openapi.py \
+            artifacts/typed-client-proof/openapi.json \
+            artifacts/typed-client-proof/client/GeneratedApiClient.g.cs \
+            --namespace FoundationKit.GeneratedProof.Client \
+            --class-name GeneratedApiClient \
+            --check
+          grep -Fq 'ApiResponse<CustomerResponse>' artifacts/typed-client-proof/client/GeneratedApiClient.g.cs
+          grep -Fq 'ApiResponseMetadata' src/FoundationKit.Blazor/Api/ApiResponse.cs
+          ! grep -Fq 'HttpResponseMessage>' artifacts/typed-client-proof/client/GeneratedApiClient.g.cs
+
+      - name: Create typed-client execution proof project
+        shell: bash
+        run: |
+          cat > artifacts/typed-client-proof/client/TypedClientProof.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+              <EnableNETAnalyzers>true</EnableNETAnalyzers>
+              <AnalysisLevel>10.0-recommended</AnalysisLevel>
+            </PropertyGroup>
+            <ItemGroup>
+              <ProjectReference Include="../../../src/FoundationKit.Blazor/FoundationKit.Blazor.csproj" />
+            </ItemGroup>
+          </Project>
+          EOF
+
+          cat > artifacts/typed-client-proof/client/Program.cs <<'EOF'
+          using System.Net;
+          using FoundationKit.GeneratedProof.Client;
+
+          using var http = new HttpClient
+          {
+              BaseAddress = new Uri("http://127.0.0.1:8301/")
+          };
+          http.DefaultRequestHeaders.Add("X-Foundation-User", "22222222-2222-2222-2222-222222222222");
+          http.DefaultRequestHeaders.Add("X-Foundation-Roles", "admin");
+          http.DefaultRequestHeaders.Add("X-Foundation-Email", "typed-client@example.com");
+
+          var client = new GeneratedApiClient(http);
+
+          var create = await client.CreateCustomerAsync(
+              idempotencyKey: "typed-client-create",
+              request: new CustomerCreateRequest("Typed Client", "phase13"));
+          Require(create.Result.IsSuccess, $"create failed: {create.Result.Error?.Code}");
+          Require(create.Result.StatusCode == HttpStatusCode.Created, "create status was not 201");
+          Require(create.Metadata.Location is not null, "create Location metadata was not preserved");
+          var created = create.Result.Value;
+          Require(created.Version == 1, "create version was not 1");
+
+          var get = await client.GetCustomerAsync(id: created.Id);
+          Require(get.Result.IsSuccess, "get failed");
+          Require(get.Metadata.EntityTag == "\"1\"", $"expected ETag 1, got {get.Metadata.EntityTag}");
+          Require(!string.IsNullOrWhiteSpace(get.Metadata.CorrelationId), "correlation metadata was not preserved");
+
+          var update = await client.UpdateCustomerAsync(
+              id: created.Id,
+              idempotencyKey: "typed-client-update",
+              entityTag: get.Metadata.EntityTag!,
+              request: new CustomerUpdateRequest("Typed Client Updated", "phase13-update"));
+          Require(update.Result.IsSuccess, $"update failed: {update.Result.Error?.Code}");
+          Require(update.Result.Value.Version == 2, "update version was not 2");
+          Require(update.Metadata.EntityTag == "\"2\"", $"expected ETag 2, got {update.Metadata.EntityTag}");
+
+          var list = await client.ListCustomerAsync(
+              page: 1,
+              pageSize: 20,
+              filter: Array.Empty<string>(),
+              sort: Array.Empty<string>());
+          Require(list.Result.IsSuccess, "list failed");
+          Require(list.Result.Value.Items.Any(item => item.Id == created.Id), "list did not contain created item");
+
+          var delete = await client.DeleteCustomerAsync(
+              id: created.Id,
+              idempotencyKey: "typed-client-delete");
+          Require(delete.Result.IsSuccess, $"delete failed: {delete.Result.Error?.Code}");
+          Require(delete.Result.StatusCode == HttpStatusCode.NoContent, "delete status was not 204");
+
+          var afterDelete = await client.GetCustomerAsync(id: created.Id);
+          Require(afterDelete.Result.IsFailure, "deleted resource was still readable");
+          Require(afterDelete.Result.StatusCode == HttpStatusCode.NotFound, "deleted resource did not return 404");
+
+          var evidence = $$"""
+          {
+            "createdId": "{{created.Id:D}}",
+            "createLocation": "{{create.Metadata.Location}}",
+            "initialEntityTag": "\\\"1\\\"",
+            "updatedEntityTag": "\\\"2\\\"",
+            "updatedVersion": {{update.Result.Value.Version}},
+            "listContainsCreatedItem": true,
+            "deleteStatus": 204,
+            "readAfterDeleteStatus": 404,
+            "transportCorrelationPreserved": true
+          }
+          """;
+          await File.WriteAllTextAsync("../typed-client-runtime-proof.json", evidence + Environment.NewLine);
+          Console.WriteLine(evidence);
+
+          static void Require(bool condition, string message)
+          {
+              if (!condition)
+                  throw new InvalidOperationException(message);
+          }
+          EOF
+
+      - name: Build and execute generated typed client against live API
+        working-directory: artifacts/typed-client-proof/client
+        run: |
+          dotnet restore TypedClientProof.csproj
+          dotnet build TypedClientProof.csproj --configuration Release --no-restore
+          dotnet run --project TypedClientProof.csproj --configuration Release --no-build --no-restore
+          python3 -m json.tool ../typed-client-runtime-proof.json >/dev/null
+
+      - name: Upload typed-client evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundationkit-typed-client-proof
+          path: |
+            artifacts/typed-client-proof/openapi.json
+            artifacts/typed-client-proof/client/GeneratedApiClient.g.cs
+            artifacts/typed-client-proof/typed-client-runtime-proof.json
+            artifacts/typed-client-proof/logs/api.log
+          if-no-files-found: error
+
+      - name: Print logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "--- Generated API ---"
+          cat artifacts/typed-client-proof/logs/api.log 2>/dev/null || true
+          echo "--- SQL Server ---"
+          docker logs foundationkit-typed-client-sql --tail 300 2>/dev/null || true
+
+      - name: Stop generated API and SQL Server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/foundationkit-typed-client-api.pid ]; then
+            kill "$(cat /tmp/foundationkit-typed-client-api.pid)" 2>/dev/null || true
+          fi
+          docker rm -f foundationkit-typed-client-sql >/dev/null 2>&1 || true
