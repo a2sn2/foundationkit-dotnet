@@ -12,6 +12,11 @@ public enum ComposerResourceIdType
     Int = 3
 }
 
+public enum ComposerResourceFieldType
+{
+    Text = 0
+}
+
 public enum ComposerResourceBehavior
 {
     Crud = 0,
@@ -42,6 +47,12 @@ public enum ComposerApiConcurrencyMode
     RequireIfMatch = 1
 }
 
+public sealed record ComposerResourceField(
+    string Name,
+    ComposerResourceFieldType Type,
+    bool Required,
+    int MaximumLength);
+
 public sealed record ComposerResourceApi(
     string RoutePrefix,
     ComposerApiIdempotencyMode Idempotency,
@@ -57,8 +68,12 @@ public sealed record ComposerResourceDefinition(
     string Route,
     ComposerResourceIdType IdType,
     IReadOnlyList<ComposerResourceBehavior> Behaviors,
+    IReadOnlyList<ComposerResourceField> Fields,
     ComposerResourceOverrides Overrides,
-    ComposerResourceApi Api);
+    ComposerResourceApi Api)
+{
+    public bool IsExecutable => Fields.Count > 0;
+}
 
 public sealed record ComposerModuleDefinition(
     string Name,
@@ -135,6 +150,14 @@ public static class ComposerManifestParser
     private const int MaxModules = 32;
     private const int MaxResourcesPerModule = 64;
     private const int MaxResources = 256;
+    private const int MaxFieldsPerResource = 32;
+    private const int MaxTextFieldLength = 4000;
+
+    private static readonly HashSet<string> ReservedGeneratedFieldNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Id",
+        "Version"
+    };
 
     private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
     {
@@ -292,6 +315,7 @@ public static class ComposerManifestParser
         var route = NormalizeRoute(resource.Route, name);
         var idType = ParseIdType(resource.IdType);
         var behaviors = NormalizeBehaviors(resource.Behaviors, moduleName, name);
+        var fields = NormalizeFields(resource.Fields, moduleName, name);
         var manager = resource.Overrides?.Manager is null
             ? null
             : RequireIdentifier(resource.Overrides.Manager, $"manager override for '{moduleName}.{name}'");
@@ -302,8 +326,67 @@ public static class ComposerManifestParser
             route,
             idType,
             behaviors,
+            fields,
             new ComposerResourceOverrides(manager),
             api);
+    }
+
+    private static ComposerResourceField[] NormalizeFields(
+        IReadOnlyList<FieldDocument>? values,
+        string moduleName,
+        string resourceName)
+    {
+        if (values is null)
+            return Array.Empty<ComposerResourceField>();
+        if (values.Count == 0)
+        {
+            throw new ComposerManifestException(
+                $"Resource '{moduleName}.{resourceName}' declares 'fields' but the list is empty.");
+        }
+        if (values.Count > MaxFieldsPerResource)
+        {
+            throw new ComposerManifestException(
+                $"Resource '{moduleName}.{resourceName}' supports at most {MaxFieldsPerResource} executable fields.");
+        }
+
+        var fields = new List<ComposerResourceField>(values.Count);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var value in values)
+        {
+            var name = RequireIdentifier(value.Name, $"field name in '{moduleName}.{resourceName}'");
+            if (ReservedGeneratedFieldNames.Contains(name))
+            {
+                throw new ComposerManifestException(
+                    $"Resource field '{moduleName}.{resourceName}.{name}' is reserved by generated infrastructure.");
+            }
+            if (!names.Add(name))
+                throw new ComposerManifestException($"Resource '{moduleName}.{resourceName}' contains duplicate field '{name}'.");
+
+            var type = value.Type?.Trim().ToLowerInvariant() switch
+            {
+                "text" => ComposerResourceFieldType.Text,
+                null or "" => throw new ComposerManifestException(
+                    $"Resource field '{moduleName}.{resourceName}.{name}' requires a field type."),
+                _ => throw new ComposerManifestException(
+                    $"Resource field '{moduleName}.{resourceName}.{name}' has unsupported type '{value.Type}'. Allowed: text.")
+            };
+            var maximumLength = value.MaximumLength
+                ?? throw new ComposerManifestException(
+                    $"Resource field '{moduleName}.{resourceName}.{name}' requires maximumLength.");
+            if (maximumLength is < 1 or > MaxTextFieldLength)
+            {
+                throw new ComposerManifestException(
+                    $"Resource field '{moduleName}.{resourceName}.{name}' maximumLength must be between 1 and {MaxTextFieldLength}.");
+            }
+
+            fields.Add(new ComposerResourceField(
+                name,
+                type,
+                value.Required ?? true,
+                maximumLength));
+        }
+
+        return fields.OrderBy(field => field.Name, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     private static IReadOnlyList<ComposerResourceBehavior> NormalizeBehaviors(
@@ -546,8 +629,15 @@ public static class ComposerManifestParser
         string? Route,
         string? IdType,
         IReadOnlyList<string>? Behaviors,
+        IReadOnlyList<FieldDocument>? Fields,
         OverridesDocument? Overrides,
         ApiDocument? Api);
+
+    private sealed record FieldDocument(
+        string? Name,
+        string? Type,
+        bool? Required,
+        int? MaximumLength);
 
     private sealed record OverridesDocument(string? Manager);
 
