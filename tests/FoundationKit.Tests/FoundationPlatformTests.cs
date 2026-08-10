@@ -47,7 +47,7 @@ public sealed class FoundationPlatformTests
         var registry = new FoundationModuleRegistry([module]);
         Assert.Equal("customers", registry.Find("customers")!.Route);
         Assert.False(module.Crud!.DeleteEnabled);
-        Assert.True(module.HasCapability(FoundationModuleCapabilities.Auditing));
+        Assert.True(module.HasCapability(FoundationModuleCapability.Auditing));
     }
 
     [Fact]
