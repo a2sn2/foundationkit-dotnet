@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using FoundationKit.Domain.Primitives;
 
 namespace FoundationKit.Workbench.Domain;
@@ -16,8 +17,11 @@ public sealed class CoreCrudRecord : Entity<Guid>
         Version = 1;
     }
 
+    [Required]
+    [StringLength(120)]
     public string Name { get; private set; } = string.Empty;
 
+    [Range(1, int.MaxValue)]
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedUtc { get; private set; }
