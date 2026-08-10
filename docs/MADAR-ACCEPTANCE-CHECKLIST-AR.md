@@ -1,6 +1,6 @@
 # قائمة قبول مدار محليًا — v0.10
 
-هذه القائمة هي **دور المستخدم بعد اكتمال التسليم التقني**. لا تحتاج لتعديل كود أو قاعدة بيانات يدويًا؛ المطلوب تشغيل Madar وتجربة المنتج من منظور الاستخدام.
+هذه القائمة هي جولة **UAT بشرية** بعد اكتمال التسليم التقني. لا تحتاج لتعديل كود أو قاعدة بيانات يدويًا؛ المطلوب تشغيل Madar وتجربة المنتج من منظور الاستخدام.
 
 راجع أيضًا:
 
@@ -14,16 +14,17 @@
 
 ```powershell
 git pull --ff-only origin main
-.\foundationkit.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
 ```
 
-النتيجة المطلوبة:
+المطلوب لمسار Native:
 
 - .NET 10 موجود.
-- Docker جاهز.
-- لا يوجد FAIL لمتطلب Madar.
+- SQL Server المحلي يعمل.
+- المنفذ `8100` متاح أو مملوك لنسخة Madar سليمة.
+- لا يوجد FAIL في متطلبات التشغيل الأساسية.
 
-النتيجة:
+Docker و`devtunnel` و`cloudflared` أدوات اختيارية حسب topology والمشاركة المستخدمة.
 
 ```text
 [ ] PASS
@@ -31,10 +32,10 @@ git pull --ff-only origin main
 ملاحظات:
 ```
 
-## 2. تشغيل Madar
+## 2. تشغيل Madar Native
 
 ```powershell
-.\foundationkit.ps1 start -Target Madar -Mode Docker
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
 ```
 
 المطلوب:
@@ -47,11 +48,11 @@ URL: http://localhost:8100
 ثم:
 
 ```powershell
-.\scripts\madar-product.ps1 credentials
-.\foundationkit.ps1 open -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 open -Target Madar
 ```
 
-النتيجة:
+ملاحظة: إذا كانت `MadarDb` موجودة من تشغيل أقدم، قد لا تطابق كلمات المرور المولدة حديثًا مستخدمين موجودين سابقًا لأن bootstrap لا يعيد كتابة كلمات مرورهم.
 
 ```text
 [ ] PASS
@@ -61,16 +62,16 @@ URL: http://localhost:8100
 
 ## 3. تسجيل الدخول كـAdministrator
 
-استخدم بيانات Administrator المحلية التي عرضها أمر `credentials`.
-
 تحقق من:
 
 - نجاح تسجيل الدخول.
-- ظهور واجهة Madar العربية بشكل طبيعي.
-- عدم وجود صفحة خطأ أو assets مفقودة.
+- ظهور الواجهة العربية بشكل طبيعي.
+- عدم وجود assets أساسية مفقودة.
+- وجود favicon بدل 404 المتكرر السابق.
 - إمكانية الوصول إلى `/cases` و`/reports/cases` و`/admin/departments`.
+- عدم ظهور تحذير browser خاص بوجود password input خارج form.
 
-النتيجة:
+قد يظهر `401` على `/api/auth/me` قبل تسجيل الدخول أثناء اكتشاف حالة المصادقة؛ هذا متوقع إذا تحولت الواجهة بعدها إلى anonymous/login بصورة سليمة.
 
 ```text
 [ ] PASS
@@ -83,11 +84,9 @@ URL: http://localhost:8100
 من `/admin/departments`:
 
 - راجع الأقسام الموجودة.
-- تأكد أن بيانات القسم واضحة.
-- راجع عضوية Operator حيث تظهر الواجهة ذلك.
-- لا تعدّل بيانات لا تريد الاحتفاظ بها في SQL volume المحلي.
-
-النتيجة:
+- تأكد أن البيانات واضحة.
+- راجع عضوية Operator.
+- لا تعدّل بيانات لا تريد الاحتفاظ بها في SQL المحلي.
 
 ```text
 [ ] PASS
@@ -97,24 +96,16 @@ URL: http://localhost:8100
 
 ## 5. إنشاء حالة
 
-من `/cases` أنشئ حالة تجريبية فقط.
-
-سجل لنفسك:
+من `/cases` أنشئ حالة تجريبية فقط وسجل:
 
 ```text
 العنوان:
 النوع:
 الأولوية:
-رقم الحالة بعد الإنشاء:
+رقم الحالة:
 ```
 
-تحقق من:
-
-- ظهور الحالة بعد الإنشاء.
-- حفظ العنوان والوصف والنوع والأولوية بشكل صحيح.
-- وجود حالة lifecycle منطقية.
-
-النتيجة:
+تحقق من الحفظ والظهور والـlifecycle الأولي.
 
 ```text
 [ ] PASS
@@ -124,15 +115,10 @@ URL: http://localhost:8100
 
 ## 6. التوجيه والإسناد
 
-باستخدام Administrator/Supervisor surface المتاح في بيانات التطوير:
-
-- وجّه الحالة إلى قسم فعال إن كانت العملية متاحة.
-- اسندها/أعد إسنادها إلى Operator مؤهل.
-- افتح طابور القسم وتأكد من موقع الحالة المتوقع.
-
-تحقق من أن التوجيه والإسناد لا يمسحان بيانات الحالة السابقة.
-
-النتيجة:
+- وجّه الحالة إلى قسم فعال.
+- اسندها أو أعد إسنادها إلى Operator مؤهل.
+- راجع طابور القسم.
+- تأكد أن التوجيه والإسناد لا يمسحان بيانات الحالة السابقة.
 
 ```text
 [ ] PASS
@@ -142,17 +128,14 @@ URL: http://localhost:8100
 
 ## 7. تسجيل الدخول كـOperator
 
-اخرج من الحساب الإداري وسجل الدخول ببيانات Operator المحلية.
+اخرج من الحساب الإداري وسجل الدخول بـOperator.
 
 تحقق من:
 
-- أن Operator يرى فقط ما تسمح به صلاحياته الحالية.
-- أن طابور القسم/الحالات المسندة تعمل كما تتوقع.
-- عدم ظهور إجراءات إدارية غير مناسبة كبديل عن التحقق الحقيقي في الخادم.
-
-إذا ظهر زر غير مناسب، جرّب السلوك بحذر في بيانات التطوير وسجل النتيجة؛ المصدر النهائي للصلاحية هو Application/API وليس الواجهة وحدها.
-
-النتيجة:
+- نطاق الرؤية الصحيح.
+- طابور القسم والحالات المسندة.
+- عدم توفر إجراءات إدارية غير مخولة.
+- أن المصدر النهائي للصلاحية هو Application/API وليس مجرد إخفاء UI.
 
 ```text
 [ ] PASS
@@ -164,17 +147,15 @@ URL: http://localhost:8100
 
 على حالة مؤهلة:
 
-- جرّب claim إن كانت في طابور Operator.
-- تقدم عبر الحالات المسموحة.
-- تحقق من رفض انتقال غير منطقي إن واجهته الواجهة/API.
+- جرّب claim.
+- تقدم عبر الانتقالات المسموحة.
+- تحقق من رفض الانتقال غير المنطقي.
 
 الدورة المرجعية:
 
 ```text
 new → assigned → in-progress → resolved → closed
 ```
-
-النتيجة:
 
 ```text
 [ ] PASS
@@ -184,14 +165,9 @@ new → assigned → in-progress → resolved → closed
 
 ## 9. التعليقات
 
-افتح تفاصيل الحالة:
-
 - أضف تعليقًا تجريبيًا.
 - أعد تحميل الصفحة.
-- تأكد أن التعليق ما زال موجودًا.
-- تأكد أن التعليقات مرتبطة بالحالة الصحيحة.
-
-النتيجة:
+- تأكد من بقاء التعليق وارتباطه بالحالة الصحيحة.
 
 ```text
 [ ] PASS
@@ -201,27 +177,21 @@ new → assigned → in-progress → resolved → closed
 
 ## 10. الموافقات
 
-إذا كانت الحالة/العملية الحالية تعرض approval flow:
+إذا كان السيناريو يعرض approval flow:
 
-- أنشئ/راجع طلب موافقة حسب الدور المسموح.
-- تحقق من أن القرار الحساس يحترم maker-checker.
-- لا تعتبر مجرد إخفاء الزر إثباتًا؛ سجل أي سلوك غير متوقع.
-
-النتيجة:
+- أنشئ/راجع طلب موافقة حسب الدور.
+- تحقق من maker-checker في القرار الحساس.
 
 ```text
 [ ] PASS
 [ ] FAIL
-[ ] غير منطبق على السيناريو اليدوي المستخدم
+[ ] غير منطبق
 ملاحظات:
 ```
 
 ## 11. التحويل وإعادة الإسناد
 
-على حالة تجريبية مناسبة:
-
-- جرّب reassignment.
-- جرّب transfer إلى قسم آخر إن كان لديك دور مخول.
+جرّب reassignment وtransfer على بيانات تجريبية مناسبة.
 
 عند transfer المتوقع:
 
@@ -229,8 +199,6 @@ new → assigned → in-progress → resolved → closed
 - الإسناد السابق يزال.
 - الحالة تعود `new` في طابور القسم الهدف.
 - المحتوى والتعليقات والموافقات والمرفقات والتاريخ السابق لا تختفي.
-
-النتيجة:
 
 ```text
 [ ] PASS
@@ -240,33 +208,14 @@ new → assigned → in-progress → resolved → closed
 
 ## 12. المرفقات
 
-اختبر بملف تجريبي غير حساس.
-
-الأنواع الحالية:
+استخدم ملفًا تجريبيًا غير حساس.
 
 ```text
-PDF
-PNG
-JPEG
-TXT
+Allowed: PDF / PNG / JPEG / TXT
+Maximum: 10 MiB
 ```
 
-الحد الحالي:
-
-```text
-10 MiB
-```
-
-تحقق من:
-
-- نجاح ملف مسموح وصغير.
-- ظهور metadata الصحيحة.
-- إمكانية التنزيل للمستخدم المخول.
-- رفض نوع/حجم غير مسموح عند تجربة ذلك.
-
-لا ترفع مستندات شخصية أو مالية حقيقية في بيئة الاختبار.
-
-النتيجة:
+تحقق من upload، metadata، download للمخول، ورفض النوع/الحجم غير المسموح عند اختباره. لا ترفع مستندات شخصية أو مالية حقيقية.
 
 ```text
 [ ] PASS
@@ -282,16 +231,7 @@ TXT
 http://localhost:8100/reports/cases
 ```
 
-جرّب:
-
-- البحث بكلمة من عنوان حالة.
-- فلترًا متاحًا.
-- الانتقال بين الصفحات إن وجدت نتائج كافية.
-- مقارنة النتائج/العدادات بين Administrator وOperator.
-
-المهم: لا يجب أن تكشف العدادات أو النتائج حالات خارج نطاق رؤية الدور الأضيق.
-
-النتيجة:
+جرّب كلمة من عنوان حالة، فلترًا متاحًا، paging عند توفر نتائج، وقارن النتائج/العدادات بين Administrator وOperator. لا يجب أن تكشف العدادات أو النتائج حالات خارج نطاق رؤية الدور الأضيق.
 
 ```text
 [ ] PASS
@@ -299,13 +239,9 @@ http://localhost:8100/reports/cases
 ملاحظات:
 ```
 
-## 14. SLA — اختياري في القبول اليدوي
+## 14. SLA — اختياري
 
-SLA معطل افتراضيًا في الإعداد المحلي. لا تغيّره إذا كنت تريد فقط قبول تجربة المنتج الأساسية.
-
-إذا أردت اختباره، اتبع `MADAR-OPERATIONS-AR.md` واستخدم قيم تطوير فقط، ثم أعد تشغيل Madar.
-
-النتيجة:
+SLA معطل افتراضيًا في الإعداد المحلي. لا تغيّره لقبول تجربة المنتج الأساسية. إذا اختبرته، استخدم قيم Development فقط واتبع `MADAR-OPERATIONS-AR.md`.
 
 ```text
 [ ] PASS
@@ -316,17 +252,13 @@ SLA معطل افتراضيًا في الإعداد المحلي. لا تغيّ�
 
 ## 15. Audit / Timeline
 
-في تفاصيل الحالة راجع التاريخ/التدقيق المتاح.
-
-تحقق من أن العمليات التي نفذتها لها أثر مفهوم، خصوصًا:
+راجع أثر:
 
 - الإنشاء.
 - التوجيه/الإسناد.
 - الانتقالات.
 - الموافقات.
-- transfer/reassignment حيث طبقت.
-
-النتيجة:
+- transfer/reassignment عند تطبيقها.
 
 ```text
 [ ] PASS
@@ -334,16 +266,46 @@ SLA معطل افتراضيًا في الإعداد المحلي. لا تغيّ�
 ملاحظات:
 ```
 
-## 16. Health وLogs
+## 16. مشاركة Microsoft — اختياري حسب جولة UAT
+
+مع Madar `READY`:
 
 ```powershell
-.\foundationkit.ps1 status -Target Madar
-.\foundationkit.ps1 logs -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Microsoft
 ```
 
-تحقق من بقاء المنتج `READY` وعدم وجود exception متكرر أثناء جولة الاستخدام.
+تحقق من فتح الرابط من جهاز آخر/نافذة مستقلة. هذا tunnel anonymous ومؤقت؛ استخدم بيانات اختبار وأوقفه بـ`Ctrl+C`.
 
-النتيجة:
+```text
+[ ] PASS
+[ ] FAIL
+[ ] لم أختبر
+ملاحظات:
+```
+
+## 17. مشاركة Cloudflare — اختياري حسب جولة UAT
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Cloudflare
+```
+
+تحقق من الرابط المؤقت ثم أوقفه بـ`Ctrl+C`. عدم توفر مزود واحد لا يغيّر صحة تشغيل Madar المحلي؛ المساران بديلان مستقلان للمشاركة.
+
+```text
+[ ] PASS
+[ ] FAIL
+[ ] لم أختبر
+ملاحظات:
+```
+
+## 18. Health وLogs
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 logs -Target Madar
+```
+
+تحقق من بقاء المنتج `READY` وعدم وجود exception متكرر أثناء الجولة.
 
 ```text
 [ ] PASS
@@ -351,15 +313,13 @@ SLA معطل افتراضيًا في الإعداد المحلي. لا تغيّ�
 ملاحظات:
 ```
 
-## 17. Release Publish
-
-بعد جولة المنتج:
+## 19. Release Publish
 
 ```powershell
-.\scripts\madar-product.ps1 publish
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\madar-product.ps1 publish
 ```
 
-تحقق من وجود:
+تحقق من:
 
 ```text
 artifacts/madar/publish/Madar.Api.dll
@@ -367,16 +327,27 @@ artifacts/madar/Madar-net10.0-Release.zip
 artifacts/madar/Madar-net10.0-Release.zip.sha256
 ```
 
-ثم:
+ثم قارن:
 
 ```powershell
 Get-FileHash .\artifacts\madar\Madar-net10.0-Release.zip -Algorithm SHA256
 Get-Content .\artifacts\madar\Madar-net10.0-Release.zip.sha256
 ```
 
-يجب أن تتطابق البصمتان.
+```text
+[ ] PASS
+[ ] FAIL
+ملاحظات:
+```
 
-النتيجة:
+## 20. الإيقاف
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+```
+
+في Native تبقى `MadarDb` المحلية للتشغيل التالي.
 
 ```text
 [ ] PASS
@@ -384,35 +355,14 @@ Get-Content .\artifacts\madar\Madar-net10.0-Release.zip.sha256
 ملاحظات:
 ```
 
-## 18. الإيقاف
-
-```powershell
-.\foundationkit.ps1 stop -Target Madar
-```
-
-ثم:
-
-```powershell
-.\foundationkit.ps1 status -Target Madar
-```
-
-البيانات المحلية تبقى في SQL volume للتشغيل التالي.
-
-النتيجة:
-
-```text
-[ ] PASS
-[ ] FAIL
-ملاحظات:
-```
-
-## 19. نتيجة القبول
+## 21. نتيجة القبول
 
 ```text
 تاريخ التجربة:
 الجهاز/Windows:
-Docker Desktop version:
 .NET SDK:
+SQL Server instance:
+طريقة المشاركة إن استخدمت: Microsoft / Cloudflare / لا يوجد
 
 النتيجة العامة:
 [ ] مقبول للتجربة الحالية
@@ -425,13 +375,4 @@ Docker Desktop version:
 3.
 ```
 
-إذا وجدت مشكلة، احتفظ بـ:
-
-- اسم الصفحة أو العملية.
-- الخطوات التي نفذتها.
-- النتيجة المتوقعة.
-- النتيجة الفعلية.
-- Screenshot إن كان الخلل بصريًا.
-- آخر logs ذات الصلة دون نشر كلمات المرور أو الأسرار.
-
-هذه المعلومات تكفي لتحويل ملاحظتك إلى إصلاح/إصدار لاحق بدل التخمين.
+إذا وجدت مشكلة، احتفظ باسم الصفحة/العملية، الخطوات، المتوقع، الفعلي، Screenshot عند الحاجة، وآخر logs ذات الصلة بدون كلمات مرور أو أسرار. هذه المعلومات هي مدخل الإصلاح أو الإصدار التالي، لا التخمين.
