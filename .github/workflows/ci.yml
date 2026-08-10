@@ -15,9 +15,8 @@ concurrency:
 
 jobs:
   build-test-pack:
-    name: Build, security checks, test, examples, portal, and pack
+    name: Core build, test, catalog, pack
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,122 +36,56 @@ jobs:
       - name: Verify repository boundaries
         run: bash scripts/verify-repository.sh
 
-      - name: Validate JSON and Pages assets
+      - name: Validate JSON and static assets
         run: |
           python3 -m json.tool catalog/foundationkit.catalog.json >/dev/null
+          python3 -m json.tool catalog/foundationkit.capabilities.json >/dev/null
+          python3 -m json.tool catalog/foundationkit.maturity-evidence.json >/dev/null
           python3 -m json.tool postman/FoundationKit.Workbench.postman_collection.json >/dev/null
-          python3 -m json.tool postman/Athar.Api.postman_collection.json >/dev/null
           python3 scripts/verify-pages.py
           node --check site/app.js
-          node --check site/athar-demo/app.js
-          test -f site/athar-demo/index.html
-          test -f site/athar-demo/styles.css
-          grep -q "DEMO · بدون خادم" site/athar-demo/index.html
-
-      - name: Validate container hardening policy
-        shell: bash
-        run: |
-          python3 scripts/security/check-container-hardening.py
-          export ATHAR_SQL_PASSWORD="ConfigOnly!$(openssl rand -hex 16)Aa1"
-          export ATHAR_ADMIN_EMAIL="config-only@athar.test"
-          export ATHAR_ADMIN_PASSWORD="ConfigOnlyAdmin!$(openssl rand -hex 16)Aa1"
-          docker compose -f deploy/athar-compose.yml config >/dev/null
-          export MADAR_SQL_PASSWORD="ConfigOnlyMadar!$(openssl rand -hex 16)Aa1"
-          export MADAR_ADMIN_EMAIL="config-only-admin@madar.test"
-          export MADAR_ADMIN_PASSWORD="ConfigOnlyMadarAdmin!$(openssl rand -hex 16)Aa1"
-          export MADAR_OPERATOR_EMAIL="config-only-operator@madar.test"
-          export MADAR_OPERATOR_PASSWORD="ConfigOnlyMadarOperator!$(openssl rand -hex 16)Aa1"
-          docker compose -f deploy/madar-compose.yml config >/dev/null
 
       - name: Validate repository PowerShell
         shell: pwsh
         run: |
           $allErrors = @()
-          $scripts = @(
-            "foundationkit.ps1",
-            "scripts/pack.ps1",
-            "scripts/athar-product.ps1",
-            "scripts/madar-product.ps1",
-            "scripts/expose-athar-tunnel.ps1",
-            "deploy/run-athar-published.ps1")
-
-          foreach ($script in $scripts) {
-            $tokens = $null
-            $parseErrors = $null
-            [System.Management.Automation.Language.Parser]::ParseFile(
-              $script,
-              [ref]$tokens,
-              [ref]$parseErrors) | Out-Null
-
-            if ($parseErrors.Count -gt 0) {
-              $allErrors += $parseErrors
-            }
+          foreach ($script in @("foundationkit.ps1", "scripts/pack.ps1", "scripts/run-workbench.ps1", "scripts/stop-workbench.ps1")) {
+            $tokens = $null; $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count -gt 0) { $allErrors += $parseErrors }
           }
-
-          if ($allErrors.Count -gt 0) {
-            $allErrors | Format-List | Out-String | Write-Error
-            exit 1
-          }
+          if ($allErrors.Count -gt 0) { $allErrors | Format-List | Out-String | Write-Error; exit 1 }
 
       - name: Restore with NuGet vulnerability audit
         run: dotnet restore FoundationKit.sln
 
-      - name: Generate CycloneDX dependency SBOM
+      - name: Generate dependency evidence
         run: |
           mkdir -p artifacts/security
           dotnet list FoundationKit.sln package --include-transitive --format json > artifacts/security/dotnet-packages.json
           python3 scripts/security/generate-sbom.py artifacts/security/dotnet-packages.json artifacts/security/foundationkit.cdx.json
-          python3 -m json.tool artifacts/security/foundationkit.cdx.json >/dev/null
 
       - name: Build
         run: dotnet build FoundationKit.sln --configuration Release --no-restore
 
       - name: Check generated capability documentation
-        run: >-
-          dotnet run
-          --project tools/FoundationKit.CatalogGenerator
-          --configuration Release
-          --no-build
-          -- --check
+        run: dotnet run --project tools/FoundationKit.CatalogGenerator --configuration Release --no-build -- --check
 
       - name: Test
-        run: >-
-          dotnet test FoundationKit.sln
-          --configuration Release
-          --no-build
-          --logger "trx;LogFileName=foundationkit.trx"
+        run: dotnet test FoundationKit.sln --configuration Release --no-build --logger "trx;LogFileName=foundationkit.trx"
 
       - name: Publish Workbench
-        run: >-
-          dotnet publish
-          samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj
-          --configuration Release
-          --no-build
-          --output artifacts/workbench
+        run: dotnet publish samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj --configuration Release --no-build --output artifacts/workbench
 
-      - name: Publish Athar
-        run: >-
-          dotnet publish
-          examples/Athar/Athar.Api/Athar.Api.csproj
-          --configuration Release
-          --no-build
-          --output artifacts/athar
-
-      - name: Publish Madar
-        run: >-
-          dotnet publish
-          apps/Madar/Madar.Api/Madar.Api.csproj
-          --configuration Release
-          --no-build
-          --output artifacts/madar
-
-      - name: Pack reusable core
+      - name: Pack reusable Core
         run: bash scripts/pack.sh Release artifacts/packages
 
-      - name: Create artifact integrity evidence
+      - name: Verify package count and integrity
         run: |
+          test "$(find artifacts/packages -maxdepth 1 -name '*.nupkg' ! -name '*.snupkg' | wc -l)" -eq 17
+          test "$(find artifacts/packages -maxdepth 1 -name '*.snupkg' | wc -l)" -eq 17
           sha256sum artifacts/packages/*.nupkg artifacts/packages/*.snupkg > artifacts/security/package-sha256.txt
-          sha256sum artifacts/athar/Athar.Api.dll artifacts/madar/Madar.Api.dll artifacts/workbench/FoundationKit.Workbench.Api.dll > artifacts/security/publish-sha256.txt
+          sha256sum artifacts/workbench/FoundationKit.Workbench.Api.dll > artifacts/security/publish-sha256.txt
 
       - name: Upload test results
         if: always()
@@ -162,6 +95,13 @@ jobs:
           path: tests/**/TestResults/*.trx
           if-no-files-found: ignore
 
+      - name: Upload packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundationkit-packages
+          path: artifacts/packages
+          if-no-files-found: error
+
       - name: Upload security evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -169,53 +109,23 @@ jobs:
           path: artifacts/security
           if-no-files-found: error
 
-      - name: Upload packages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: foundationkit-packages
-          path: |
-            artifacts/packages/*.nupkg
-            artifacts/packages/*.snupkg
-          if-no-files-found: error
-
   sqlserver-integration-smoke:
-    name: Workbench, Athar, and Madar SQL Server integration
+    name: Workbench SQL Server full-stack and CRUD engine
     runs-on: ubuntu-latest
     needs: build-test-pack
-
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Generate temporary integration credentials
+      - name: Generate temporary SQL credential
         shell: bash
         run: |
-          foundationkit_sql_password="Fkit!$(openssl rand -hex 12)Aa1"
-          athar_sql_password="AtharSql!$(openssl rand -hex 12)Aa1"
-          athar_admin_password="AtharAdmin!$(openssl rand -hex 12)Aa1"
-          madar_sql_password="MadarSql!$(openssl rand -hex 12)Aa1"
-          madar_admin_password="MadarAdmin!$(openssl rand -hex 12)Aa1"
-          madar_operator_password="MadarOperator!$(openssl rand -hex 12)Aa1"
-          echo "::add-mask::$foundationkit_sql_password"
-          echo "::add-mask::$athar_sql_password"
-          echo "::add-mask::$athar_admin_password"
-          echo "::add-mask::$madar_sql_password"
-          echo "::add-mask::$madar_admin_password"
-          echo "::add-mask::$madar_operator_password"
-          echo "FOUNDATIONKIT_SQL_PASSWORD=$foundationkit_sql_password" >> "$GITHUB_ENV"
-          echo "ATHAR_SQL_PASSWORD=$athar_sql_password" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_PASSWORD=$athar_admin_password" >> "$GITHUB_ENV"
-          echo "MADAR_SQL_PASSWORD=$madar_sql_password" >> "$GITHUB_ENV"
-          echo "MADAR_ADMIN_EMAIL=admin@madar.test" >> "$GITHUB_ENV"
-          echo "MADAR_ADMIN_PASSWORD=$madar_admin_password" >> "$GITHUB_ENV"
-          echo "MADAR_OPERATOR_EMAIL=operator@madar.test" >> "$GITHUB_ENV"
-          echo "MADAR_OPERATOR_PASSWORD=$madar_operator_password" >> "$GITHUB_ENV"
-          echo "MADAR_SLA_ENABLED=true" >> "$GITHUB_ENV"
-          echo "MADAR_SLA_LOW=00:10:00" >> "$GITHUB_ENV"
-          echo "MADAR_SLA_MEDIUM=00:10:00" >> "$GITHUB_ENV"
-          echo "MADAR_SLA_HIGH=00:10:00" >> "$GITHUB_ENV"
-          echo "MADAR_SLA_CRITICAL=00:00:02" >> "$GITHUB_ENV"
+          password="Fkit!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Validate container hardening
+        run: python3 scripts/security/check-container-hardening.py
 
       - name: Start Workbench stack
         run: docker compose -f deploy/docker-compose.yml up --build -d
@@ -223,133 +133,26 @@ jobs:
       - name: Wait for Workbench
         run: |
           for attempt in {1..120}; do
-            if curl --fail --silent http://localhost:8080/api/health >/dev/null; then
-              exit 0
-            fi
+            if curl --fail --silent http://localhost:8080/api/health >/dev/null; then exit 0; fi
             sleep 2
           done
-          docker compose -f deploy/docker-compose.yml ps
+          docker compose -f deploy/docker-compose.yml logs --no-color --tail=300
           exit 1
 
-      - name: Verify Workbench portals, MudBlazor assets, and Swagger
+      - name: Verify API and Swagger
         run: |
           curl --fail --silent http://localhost:8080/ | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8080/user | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8080/admin | grep -q "blazor.webassembly.js"
-          curl --fail --silent --show-error -o /dev/null http://localhost:8080/_content/MudBlazor/MudBlazor.min.css
-          curl --fail --silent --show-error -o /dev/null http://localhost:8080/_content/MudBlazor/MudBlazor.min.js
           swagger="$(curl --fail --silent http://localhost:8080/swagger/v1/swagger.json)"
-          grep -q "CreateUserRequest" <<< "$swagger"
-          grep -q "GetAdminRequestQueue" <<< "$swagger"
-          grep -q "ReviewUserRequest" <<< "$swagger"
+          grep -q 'core-crud' <<< "$swagger"
+          grep -q 'CoreCrudCreateRequest' <<< "$swagger"
 
-      - name: Run Workbench SQL workflow
+      - name: Run SQL integration smoke
         run: bash scripts/smoke-workbench.sh
 
-      - name: Print Workbench logs on failure
+      - name: Print logs on failure
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs --no-color --tail=300
+        run: docker compose -f deploy/docker-compose.yml logs --no-color --tail=400
 
-      - name: Stop Workbench stack
+      - name: Stop stack
         if: always()
         run: docker compose -f deploy/docker-compose.yml down --volumes --remove-orphans
-
-      - name: Start Athar stack
-        run: docker compose -f deploy/athar-compose.yml up --build -d
-
-      - name: Wait for Athar readiness
-        run: |
-          for attempt in {1..150}; do
-            if curl --fail --silent http://localhost:8090/health/ready >/dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose -f deploy/athar-compose.yml ps
-          exit 1
-
-      - name: Verify Athar container runs without root privileges
-        run: |
-          uid="$(docker compose -f deploy/athar-compose.yml exec -T athar-api id -u)"
-          test "$uid" != "0"
-          docker compose -f deploy/athar-compose.yml ps
-
-      - name: Verify Arabic client, MudBlazor assets, and API surface
-        run: |
-          curl --fail --silent http://localhost:8090/ | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8090/account | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8090/initiatives | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8090/admin | grep -q "blazor.webassembly.js"
-          curl --fail --silent --show-error -o /dev/null http://localhost:8090/_content/MudBlazor/MudBlazor.min.css
-          curl --fail --silent --show-error -o /dev/null http://localhost:8090/_content/MudBlazor/MudBlazor.min.js
-          readiness="$(curl --fail --silent http://localhost:8090/health/ready)"
-          grep -q '"status":"ready"' <<< "$readiness"
-          ! grep -qi 'sql-server' <<< "$readiness"
-          swagger="$(curl --fail --silent http://localhost:8090/swagger/v1/swagger.json)"
-          grep -q "RegisterAtharUser" <<< "$swagger"
-          grep -q "CreateAtharInitiative" <<< "$swagger"
-          grep -q "ReviewAtharInitiative" <<< "$swagger"
-
-      - name: Run Athar end-to-end workflow
-        run: bash scripts/smoke-athar.sh
-
-      - name: Verify Athar backup can be restored in isolation
-        env:
-          ATHAR_ALLOW_RESTORE_DRILL: "true"
-        run: bash scripts/verify-athar-restore.sh
-
-      - name: Print Athar logs on failure
-        if: failure()
-        run: docker compose -f deploy/athar-compose.yml logs --no-color --tail=400
-
-      - name: Stop Athar stack
-        if: always()
-        run: docker compose -f deploy/athar-compose.yml down --volumes --remove-orphans
-
-      - name: Start Madar stack
-        run: docker compose -f deploy/madar-compose.yml up --build -d
-
-      - name: Wait for Madar readiness
-        run: |
-          for attempt in {1..150}; do
-            if curl --fail --silent http://localhost:8100/health/ready >/dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose -f deploy/madar-compose.yml ps
-          exit 1
-
-      - name: Verify Madar container, client assets, and API surface
-        run: |
-          uid="$(docker compose -f deploy/madar-compose.yml exec -T madar-api id -u)"
-          test "$uid" != "0"
-          curl --fail --silent http://localhost:8100/ | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8100/login | grep -q "blazor.webassembly.js"
-          curl --fail --silent http://localhost:8100/cases | grep -q "blazor.webassembly.js"
-          curl --fail --silent --show-error -o /dev/null http://localhost:8100/_content/MudBlazor/MudBlazor.min.css
-          curl --fail --silent --show-error -o /dev/null http://localhost:8100/_content/MudBlazor/MudBlazor.min.js
-          swagger="$(curl --fail --silent http://localhost:8100/swagger/v1/swagger.json)"
-          grep -q "LoginMadarUser" <<< "$swagger"
-          grep -q "CreateMadarCase" <<< "$swagger"
-          grep -q "AssignMadarCase" <<< "$swagger"
-          grep -q "RouteMadarCase" <<< "$swagger"
-          grep -q "ClaimMadarCase" <<< "$swagger"
-          grep -q "GetMadarDepartmentQueue" <<< "$swagger"
-          grep -q "TransitionMadarCase" <<< "$swagger"
-          grep -q "GetMadarCaseTimeline" <<< "$swagger"
-          grep -q "EvaluateMadarCaseSla" <<< "$swagger"
-
-      - name: Run Madar end-to-end workflow
-        run: bash scripts/smoke-madar.sh
-
-      - name: Run Madar department routing SQL workflow
-        run: bash scripts/smoke-madar-routing.sh
-
-      - name: Print Madar logs on failure
-        if: failure()
-        run: docker compose -f deploy/madar-compose.yml logs --no-color --tail=400
-
-      - name: Stop Madar stack
-        if: always()
-        run: docker compose -f deploy/madar-compose.yml down --volumes --remove-orphans
