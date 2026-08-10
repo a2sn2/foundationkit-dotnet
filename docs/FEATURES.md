@@ -291,3 +291,4 @@ When an implemented public capability changes:
 2. update `catalog/foundationkit.catalog.json`;
 3. run `dotnet run --project tools/FoundationKit.CatalogGenerator`;
 4. update `CHANGELOG.md`.
+
