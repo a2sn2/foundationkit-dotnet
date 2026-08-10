@@ -86,11 +86,19 @@ Madar     → operational case-management product through v0.10
 
 Madar's product-owned departments, SLA, attachments, search and reporting are evidence—not automatic justification for generic `Organization`, `Jobs`, `Files`, `Search`, or `Reporting` packages.
 
-## Post-closure maintenance
+## Post-closure maintenance and support state
 
-Core closure does not freeze dependencies or prevent bug/security/support fixes. PR #103 refreshed the supported .NET 8 servicing dependencies and Madar Docker dependency monitoring without changing public capability semantics, package count, or the v0.1 closure decision.
+Core closure does not freeze dependencies or prevent bug/security/support fixes. PR #103 refreshed the supported dependency baseline and Madar Docker dependency monitoring without changing public capability semantics, package count, or the v0.1 closure decision.
 
-The repository baseline is now migrating coherently to **.NET 10 LTS / `net10.0`** under Issue #104. This support-lifecycle migration changes the framework target, SDK/runtime/container line, and matching Microsoft dependencies while preserving the closed capability model, package count, package version, product schemas, and conservative maturity policy unless exact compatibility evidence requires an explicit additional change.
+The repository migration to **.NET 10 LTS / `net10.0` is complete** through PR #114. That coordinated migration updated framework targets, SDK/runtime/container lines, matching Microsoft dependencies, CI and generated Composer output while preserving the closed capability model, package count, package version, product schemas, and conservative maturity policy.
+
+Madar v0.10 is also now a repeatable UAT consumer baseline after PR #118: Native Windows + local SQL Server is the primary human/UAT path, with Docker retained for integration/regression evidence and temporary Microsoft/Cloudflare tunnel paths available for Development/UAT sharing. This improves consumer evidence without turning Madar-specific organization, attachment, SLA, search, or reporting semantics into FoundationKit packages.
+
+## Core vNext transition
+
+The next Core phase starts with Issue #119, which is an evidence/decision gate rather than an automatic extraction cycle. It must review current Workbench, Athar, and Madar usage, distinguish existing-package hardening from maturity progression and new capability extraction, and select one next Core increment with explicit compatibility, migration, testing, contract-version, and package-boundary impact.
+
+Until that review proves otherwise, the v0.1 **17 + 17** package invariant remains the reusable baseline and product-owned semantics remain product-owned.
 
 ## Stop rule
 
