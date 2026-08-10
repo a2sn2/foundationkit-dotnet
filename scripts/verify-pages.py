@@ -126,6 +126,24 @@ def verify_madar_handoff() -> None:
         if required_doc not in product_readme:
             fail(f"Madar README must link to {required_doc}")
 
+    for required_ua_text in (
+        "start -Target Madar -Mode Native",
+        "TunnelProvider Microsoft",
+        "TunnelProvider Cloudflare",
+    ):
+        if required_ua_text not in product_readme:
+            fail(f"Madar README must preserve Native UAT handoff text: {required_ua_text}")
+
+    local_guide = (ROOT / "docs/MADAR-LOCAL-RUN-PUBLISH-AR.md").read_text(encoding="utf-8")
+    for required_guide_text in (
+        "start -Target Madar -Mode Native",
+        "TunnelProvider Microsoft",
+        "TunnelProvider Cloudflare",
+        "Production Approval",
+    ):
+        if required_guide_text not in local_guide:
+            fail(f"Madar local-run guide must preserve handoff boundary text: {required_guide_text}")
+
 
 def main() -> None:
     missing_files = REQUIRED_SITE_FILES - {path.name for path in SITE.iterdir()} if SITE.exists() else REQUIRED_SITE_FILES
