@@ -54,6 +54,8 @@ internal static class ComposerExecutableResourceGenerator
         files[$"src/{projectPrefix}.Api/Program.cs"] =
             BuildProgram(manifest, projectPrefix, executable);
         files["GENERATED-FULLSTACK.md"] = BuildFullStackReport(manifest, executable);
+        files["README.md"] = BuildExecutableReadme(manifest, projectPrefix, executable);
+        files["ARCHITECTURE.md"] = BuildExecutableArchitecture(manifest, executable);
         return files;
     }
 
@@ -146,7 +148,7 @@ internal static class ComposerExecutableResourceGenerator
         ComposerResourceDefinition resource)
     {
         var entity = $"{projectPrefix}.Domain.GeneratedModules.{module.Name}.{resource.Name}";
-        var createArgs = string.Join(", ", resource.Fields.Select(field => $"request.{field.Name}"));
+        var requestArguments = string.Join(", ", resource.Fields.Select(field => $"request.{field.Name}"));
         var responseArgs = new List<string> { "entity.Id" };
         responseArgs.AddRange(resource.Fields.Select(field => $"entity.{field.Name}"));
         if (Has(resource, ComposerResourceBehavior.Concurrency))
@@ -172,10 +174,10 @@ internal static class ComposerExecutableResourceGenerator
                 : ICrudMapper<{{entity}}, Guid, {{resource.Name}}CreateRequest, {{resource.Name}}UpdateRequest, {{resource.Name}}Response>
             {
                 public {{entity}} Create({{resource.Name}}CreateRequest request) =>
-                    {{entity}}.Create({{createArgs}});
+                    {{entity}}.Create({{requestArguments}});
 
                 public void ApplyUpdate({{entity}} entity, {{resource.Name}}UpdateRequest request) =>
-                    entity.ApplyUpdate({{createArgs}});
+                    entity.ApplyUpdate({{requestArguments}});
 
                 public {{resource.Name}}Response ToReadModel({{entity}} entity) =>
                     new({{string.Join(", ", responseArgs)}});
@@ -554,10 +556,48 @@ internal static class ComposerExecutableResourceGenerator
             #nullable enable
 
             using FoundationKit.WebApi.Api;
+            using Microsoft.AspNetCore.Authorization;
+            using Microsoft.OpenApi.Models;
+            using Swashbuckle.AspNetCore.SwaggerGen;
 
             namespace {{projectPrefix}}.Api.GeneratedPlatform;
 
             {{etagClasses}}
+
+            public sealed class GeneratedAuthorizationOperationFilter : IOperationFilter
+            {
+                public void Apply(OpenApiOperation operation, OperationFilterContext context)
+                {
+                    ArgumentNullException.ThrowIfNull(operation);
+                    ArgumentNullException.ThrowIfNull(context);
+                    var requiresAuthorization = context.ApiDescription.ActionDescriptor.EndpointMetadata
+                        .OfType<IAuthorizeData>()
+                        .Any();
+                    if (!requiresAuthorization)
+                        return;
+
+                    operation.Security ??= new List<OpenApiSecurityRequirement>();
+                    operation.Security.Add(new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "FoundationGeneratedUser"
+                            }
+                        }] = Array.Empty<string>(),
+                        [new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "FoundationGeneratedRoles"
+                            }
+                        }] = Array.Empty<string>()
+                    });
+                }
+            }
             """;
     }
 
@@ -679,25 +719,7 @@ internal static class ComposerExecutableResourceGenerator
                     Name = "X-Foundation-Roles",
                     Description = "Generated reference adapter only: include admin for protected CRUD routes."
                 });
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    [new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "FoundationGeneratedUser"
-                        }
-                    }] = Array.Empty<string>(),
-                    [new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "FoundationGeneratedRoles"
-                        }
-                    }] = Array.Empty<string>()
-                });
+                options.OperationFilter<GeneratedAuthorizationOperationFilter>();
                 """
             : string.Empty;
 
@@ -802,8 +824,109 @@ internal static class ComposerExecutableResourceGenerator
         builder.AppendLine("- Supply the SQL Server connection string at runtime through `ConnectionStrings__Generated`; Composer does not emit database credentials.");
         builder.AppendLine("- Generated proof authentication uses `X-Foundation-User` plus `X-Foundation-Roles: admin`; it is a bounded reference adapter, not a production identity system.");
         builder.AppendLine("- Foundation diagnostics/security headers wrap authentication; authentication/authorization execute before durable-idempotency replay.");
+        builder.AppendLine("- OpenAPI security requirements are attached only to endpoint operations that carry authorization metadata.");
         builder.AppendLine("- Runtime Postman must be derived from `/swagger/v1/swagger.json` through the FoundationKit OpenAPI-to-Postman generator; it is intentionally not hand-authored here.");
         return builder.ToString();
+    }
+
+    private static string BuildExecutableReadme(
+        ComposerManifest manifest,
+        string projectPrefix,
+        IReadOnlyList<(ComposerModuleDefinition Module, ComposerResourceDefinition Resource)> executable)
+    {
+        var resourceLines = string.Join("\n", executable.Select(item =>
+            $"- `{item.Module.Name}.{item.Resource.Name}` at `/{item.Resource.Api.RoutePrefix}/{item.Resource.Route}`"));
+        return $$"""
+            # {{manifest.Name}}
+
+            Generated deterministically by FoundationKit Composer schema v2 / generator contract v2.
+
+            This project includes the bounded Phase 12 executable full-stack overlay because its manifest resources declare explicit `fields`.
+
+            ## Generated executable resources
+
+            {{resourceLines}}
+
+            For those resources Composer generated product-owned Domain entities, Create/Update/Response contracts, DataAnnotations validation metadata, CRUD mappers/policies, EF Core SQL Server mappings, a product migration, generic FoundationKit CRUD/API registration, runtime OpenAPI, reference authorization, auditing, concurrency, and durable-idempotency wiring where declared.
+
+            ## Run
+
+            Supply the database connection at runtime; no database credential is generated into source:
+
+            ```bash
+            export ConnectionStrings__Generated='<SQL Server connection string>'
+            dotnet run --project src/{{projectPrefix}}.Api/{{projectPrefix}}.Api.csproj
+            ```
+
+            The reference authorization adapter accepts `X-Foundation-User: <guid>` and `X-Foundation-Roles: admin` only to make the generated proof executable. Replace that adapter with the product's real authentication/identity integration before production use.
+
+            ## Boundaries
+
+            - project-specific business rules, real identity/account persistence, secrets, deployment topology, retention, external integrations, and production authorization semantics remain consumer-owned;
+            - resources without explicit `fields` remain Composer descriptors and are not silently turned into domain models;
+            - runtime OpenAPI is the transport source of truth; derive Postman/typed clients from it rather than maintaining duplicate request contracts;
+            - `GENERATED-FULLSTACK.md`, `PROJECT-MODEL.md`, and `ARCHITECTURE.md` record the generated decisions and limitations.
+            """;
+    }
+
+    private static string BuildExecutableArchitecture(
+        ComposerManifest manifest,
+        IReadOnlyList<(ComposerModuleDefinition Module, ComposerResourceDefinition Resource)> executable)
+    {
+        var resourceLines = string.Join("\n", executable.Select(item =>
+            $"- `{item.Module.Name}.{item.Resource.Name}` → table `{TableName(manifest, item.Resource)}`"));
+        return $$"""
+            # {{manifest.Name}} generated architecture
+
+            ## Executable flow
+
+            ```text
+            Manifest v2 fields/behaviors/API intent
+                    ↓
+            Domain entity + contracts + validation metadata
+                    ↓
+            FoundationKit generic CRUD application service
+                    ↓
+            product-owned EF Core SQL Server DbContext/migration
+                    ↓
+            FoundationKit API Engine endpoints
+                    ↓
+            runtime OpenAPI
+                    ↓
+            deterministic Postman / future typed clients
+            ```
+
+            ## Project and database isolation
+
+            - Foundation project ID: `{{ProjectIdentity(manifest)}}`
+            - SQL namespace: `{{SqlNamespace(manifest)}}`
+            - idempotency table: `{{IdempotencyTableName(manifest)}}`
+            - EF migrations-history table: `{{MigrationHistoryTableName(manifest)}}`
+
+            {{resourceLines}}
+
+            These names are deterministic and project-scoped so two independently generated projects can share a SQL Server database without collapsing resource, idempotency, or migration-history ownership.
+
+            ## HTTP/security order
+
+            ```text
+            Correlation / Problem Details / Security Headers
+                    ↓
+            Authentication
+                    ↓
+            Authorization
+                    ↓
+            Durable idempotency replay
+                    ↓
+            Endpoint / CRUD / database
+            ```
+
+            This prevents an idempotency replay from bypassing the current request's authorization decision while retaining the FoundationKit diagnostics/security envelope on 401/403 responses. OpenAPI security requirements are emitted per authorized endpoint operation rather than globally.
+
+            ## Ownership boundary
+
+            The generated SQL schema and migration belong to this generated product, not to reusable FoundationKit packages. The generated header-auth adapter and in-memory audit sink are executable reference adapters, not production identity, SIEM, or operational governance. Product business rules and environment-specific controls remain explicit consumer code/configuration.
+            """;
     }
 
     private static string BuildContractParameter(ComposerResourceField field)
