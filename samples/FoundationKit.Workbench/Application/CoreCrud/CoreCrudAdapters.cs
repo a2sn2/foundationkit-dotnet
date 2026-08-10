@@ -35,17 +35,18 @@ public sealed class CoreCrudAuthorizationPolicy : ICrudAuthorizationPolicy<CoreC
 
 public sealed class CoreCrudConcurrencyPolicy : ICrudConcurrencyPolicy<CoreCrudRecord, CoreCrudUpdateRequest>
 {
+    public Result Validate(CoreCrudRecord entity, CoreCrudUpdateRequest request) =>
+        Result.Failure(Error.PreconditionRequired(
+            "CoreCrud.Version.Required",
+            "An If-Match concurrency token is required."));
+
     public Result Validate(
         CoreCrudRecord entity,
         CoreCrudUpdateRequest request,
-        CrudConcurrencyPrecondition? precondition = null)
+        CrudConcurrencyPrecondition? precondition)
     {
         if (precondition is null)
-        {
-            return Result.Failure(Error.PreconditionRequired(
-                "CoreCrud.Version.Required",
-                "An If-Match concurrency token is required."));
-        }
+            return Validate(entity, request);
 
         var token = precondition.Token.Trim();
         if (token.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
@@ -132,7 +133,7 @@ public sealed class CoreCrudQueryPolicy : ICrudQueryPolicy<CoreCrudRecord, Guid>
 
         if (string.Equals(filter.Field, "version", StringComparison.OrdinalIgnoreCase))
         {
-            if (!int.TryParse(filter.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var version))
+            if (!int.TryParse(filter.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var version) || version < 1)
                 return FilterFailure("CoreCrud.Query.VersionInvalid", "Version filter values must be positive integers.");
 
             Expression<Func<CoreCrudRecord, bool>>? expression = filter.Operator switch
