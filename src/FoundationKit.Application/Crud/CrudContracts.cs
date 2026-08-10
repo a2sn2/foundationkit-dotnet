@@ -5,15 +5,6 @@ using FoundationKit.Domain.Primitives;
 
 namespace FoundationKit.Application.Crud;
 
-public enum CrudOperation
-{
-    Create,
-    Read,
-    List,
-    Update,
-    Delete
-}
-
 public sealed record CrudItemResult<TId, TRead>(TId Id, TRead Item)
     where TId : notnull;
 
