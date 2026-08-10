@@ -28,11 +28,9 @@ public sealed class DefaultFoundationExceptionMapper : IFoundationExceptionMappe
     {
         error = exception switch
         {
-            ValidationException validation => Error.Validation(
+            ValidationException => Error.Validation(
                 "Foundation.Request.Validation",
-                string.IsNullOrWhiteSpace(validation.Message)
-                    ? "The request failed validation."
-                    : validation.Message),
+                "The request failed validation."),
             BadHttpRequestException => Error.Validation(
                 "Foundation.Http.BadRequest",
                 "The request could not be processed because it is malformed or invalid."),
