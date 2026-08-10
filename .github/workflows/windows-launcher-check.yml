@@ -96,7 +96,8 @@ jobs:
           @'
           $listeners = @(
               [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 5057),
-              [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 8090)
+              [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 8090),
+              [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 8100)
           )
 
           try {
@@ -121,28 +122,26 @@ jobs:
               New-Item -ItemType Directory -Force -Path ".local" | Out-Null
               [System.IO.File]::WriteAllText(".local\athar-native.pid", $stub.Id.ToString())
               [System.IO.File]::WriteAllText(".local\workbench-native.pid", $stub.Id.ToString())
+              [System.IO.File]::WriteAllText(".local\madar-native.pid", $stub.Id.ToString())
               Start-Sleep -Seconds 1
 
               $doctorOutput = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" doctor 2>&1 | Out-String)
               Write-Host $doctorOutput
 
-              if ($doctorOutput -match "\[STOPPED\] Athar") {
-                  throw "Doctor falsely reported tracked Athar listener as stopped."
-              }
-              if ($doctorOutput -match "\[STOPPED\] Workbench Native") {
-                  throw "Doctor falsely reported tracked Workbench listener as stopped."
-              }
-              if ($doctorOutput -notmatch "\[DEGRADED\] Athar") {
-                  throw "Doctor did not distinguish Athar process/listener state from health readiness."
-              }
-              if ($doctorOutput -notmatch "\[DEGRADED\] Workbench Native") {
-                  throw "Doctor did not distinguish Workbench process/listener state from health readiness."
+              foreach ($name in @("Athar", "Workbench Native", "Madar")) {
+                if ($doctorOutput -match ("\[STOPPED\] " + [regex]::Escape($name))) {
+                  throw "Doctor falsely reported tracked $name listener as stopped."
+                }
+                if ($doctorOutput -notmatch ("\[DEGRADED\] " + [regex]::Escape($name))) {
+                  throw "Doctor did not distinguish $name process/listener state from health readiness."
+                }
               }
           }
           finally {
               Stop-Process -Id $stub.Id -Force -ErrorAction SilentlyContinue
               Remove-Item ".local\athar-native.pid" -Force -ErrorAction SilentlyContinue
               Remove-Item ".local\workbench-native.pid" -Force -ErrorAction SilentlyContinue
+              Remove-Item ".local\madar-native.pid" -Force -ErrorAction SilentlyContinue
               Remove-Item $listenerScript -Force -ErrorAction SilentlyContinue
           }
 
@@ -151,13 +150,183 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\athar-product.ps1" -Action Status -Mode Native
 
-      - name: Smoke test Madar status command without Docker startup
+      - name: Smoke test Madar Native status without startup
         shell: powershell
         run: |
-          $output = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status 2>&1 | Out-String)
+          $output = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status -Mode Native 2>&1 | Out-String)
           Write-Host $output
           if ($output -notmatch "Madar: STOPPED or unreachable") {
-            throw "Madar status smoke did not report the expected bounded stopped state."
+            throw "Madar Native status smoke did not report the expected bounded stopped state."
+          }
+
+      - name: Exercise Madar Native launcher lifecycle with bounded runtime stub
+        shell: powershell
+        run: |
+          $fakeDirectory = Join-Path $env:RUNNER_TEMP "fake-dotnet"
+          New-Item -ItemType Directory -Force -Path $fakeDirectory | Out-Null
+          $fakeDotnet = Join-Path $fakeDirectory "dotnet.exe"
+
+          $source = @'
+          using System;
+          using System.IO;
+          using System.Net;
+          using System.Net.Sockets;
+          using System.Text;
+
+          public static class FakeDotNet
+          {
+              public static int Main(string[] args)
+              {
+                  if (args.Length == 1 && args[0] == "--version")
+                  {
+                      Console.WriteLine("10.0.999");
+                      return 0;
+                  }
+
+                  if (args.Length > 0 && args[0] == "publish")
+                  {
+                      string output = null;
+                      for (int index = 0; index < args.Length - 1; index++)
+                      {
+                          if (args[index] == "--output")
+                          {
+                              output = args[index + 1];
+                              break;
+                          }
+                      }
+
+                      if (String.IsNullOrWhiteSpace(output))
+                          return 2;
+
+                      Directory.CreateDirectory(output);
+                      File.WriteAllText(Path.Combine(output, "Madar.Api.dll"), "stub");
+                      return 0;
+                  }
+
+                  if (args.Length == 1 && args[0] == "Madar.Api.dll")
+                  {
+                      string rawUrl = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://127.0.0.1:18010";
+                      Uri url = new Uri(rawUrl);
+                      TcpListener listener = new TcpListener(IPAddress.Loopback, url.Port);
+                      listener.Start();
+
+                      while (true)
+                      {
+                          using (TcpClient client = listener.AcceptTcpClient())
+                          using (NetworkStream stream = client.GetStream())
+                          using (StreamReader reader = new StreamReader(stream, Encoding.ASCII, false, 1024, true))
+                          {
+                              string requestLine = reader.ReadLine();
+                              string path = "/";
+                              if (!String.IsNullOrWhiteSpace(requestLine))
+                              {
+                                  string[] parts = requestLine.Split(' ');
+                                  if (parts.Length > 1)
+                                      path = parts[1];
+                              }
+
+                              string header;
+                              while (!String.IsNullOrEmpty(header = reader.ReadLine())) { }
+
+                              string body = path.Contains("/health/ready")
+                                  ? "{\"status\":\"ready\",\"service\":\"madar-api\"}"
+                                  : path.Contains("/health/live")
+                                      ? "{\"status\":\"live\",\"service\":\"madar-api\"}"
+                                      : "{}";
+                              byte[] payload = Encoding.UTF8.GetBytes(body);
+                              string responseHeaders =
+                                  "HTTP/1.1 200 OK\r\n" +
+                                  "Content-Type: application/json; charset=utf-8\r\n" +
+                                  "Content-Length: " + payload.Length + "\r\n" +
+                                  "Connection: close\r\n\r\n";
+                              byte[] headerBytes = Encoding.ASCII.GetBytes(responseHeaders);
+                              stream.Write(headerBytes, 0, headerBytes.Length);
+                              stream.Write(payload, 0, payload.Length);
+                              stream.Flush();
+                          }
+                      }
+                  }
+
+                  return 0;
+              }
+          }
+          '@
+
+          Add-Type -TypeDefinition $source -OutputAssembly $fakeDotnet -OutputType ConsoleApplication
+
+          $originalPath = $env:PATH
+          $baseUrl = "http://127.0.0.1:18010"
+          try {
+            $env:PATH = "$fakeDirectory;$originalPath"
+            powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" start -Mode Native -BaseUrl $baseUrl -Reset
+
+            $status = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status -Mode Native -BaseUrl $baseUrl 2>&1 | Out-String)
+            Write-Host $status
+            if ($status -notmatch "Madar: READY") {
+              throw "Madar Native lifecycle smoke did not reach READY."
+            }
+            if (-not (Test-Path ".local\madar-native.pid")) {
+              throw "Madar Native lifecycle smoke did not persist its PID."
+            }
+
+            powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" stop -Mode Native -BaseUrl $baseUrl
+            $stopped = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status -Mode Native -BaseUrl $baseUrl 2>&1 | Out-String)
+            Write-Host $stopped
+            if ($stopped -notmatch "Madar: STOPPED or unreachable") {
+              throw "Madar Native lifecycle smoke did not stop cleanly."
+            }
+          }
+          finally {
+            $env:PATH = $originalPath
+            if (Test-Path ".local\madar-native.pid") {
+              $pidText = (Get-Content ".local\madar-native.pid" -Raw).Trim()
+              $processId = 0
+              if ([int]::TryParse($pidText, [ref]$processId)) {
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+              }
+              Remove-Item ".local\madar-native.pid" -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+      - name: Verify Madar Native and UAT sharing launcher contract
+        shell: powershell
+        run: |
+          $manager = Get-Content ".\scripts\madar-product.ps1" -Raw
+          $unified = Get-Content ".\foundationkit.ps1" -Raw
+          $login = Get-Content ".\apps\Madar\Madar.Client\Pages\Login.razor" -Raw
+          $index = Get-Content ".\apps\Madar\Madar.Client\wwwroot\index.html" -Raw
+
+          $requiredManagerLiterals = @(
+            "http://localhost:8100",
+            "madar-native.pid",
+            "ConnectionStrings__Madar",
+            "Madar.Api.dll",
+            'devtunnel host -p $port --allow-anonymous',
+            'cloudflared tunnel --url $BaseUrl'
+          )
+          foreach ($literal in $requiredManagerLiterals) {
+            if (-not $manager.Contains($literal)) {
+              throw "Madar manager is missing required Native/UAT contract text: $literal"
+            }
+          }
+
+          if ($manager.Contains("Docker operational path only")) {
+            throw "Madar manager still contains obsolete Docker-only wording."
+          }
+          if (-not $unified.Contains("TunnelProvider")) {
+            throw "Unified manager does not expose the Madar tunnel provider selector."
+          }
+          if (-not $unified.Contains("start -Target Madar -Mode Native")) {
+            throw "Unified help does not document Madar Native start."
+          }
+          if (-not $login.Contains('<form @onsubmit="LoginAsync" @onsubmit:preventDefault>')) {
+            throw "Madar login must keep password controls inside form semantics."
+          }
+          if (-not $index.Contains('rel="icon" type="image/svg+xml" href="favicon.svg"')) {
+            throw "Madar runtime index does not reference its favicon."
+          }
+          if (-not (Test-Path ".\apps\Madar\Madar.Client\wwwroot\favicon.svg")) {
+            throw "Madar runtime favicon asset is missing."
           }
 
       - name: Verify Madar Release publish wrapper
@@ -193,4 +362,7 @@ jobs:
           $help = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" help 2>&1 | Out-String)
           if ($help -notmatch "Athar\|Workbench\|Madar\|All\|Repository") {
             throw "Unified help does not expose the Madar target."
+          }
+          if ($help -notmatch "TunnelProvider Microsoft\|Cloudflare") {
+            throw "Unified help does not expose both Madar UAT tunnel providers."
           }
