@@ -210,7 +210,7 @@ internal sealed class FoundationIdempotencyMiddleware(
     {
         if (context.Request.ContentLength is > 0 && context.Request.ContentLength > _options.MaximumRequestBodyBytes)
             return null;
-        if (context.Request.ContentLength is null or 0)
+        if (context.Request.ContentLength == 0)
             return [];
 
         context.Request.EnableBuffering(64 * 1024, _options.MaximumRequestBodyBytes + 1L);
