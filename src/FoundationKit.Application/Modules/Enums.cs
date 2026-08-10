@@ -11,3 +11,16 @@ public enum FoundationModuleCapability
     Workflow = 1 << 4,
     Caching = 1 << 5
 }
+
+public enum FoundationApiIdempotencyMode
+{
+    Disabled = 0,
+    Optional = 1,
+    Required = 2
+}
+
+public enum FoundationApiConcurrencyMode
+{
+    ApplicationPolicy = 0,
+    RequireIfMatch = 1
+}
