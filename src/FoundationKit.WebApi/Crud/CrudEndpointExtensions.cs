@@ -172,15 +172,12 @@ public static class CrudEndpointExtensions
             CrudConcurrencyPrecondition? precondition = null;
             if (module.Api.Concurrency == FoundationApiConcurrencyMode.RequireIfMatch)
             {
-                var ifMatch = context.Request.Headers["If-Match"].ToString();
-                if (string.IsNullOrWhiteSpace(ifMatch))
+                if (!FoundationApiQueryParser.TryReadIfMatch(context, out var parsedPrecondition, out var preconditionError))
                 {
-                    await WriteProblemAsync(context, Error.PreconditionRequired(
-                        "Foundation.Api.IfMatch.Required",
-                        "The If-Match header is required for this operation.")).ConfigureAwait(false);
+                    await WriteProblemAsync(context, preconditionError).ConfigureAwait(false);
                     return;
                 }
-                precondition = new CrudConcurrencyPrecondition(ifMatch);
+                precondition = parsedPrecondition;
             }
 
             var service = Resolve<TEntity, TId, TCreate, TUpdate, TRead>(context);
