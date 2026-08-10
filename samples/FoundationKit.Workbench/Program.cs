@@ -112,6 +112,9 @@ builder.Services.AddFoundationEfCrudModule<
         .Auditing()
         .Authorization()
         .Concurrency()
+        .FeatureManagement()
+        .Localization()
+        .Caching()
         .UseManager<CoreCrudManager>());
 
 builder.Services.AddSingleton<WorkbenchAuditSink>();
