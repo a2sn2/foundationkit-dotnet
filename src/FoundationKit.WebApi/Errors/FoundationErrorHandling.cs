@@ -208,8 +208,10 @@ internal static class FoundationHttpProblemDetails
         StatusCodes.Status404NotFound => Error.NotFound("Foundation.Http.NotFound", "The requested endpoint or resource was not found."),
         StatusCodes.Status405MethodNotAllowed => Error.Validation("Foundation.Http.MethodNotAllowed", "The HTTP method is not allowed for this endpoint."),
         StatusCodes.Status408RequestTimeout => Error.Timeout("Foundation.Http.RequestTimeout", "The request timed out."),
+        StatusCodes.Status412PreconditionFailed => Error.PreconditionFailed("Foundation.Http.PreconditionFailed", "The request precondition did not match the current resource state."),
         StatusCodes.Status413PayloadTooLarge => Error.Validation("Foundation.Http.PayloadTooLarge", "The request payload is too large."),
         StatusCodes.Status415UnsupportedMediaType => Error.Validation("Foundation.Http.UnsupportedMediaType", "The request media type is not supported."),
+        StatusCodes.Status428PreconditionRequired => Error.PreconditionRequired("Foundation.Http.PreconditionRequired", "A required request precondition is missing."),
         StatusCodes.Status429TooManyRequests => Error.TooManyRequests("Foundation.Http.TooManyRequests", "Too many requests were received. Retry later."),
         StatusCodes.Status502BadGateway => Error.ServiceUnavailable("Foundation.Http.BadGateway", "A downstream service returned an invalid response."),
         StatusCodes.Status503ServiceUnavailable => Error.ServiceUnavailable("Foundation.Http.ServiceUnavailable", "The service is temporarily unavailable."),
@@ -231,6 +233,8 @@ internal static class FoundationHttpErrorMapping
         ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
         ErrorType.ServiceUnavailable => StatusCodes.Status503ServiceUnavailable,
         ErrorType.Timeout => StatusCodes.Status504GatewayTimeout,
+        ErrorType.PreconditionRequired => StatusCodes.Status428PreconditionRequired,
+        ErrorType.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
         _ => StatusCodes.Status500InternalServerError
     };
 }
