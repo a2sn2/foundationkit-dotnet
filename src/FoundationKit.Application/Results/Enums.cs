@@ -12,5 +12,7 @@ public enum ErrorType
     Failure = 7,
     TooManyRequests = 8,
     ServiceUnavailable = 9,
-    Timeout = 10
+    Timeout = 10,
+    PreconditionRequired = 11,
+    PreconditionFailed = 12
 }
