@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.Text.Json;
 using FoundationKit.Application.Crud;
 using FoundationKit.Application.Modules;
@@ -47,6 +48,7 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Get],
                     CreateListDelegate<TEntity, TId, TCreate, TUpdate, TRead>(options))
                 .WithName($"{module.Name}.List")
+                .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(ListApiMarker))))
                 .WithMetadata(
                     JsonResponse(StatusCodes.Status200OK, typeof(PagedResult<TRead>)),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -60,6 +62,7 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Get],
                     CreateGetDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Get")
+                .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(GetApiMarker), typeof(TId))))
                 .WithMetadata(
                     JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -74,6 +77,7 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Post],
                     CreatePostDelegate<TEntity, TId, TCreate, TUpdate, TRead>(module))
                 .WithName($"{module.Name}.Create")
+                .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(CreateApiMarker), typeof(TCreate))))
                 .WithMetadata(
                     JsonRequest(typeof(TCreate)),
                     JsonResponse(StatusCodes.Status201Created, typeof(TRead)),
@@ -89,6 +93,7 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Put],
                     CreatePutDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Update")
+                .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(UpdateApiMarker), typeof(TId), typeof(TUpdate))))
                 .WithMetadata(
                     JsonRequest(typeof(TUpdate)),
                     JsonResponse(StatusCodes.Status200OK, typeof(TRead)),
@@ -106,6 +111,7 @@ public static class CrudEndpointExtensions
                     [HttpMethods.Delete],
                     CreateDeleteDelegate<TEntity, TId, TCreate, TUpdate, TRead>())
                 .WithName($"{module.Name}.Delete")
+                .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(DeleteApiMarker), typeof(TId))))
                 .WithMetadata(
                     new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent),
                     ProblemResponse(StatusCodes.Status400BadRequest),
@@ -317,6 +323,52 @@ public static class CrudEndpointExtensions
     private static Task WriteProblemAsync(HttpContext context, Error error) =>
         error.ToProblem().ExecuteAsync(context);
 
+    private static object[] ApiExplorerMetadata(MethodInfo methodInfo)
+    {
+        var parameters = methodInfo.GetParameters();
+        var metadata = new object[parameters.Length + 1];
+        metadata[0] = methodInfo;
+        for (var index = 0; index < parameters.Length; index++)
+            metadata[index + 1] = new CrudParameterBindingMetadata(parameters[index]);
+        return metadata;
+    }
+
+    private static MethodInfo GetMarker(string methodName, params Type[] genericArguments)
+    {
+        var method = typeof(CrudEndpointExtensions).GetMethod(
+            methodName,
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"CRUD ApiExplorer marker '{methodName}' was not found.");
+
+        return method.IsGenericMethodDefinition
+            ? method.MakeGenericMethod(genericArguments)
+            : method;
+    }
+
+    private static void ListApiMarker(
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize)
+    {
+    }
+
+    private static void GetApiMarker<TId>([FromRoute] TId id)
+    {
+    }
+
+    private static void CreateApiMarker<TCreate>([FromBody] TCreate request)
+    {
+    }
+
+    private static void UpdateApiMarker<TId, TUpdate>(
+        [FromRoute] TId id,
+        [FromBody] TUpdate request)
+    {
+    }
+
+    private static void DeleteApiMarker<TId>([FromRoute] TId id)
+    {
+    }
+
     private static AcceptsMetadata JsonRequest(Type requestType) =>
         new(["application/json"], requestType, isOptional: false);
 
@@ -325,4 +377,27 @@ public static class CrudEndpointExtensions
 
     private static ProducesResponseTypeMetadata ProblemResponse(int statusCode) =>
         new(statusCode, typeof(ProblemDetails), ["application/problem+json"]);
+
+    private sealed class CrudParameterBindingMetadata(ParameterInfo parameterInfo) : IParameterBindingMetadata
+    {
+        public string Name { get; } = parameterInfo.Name ?? string.Empty;
+
+        public bool HasTryParse { get; } = HasTryParseSupport(parameterInfo.ParameterType);
+
+        public bool HasBindAsync => false;
+
+        public ParameterInfo ParameterInfo { get; } = parameterInfo;
+
+        public bool IsOptional { get; } =
+            parameterInfo.HasDefaultValue ||
+            Nullable.GetUnderlyingType(parameterInfo.ParameterType) is not null;
+
+        private static bool HasTryParseSupport(Type type)
+        {
+            var effectiveType = Nullable.GetUnderlyingType(type) ?? type;
+            return effectiveType == typeof(string) ||
+                   effectiveType.IsEnum ||
+                   TypeDescriptor.GetConverter(effectiveType).CanConvertFrom(typeof(string));
+        }
+    }
 }
