@@ -136,10 +136,7 @@ public sealed class FoundationPlatformTests
 
     private sealed class VersionPolicy : ICrudConcurrencyPolicy<TestEntity, UpdateRequest>
     {
-        public Result Validate(
-            TestEntity entity,
-            UpdateRequest request,
-            CrudConcurrencyPrecondition? precondition = null) => entity.Version == request.ExpectedVersion
+        public Result Validate(TestEntity entity, UpdateRequest request) => entity.Version == request.ExpectedVersion
             ? Result.Success()
             : Result.Failure(Error.Conflict("Test.VersionConflict", "Version mismatch."));
     }
