@@ -46,7 +46,8 @@ The static GitHub Pages demo is under `site/madar-demo/`. It is intentionally **
 Canonical handoff documents:
 
 - [`../../docs/MADAR-SPECIFICATION-AR.md`](../../docs/MADAR-SPECIFICATION-AR.md) — current v0.10 product specification.
-- [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) — local run, credentials, acceptance and publish steps.
+- [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) — local run, credentials and publish steps.
+- [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md) — the manual Administrator/Operator acceptance round for the user's turn.
 
 ## Product structure
 
@@ -122,6 +123,7 @@ Detailed product documents:
 
 - [`../../docs/MADAR-SPECIFICATION-AR.md`](../../docs/MADAR-SPECIFICATION-AR.md)
 - [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md)
+- [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md)
 - [`../../docs/MADAR-OPERATIONS-AR.md`](../../docs/MADAR-OPERATIONS-AR.md)
 - [`../../docs/MADAR-COMMENTS-AR.md`](../../docs/MADAR-COMMENTS-AR.md)
 - [`../../docs/MADAR-APPROVALS-AR.md`](../../docs/MADAR-APPROVALS-AR.md)
@@ -176,7 +178,7 @@ Specialized launcher:
 .\scripts\madar-product.ps1 publish
 ```
 
-Development/CI bootstrap data is test topology, not a Production organization policy. See [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) for the complete handoff flow.
+Development/CI bootstrap data is test topology, not a Production organization policy. See [`../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](../../docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) for the complete handoff flow and [`../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md`](../../docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md) for the manual acceptance round.
 
 ## Main API/UI surfaces
 
