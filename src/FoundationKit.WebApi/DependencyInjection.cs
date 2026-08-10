@@ -13,8 +13,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddFoundationWebApi(
         this IServiceCollection services,
-        Action<FoundationErrorHandlingOptions>? configureErrorHandling = null,
-        Action<FoundationIdempotencyOptions>? configureIdempotency = null)
+        Action<FoundationErrorHandlingOptions>? configureErrorHandling = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
@@ -23,8 +22,6 @@ public static class DependencyInjection
             services.Configure(configureErrorHandling);
 
         services.AddOptions<FoundationIdempotencyOptions>();
-        if (configureIdempotency is not null)
-            services.Configure(configureIdempotency);
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
 
         services.TryAddEnumerable(
@@ -49,6 +46,16 @@ public static class DependencyInjection
             };
         });
 
+        return services;
+    }
+
+    public static IServiceCollection ConfigureFoundationIdempotency(
+        this IServiceCollection services,
+        Action<FoundationIdempotencyOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+        services.Configure(configure);
         return services;
     }
 
