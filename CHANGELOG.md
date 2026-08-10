@@ -18,6 +18,8 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added Phase 8 contract source-of-truth tooling: runtime OpenAPI is the canonical serialized transport contract and Workbench Postman is generated deterministically from it.
 - Added exact CI drift gates proving repeated OpenAPI-to-Postman generation is byte-identical and matches the committed generated collection.
 - Kept runtime behavior proof separate from derived contract artifacts: SQL/HTTP smoke proves semantics while OpenAPI/Postman prove transport shape.
+- Added Phase 9 unified module capability composition with declared/effective capability separation, deterministic dependency closure, one fluent builder vocabulary for existing cross-cutting capabilities, registry snapshots, and Workbench `/api/modules` runtime evidence.
+- Reconciled the incomplete initial Phase 9 merge before starting the next reliability increment so the repository returns to an internally consistent buildable baseline.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0
