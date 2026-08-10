@@ -1,0 +1,255 @@
+using FoundationKit.Application.Pagination;
+using FoundationKit.Domain.Primitives;
+
+namespace FoundationKit.Application.Modules;
+
+public static class FoundationModuleCapabilities
+{
+    public const string Crud = "crud";
+    public const string Auditing = "auditing";
+    public const string Authorization = "authorization";
+    public const string Concurrency = "concurrency";
+    public const string Workflow = "workflow";
+    public const string Caching = "caching";
+}
+
+public interface IFoundationModuleDefinition
+{
+    string Name { get; }
+
+    string Route { get; }
+
+    Type EntityType { get; }
+
+    Type IdType { get; }
+
+    IReadOnlySet<string> Capabilities { get; }
+}
+
+public sealed record CrudModuleOptions(
+    bool CreateEnabled,
+    bool ReadEnabled,
+    bool ListEnabled,
+    bool UpdateEnabled,
+    bool DeleteEnabled,
+    int MaximumPageSize);
+
+public sealed class CrudModuleOptionsBuilder
+{
+    public bool CreateEnabled { get; set; } = true;
+
+    public bool ReadEnabled { get; set; } = true;
+
+    public bool ListEnabled { get; set; } = true;
+
+    public bool UpdateEnabled { get; set; } = true;
+
+    public bool DeleteEnabled { get; set; } = true;
+
+    public int MaximumPageSize { get; set; } = PageRequest.MaximumPageSize;
+
+    internal CrudModuleOptions Build()
+    {
+        if (MaximumPageSize is < 1 or > PageRequest.MaximumPageSize)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaximumPageSize),
+                $"Maximum page size must be between 1 and {PageRequest.MaximumPageSize}.");
+        }
+
+        return new CrudModuleOptions(
+            CreateEnabled,
+            ReadEnabled,
+            ListEnabled,
+            UpdateEnabled,
+            DeleteEnabled,
+            MaximumPageSize);
+    }
+}
+
+public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModuleDefinition
+    where TEntity : Entity<TId>
+    where TId : notnull
+{
+    private readonly HashSet<string> _capabilities;
+
+    internal FoundationModuleDefinition(
+        string name,
+        string route,
+        IEnumerable<string> capabilities,
+        CrudModuleOptions? crud,
+        string? authorizationPolicyPrefix,
+        Type? managerType)
+    {
+        Name = name;
+        Route = route;
+        _capabilities = new HashSet<string>(capabilities, StringComparer.OrdinalIgnoreCase);
+        Crud = crud;
+        AuthorizationPolicyPrefix = authorizationPolicyPrefix;
+        ManagerType = managerType;
+    }
+
+    public string Name { get; }
+
+    public string Route { get; }
+
+    public Type EntityType => typeof(TEntity);
+
+    public Type IdType => typeof(TId);
+
+    public IReadOnlySet<string> Capabilities => _capabilities;
+
+    public CrudModuleOptions? Crud { get; }
+
+    public string? AuthorizationPolicyPrefix { get; }
+
+    public Type? ManagerType { get; }
+
+    public bool HasCapability(string capability) => _capabilities.Contains(capability);
+}
+
+public sealed class FoundationModuleBuilder<TEntity, TId>
+    where TEntity : Entity<TId>
+    where TId : notnull
+{
+    private readonly HashSet<string> _capabilities = new(StringComparer.OrdinalIgnoreCase);
+    private string _name = typeof(TEntity).Name;
+    private string _route = typeof(TEntity).Name.ToLowerInvariant();
+    private CrudModuleOptions? _crud;
+    private string? _authorizationPolicyPrefix;
+    private Type? _managerType;
+
+    public FoundationModuleBuilder<TEntity, TId> Named(string name, string route)
+    {
+        _name = ValidateName(name, nameof(name));
+        _route = ValidateRoute(route);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Crud(Action<CrudModuleOptionsBuilder>? configure = null)
+    {
+        var builder = new CrudModuleOptionsBuilder();
+        configure?.Invoke(builder);
+        _crud = builder.Build();
+        _capabilities.Add(FoundationModuleCapabilities.Crud);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Auditing()
+    {
+        _capabilities.Add(FoundationModuleCapabilities.Auditing);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Authorization(string? policyPrefix = null)
+    {
+        _authorizationPolicyPrefix = policyPrefix is null
+            ? null
+            : ValidateName(policyPrefix, nameof(policyPrefix));
+        _capabilities.Add(FoundationModuleCapabilities.Authorization);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Concurrency()
+    {
+        _capabilities.Add(FoundationModuleCapabilities.Concurrency);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Workflow()
+    {
+        _capabilities.Add(FoundationModuleCapabilities.Workflow);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Caching()
+    {
+        _capabilities.Add(FoundationModuleCapabilities.Caching);
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> UseManager<TManager>()
+        where TManager : class
+    {
+        _managerType = typeof(TManager);
+        return this;
+    }
+
+    public FoundationModuleDefinition<TEntity, TId> Build()
+    {
+        if (_crud is null)
+            throw new InvalidOperationException("A v1 executable module must enable Crud().");
+
+        return new FoundationModuleDefinition<TEntity, TId>(
+            _name,
+            _route,
+            _capabilities,
+            _crud,
+            _authorizationPolicyPrefix,
+            _managerType);
+    }
+
+    private static string ValidateName(string value, string parameterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
+        var trimmed = value.Trim();
+        if (trimmed.Length > 96 || trimmed.Any(char.IsControl))
+            throw new ArgumentException("Module value is too long or contains control characters.", parameterName);
+        return trimmed;
+    }
+
+    private static string ValidateRoute(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        var route = value.Trim().Trim('/').ToLowerInvariant();
+        if (route.Length is 0 or > 96 ||
+            route.Any(character =>
+                !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '/'))
+        {
+            throw new ArgumentException("Module route may contain only ASCII letters, digits, '-' and '/'.", nameof(value));
+        }
+
+        return route;
+    }
+}
+
+public interface IFoundationModuleRegistry
+{
+    IReadOnlyCollection<IFoundationModuleDefinition> Modules { get; }
+
+    IFoundationModuleDefinition? Find(string name);
+}
+
+public sealed class FoundationModuleRegistry : IFoundationModuleRegistry
+{
+    private readonly IReadOnlyDictionary<string, IFoundationModuleDefinition> _modules;
+
+    public FoundationModuleRegistry(IEnumerable<IFoundationModuleDefinition> modules)
+    {
+        ArgumentNullException.ThrowIfNull(modules);
+        var materialized = modules.ToArray();
+
+        var duplicateName = materialized
+            .GroupBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateName is not null)
+            throw new InvalidOperationException($"Duplicate Foundation module name '{duplicateName.Key}'.");
+
+        var duplicateRoute = materialized
+            .GroupBy(module => module.Route, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateRoute is not null)
+            throw new InvalidOperationException($"Duplicate Foundation module route '{duplicateRoute.Key}'.");
+
+        _modules = materialized.ToDictionary(module => module.Name, StringComparer.OrdinalIgnoreCase);
+        Modules = Array.AsReadOnly(materialized);
+    }
+
+    public IReadOnlyCollection<IFoundationModuleDefinition> Modules { get; }
+
+    public IFoundationModuleDefinition? Find(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return _modules.GetValueOrDefault(name.Trim());
+    }
+}
