@@ -22,6 +22,7 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] runtime OpenAPI metadata for CRUD schemas, queries, headers, responses, and Workbench SQL proof.
 - [x] runtime OpenAPI as canonical serialized transport contract for derived client artifacts.
 - [x] deterministic OpenAPI-to-Postman generation with exact committed-artifact drift detection in CI.
+- [x] unified module capability composition with declared/effective separation, dependency closure, fluent cross-cutting capability intent, deterministic registry snapshots, and Workbench runtime discovery.
 
 ## Next backend/platform families
 

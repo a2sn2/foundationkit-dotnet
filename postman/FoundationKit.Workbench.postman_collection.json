@@ -307,6 +307,24 @@
           }
         },
         {
+          "name": "GetFoundationKitModules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "modules"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetFoundationKitModules`. Do not edit this request manually."
+          }
+        },
+        {
           "name": "GetWorkbenchPlatformReference",
           "request": {
             "method": "GET",
