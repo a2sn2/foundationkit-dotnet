@@ -12,7 +12,7 @@ public sealed class DurableIdempotencyContractTests
     [Fact]
     public void Acquisition_identity_is_normalized_and_bounded()
     {
-        var now = DateTimeOffset.Parse("2026-08-10T20:00:00+00:00");
+        var now = new DateTimeOffset(2026, 8, 10, 20, 0, 0, TimeSpan.Zero);
         var request = new IdempotencyAcquireRequest(
             new FoundationProjectId("Project-A"),
             "CoreCrud:Create",
@@ -32,7 +32,7 @@ public sealed class DurableIdempotencyContractTests
     [Fact]
     public void Acquisition_rejects_invalid_hashes_and_non_forward_replay_windows()
     {
-        var now = DateTimeOffset.Parse("2026-08-10T20:00:00+00:00");
+        var now = new DateTimeOffset(2026, 8, 10, 20, 0, 0, TimeSpan.Zero);
 
         Assert.Throws<ArgumentException>(() => new IdempotencyAcquireRequest(
             new FoundationProjectId("project-a"),
