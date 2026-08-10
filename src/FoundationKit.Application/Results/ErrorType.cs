@@ -9,5 +9,8 @@ public enum ErrorType
     Unauthorized = 4,
     Forbidden = 5,
     BusinessRule = 6,
-    Failure = 7
+    Failure = 7,
+    TooManyRequests = 8,
+    ServiceUnavailable = 9,
+    Timeout = 10
 }
