@@ -65,7 +65,6 @@ public static class DependencyInjection
 
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseExceptionHandler();
-        app.UseMiddleware<FoundationIdempotencyMiddleware>();
         app.UseStatusCodePages(async statusCodeContext =>
         {
             var httpContext = statusCodeContext.HttpContext;
@@ -91,6 +90,7 @@ public static class DependencyInjection
             }
         });
         app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseMiddleware<FoundationIdempotencyMiddleware>();
         return app;
     }
 }
