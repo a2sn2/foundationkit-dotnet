@@ -1,3 +1,4 @@
+using FoundationKit.Application.Modules;
 using FoundationKit.FeatureManagement;
 using FoundationKit.Localization;
 using FoundationKit.Settings;
@@ -69,6 +70,12 @@ public static class SystemEndpoints
             .WithSummary("Proves the reusable Settings, Feature Management, and Localization capabilities through a live Workbench consumer.")
             .Produces<PlatformReferenceResponse>()
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        api.MapGet("/modules", (IFoundationModuleRegistry registry) =>
+                TypedResults.Ok(registry.Describe()))
+            .WithName("GetFoundationKitModules")
+            .WithSummary("Returns deterministic declared/effective module capability composition evidence.")
+            .Produces<IReadOnlyList<FoundationModuleCompositionSnapshot>>();
 
         api.MapGet("/catalog", async (
                 CatalogService catalog,
