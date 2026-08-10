@@ -70,6 +70,24 @@ public sealed class FoundationExceptionHandler(
     IOptions<FoundationErrorHandlingOptions> options,
     ILogger<FoundationExceptionHandler> logger) : IExceptionHandler
 {
+    private static readonly Action<ILogger, string, Exception?> RequestCancelledLog =
+        LoggerMessage.Define<string>(
+            LogLevel.Debug,
+            new EventId(1000, nameof(RequestCancelledLog)),
+            "Request {CorrelationId} was cancelled by the client.");
+
+    private static readonly Action<ILogger, string, int, string, Exception?> HandledRequestErrorLog =
+        LoggerMessage.Define<string, int, string>(
+            LogLevel.Warning,
+            new EventId(1001, nameof(HandledRequestErrorLog)),
+            "Handled request error {ErrorCode} with HTTP {StatusCode}. CorrelationId: {CorrelationId}");
+
+    private static readonly Action<ILogger, string, Exception?> UnhandledRequestErrorLog =
+        LoggerMessage.Define<string>(
+            LogLevel.Error,
+            new EventId(1002, nameof(UnhandledRequestErrorLog)),
+            "Unhandled request exception. CorrelationId: {CorrelationId}");
+
     private readonly IFoundationExceptionMapper[] _mappers =
         (mappers ?? throw new ArgumentNullException(nameof(mappers))).ToArray();
     private readonly IProblemDetailsService _problemDetailsService =
@@ -89,9 +107,7 @@ public sealed class FoundationExceptionHandler(
 
         if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
         {
-            _logger.LogDebug(
-                "Request {CorrelationId} was cancelled by the client.",
-                httpContext.TraceIdentifier);
+            RequestCancelledLog(_logger, httpContext.TraceIdentifier, null);
             return false;
         }
 
@@ -108,19 +124,16 @@ public sealed class FoundationExceptionHandler(
         var statusCode = FoundationHttpErrorMapping.GetStatusCode(error.Type);
         if (mapped)
         {
-            _logger.LogWarning(
-                exception,
-                "Handled request error {ErrorCode} with HTTP {StatusCode}. CorrelationId: {CorrelationId}",
+            HandledRequestErrorLog(
+                _logger,
                 error.Code,
                 statusCode,
-                httpContext.TraceIdentifier);
+                httpContext.TraceIdentifier,
+                exception);
         }
         else
         {
-            _logger.LogError(
-                exception,
-                "Unhandled request exception. CorrelationId: {CorrelationId}",
-                httpContext.TraceIdentifier);
+            UnhandledRequestErrorLog(_logger, httpContext.TraceIdentifier, exception);
         }
 
         var details = FoundationHttpProblemDetails.Create(
