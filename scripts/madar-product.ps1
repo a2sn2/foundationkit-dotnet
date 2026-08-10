@@ -261,6 +261,7 @@ function Resolve-MadarMode {
         $stored = Get-StoredMode
         if ($stored -eq 'Native') {
             if ($env:OS -eq 'Windows_NT' -and (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+                Assert-DotNet10
                 return 'Native'
             }
         }
@@ -439,9 +440,8 @@ function Start-Native {
     }
 
     $environment = Get-NativeEnvironment -Config $config
-    $process = $null
-    Invoke-WithMadarEnvironment -Values $environment -Script {
-        $script:process = Start-Process `
+    $process = Invoke-WithMadarEnvironment -Values $environment -Script {
+        Start-Process `
             -FilePath 'dotnet' `
             -ArgumentList @('Madar.Api.dll') `
             -WorkingDirectory $NativePublishRoot `
