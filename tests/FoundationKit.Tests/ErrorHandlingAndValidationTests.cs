@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using FoundationKit.Application.Crud;
+using FoundationKit.Application.Results;
 using FoundationKit.Application.Validation;
 using FoundationKit.Infrastructure.Platform;
 using FoundationKit.WebApi;
@@ -26,19 +27,26 @@ public sealed class ErrorHandlingAndValidationTests
     }
 
     [Theory]
-    [MemberData(nameof(MappedExceptions))]
+    [InlineData(ExceptionScenario.Validation, StatusCodes.Status400BadRequest, "Foundation.Request.Validation")]
+    [InlineData(ExceptionScenario.BadRequest, StatusCodes.Status400BadRequest, "Foundation.Http.BadRequest")]
+    [InlineData(ExceptionScenario.InvalidJson, StatusCodes.Status400BadRequest, "Foundation.Http.InvalidJson")]
+    [InlineData(ExceptionScenario.NotFound, StatusCodes.Status404NotFound, "Foundation.Http.NotFound")]
+    [InlineData(ExceptionScenario.Forbidden, StatusCodes.Status403Forbidden, "Foundation.Http.Forbidden")]
+    [InlineData(ExceptionScenario.Concurrency, StatusCodes.Status409Conflict, "Foundation.Crud.ConcurrencyConflict")]
+    [InlineData(ExceptionScenario.Timeout, StatusCodes.Status504GatewayTimeout, "Foundation.Http.Timeout")]
+    [InlineData(ExceptionScenario.DownstreamUnavailable, StatusCodes.Status503ServiceUnavailable, "Foundation.Http.DownstreamUnavailable")]
     public async Task Exception_handler_maps_known_failures(
-        Exception exception,
+        ExceptionScenario scenario,
         int expectedStatus,
         string expectedCode)
     {
-        var response = await HandleAsync(exception);
+        var response = await HandleAsync(CreateException(scenario));
 
         Assert.True(response.Handled);
         Assert.Equal(expectedStatus, response.StatusCode);
-        Assert.Equal(expectedCode, response.Body.RootElement.GetProperty("code").GetString());
-        Assert.Equal("correlation-test", response.Body.RootElement.GetProperty("correlationId").GetString());
-        Assert.Equal("test-project", response.Body.RootElement.GetProperty("projectId").GetString());
+        Assert.Equal(expectedCode, response.Code);
+        Assert.Equal("correlation-test", response.CorrelationId);
+        Assert.Equal("test-project", response.ProjectId);
     }
 
     [Fact]
@@ -47,38 +55,38 @@ public sealed class ErrorHandlingAndValidationTests
         const string sensitiveMessage = "secret-database-password";
 
         var response = await HandleAsync(new InvalidOperationException(sensitiveMessage));
-        var json = response.Body.RootElement.GetRawText();
 
         Assert.True(response.Handled);
         Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
-        Assert.Equal("Foundation.Unhandled", response.Body.RootElement.GetProperty("code").GetString());
-        Assert.DoesNotContain(sensitiveMessage, json, StringComparison.Ordinal);
-        Assert.DoesNotContain("exceptionType", json, StringComparison.Ordinal);
+        Assert.Equal("Foundation.Unhandled", response.Code);
+        Assert.DoesNotContain(sensitiveMessage, response.RawJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("exceptionType", response.RawJson, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task Custom_exception_mapper_extends_the_pipeline_without_replacing_it()
     {
-        using var provider = BuildProvider(services =>
+        await using var provider = BuildProvider(services =>
             services.AddSingleton<IFoundationExceptionMapper, CustomExceptionMapper>());
 
         var response = await HandleAsync(new CustomException(), provider);
 
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, response.StatusCode);
-        Assert.Equal("Test.Custom", response.Body.RootElement.GetProperty("code").GetString());
+        Assert.Equal("Test.Custom", response.Code);
     }
 
-    public static IEnumerable<object[]> MappedExceptions()
+    private static Exception CreateException(ExceptionScenario scenario) => scenario switch
     {
-        yield return [new ValidationException("invalid"), StatusCodes.Status400BadRequest, "Foundation.Request.Validation"];
-        yield return [new BadHttpRequestException("bad"), StatusCodes.Status400BadRequest, "Foundation.Http.BadRequest"];
-        yield return [new JsonException("bad json"), StatusCodes.Status400BadRequest, "Foundation.Http.InvalidJson"];
-        yield return [new KeyNotFoundException(), StatusCodes.Status404NotFound, "Foundation.Http.NotFound"];
-        yield return [new UnauthorizedAccessException(), StatusCodes.Status403Forbidden, "Foundation.Http.Forbidden"];
-        yield return [new FoundationConcurrencyException("conflict"), StatusCodes.Status409Conflict, "Foundation.Crud.ConcurrencyConflict"];
-        yield return [new TimeoutException(), StatusCodes.Status504GatewayTimeout, "Foundation.Http.Timeout"];
-        yield return [new HttpRequestException(), StatusCodes.Status503ServiceUnavailable, "Foundation.Http.DownstreamUnavailable"];
-    }
+        ExceptionScenario.Validation => new ValidationException("invalid"),
+        ExceptionScenario.BadRequest => new BadHttpRequestException("bad"),
+        ExceptionScenario.InvalidJson => new JsonException("bad json"),
+        ExceptionScenario.NotFound => new KeyNotFoundException(),
+        ExceptionScenario.Forbidden => new UnauthorizedAccessException(),
+        ExceptionScenario.Concurrency => new FoundationConcurrencyException("conflict"),
+        ExceptionScenario.Timeout => new TimeoutException(),
+        ExceptionScenario.DownstreamUnavailable => new HttpRequestException(),
+        _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null)
+    };
 
     private static ServiceProvider BuildProvider(Action<IServiceCollection>? configure = null)
     {
@@ -112,8 +120,15 @@ public sealed class ErrorHandlingAndValidationTests
 
             var handled = await handler.TryHandleAsync(context, exception, CancellationToken.None);
             context.Response.Body.Position = 0;
-            var body = await JsonDocument.ParseAsync(context.Response.Body);
-            return new HandledResponse(handled, context.Response.StatusCode, body);
+            using var body = await JsonDocument.ParseAsync(context.Response.Body);
+            var root = body.RootElement;
+            return new HandledResponse(
+                handled,
+                context.Response.StatusCode,
+                root.GetProperty("code").GetString(),
+                root.GetProperty("correlationId").GetString(),
+                root.TryGetProperty("projectId", out var projectId) ? projectId.GetString() : null,
+                root.GetRawText());
         }
         finally
         {
@@ -126,24 +141,40 @@ public sealed class ErrorHandlingAndValidationTests
         [property: Required] string Name,
         [property: Range(1, 10)] int Count);
 
+    private enum ExceptionScenario
+    {
+        Validation,
+        BadRequest,
+        InvalidJson,
+        NotFound,
+        Forbidden,
+        Concurrency,
+        Timeout,
+        DownstreamUnavailable
+    }
+
     private sealed class CustomException : Exception;
 
     private sealed class CustomExceptionMapper : IFoundationExceptionMapper
     {
-        public bool TryMap(Exception exception, out FoundationKit.Application.Results.Error error)
+        public bool TryMap(Exception exception, out Error error)
         {
             if (exception is CustomException)
             {
-                error = FoundationKit.Application.Results.Error.BusinessRule(
-                    "Test.Custom",
-                    "Custom failure.");
+                error = Error.BusinessRule("Test.Custom", "Custom failure.");
                 return true;
             }
 
-            error = FoundationKit.Application.Results.Error.None;
+            error = Error.None;
             return false;
         }
     }
 
-    private sealed record HandledResponse(bool Handled, int StatusCode, JsonDocument Body);
+    private sealed record HandledResponse(
+        bool Handled,
+        int StatusCode,
+        string? Code,
+        string? CorrelationId,
+        string? ProjectId,
+        string RawJson);
 }
