@@ -12,20 +12,19 @@
 - PowerShell 5.1 أو أحدث.
 - .NET 10 SDK وفق `global.json`.
 
-لـWorkbench/Athar Native:
+لـWorkbench/Athar/Madar Native:
 
-- SQL Server محلي يعمل، مثل `MSSQLSERVER` أو `SQLEXPRESS`.
+- SQL Server محلي يعمل، مثل `MSSQLSERVER` أو instance مناسب.
 
-لـMadar:
+اختياري حسب الحاجة:
 
-- Docker Desktop/Engine مع Docker Compose في حالة Ready.
-
-اختياري:
-
+- Docker Desktop/Engine مع Docker Compose للتكامل والانحدار والحاويات.
+- Microsoft Dev Tunnels CLI (`devtunnel`) لمشاركة UAT المؤقتة.
+- `cloudflared` لمسار مشاركة UAT مستقل.
 - Visual Studio 2026 مع ASP.NET and web development.
 - SSMS.
-- Python/Node.js لفحوصات المستودع الإضافية.
-- `sqlcmd` لبعض عمليات Athar Native.
+- Python/Node.js لفحوصات إضافية.
+- `sqlcmd` لبعض العمليات المحلية.
 
 ## 2. نسخة نظيفة
 
@@ -37,32 +36,32 @@ git pull --ff-only origin main
 git status --short
 ```
 
-في نسخة نظيفة يجب ألا يعرض `git status --short` ملفات متغيرة.
+Visual Studio قد يولد `launchSettings.json` تحت مشروعات Madar؛ هذه الملفات المحلية مهملة في Git ولا تُستخدم في مسار Madar Native الكانوني.
 
 ## 3. Preflight
 
-من جذر المستودع:
+بسبب سياسات Execution Policy الشائعة على Windows، الصيغة المحمولة الموصى بها هي:
 
 ```powershell
-.\foundationkit.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
 ```
 
-ثم عند الحاجة:
+وعند الحاجة:
 
 ```powershell
 dotnet --info
 docker info
 docker compose version
+devtunnel --version
+cloudflared --version
 ```
 
-`doctor` يتحقق من الأدوات، .NET 10، Docker عند توفره، الخدمات/المنافذ المحلية وحالة التطبيقات المعروفة.
-
-إذا ظهر FAIL لمتطلب تحتاجه في المسار الذي ستشغله، أصلحه قبل بدء المنتج.
+`doctor` يتحقق من الأدوات و.NET 10 وخدمات SQL والمنافذ وGit وحالة التطبيقات، ويعرض Docker وأدوات الأنفاق كاختيارات إضافية.
 
 ## 4. Workbench — Native
 
 ```powershell
-.\foundationkit.ps1 start -Target Workbench -Mode Native
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Workbench -Mode Native
 ```
 
 الرابط:
@@ -71,46 +70,18 @@ docker compose version
 http://localhost:5057
 ```
 
-الحالة:
-
-```powershell
-.\foundationkit.ps1 status -Target Workbench -Mode Native
-```
-
-المسارات الأساسية:
-
-```text
-http://localhost:5057/
-http://localhost:5057/user
-http://localhost:5057/admin
-http://localhost:5057/swagger
-http://localhost:5057/api/health
-```
-
 Default SQL connection:
 
 ```text
 Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True
 ```
 
-إذا كنت تستخدم SQL Express، عدّل فقط القيمة المحلية داخل:
-
-```text
-.local/workbench-product.env
-```
-
-مثال:
-
-```text
-WORKBENCH_NATIVE_CONNECTION_STRING=Server=.\SQLEXPRESS;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True
-```
-
-ثم أوقف وأعد التشغيل.
+إذا كان لديك instance مختلف، عدّل الإعداد المحلي تحت `.local/workbench-product.env` وفق توثيق Workbench.
 
 ## 5. Athar — Native
 
 ```powershell
-.\foundationkit.ps1 start -Target Athar -Mode Native
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Athar -Mode Native
 ```
 
 الرابط:
@@ -119,28 +90,10 @@ WORKBENCH_NATIVE_CONNECTION_STRING=Server=.\SQLEXPRESS;Database=FoundationKitWor
 http://localhost:8090
 ```
 
-بيانات الإدارة المحلية عند الحاجة:
+بيانات الإدارة المحلية:
 
 ```powershell
-.\foundationkit.ps1 credentials -Target Athar
-```
-
-الحالة:
-
-```powershell
-.\foundationkit.ps1 status -Target Athar -Mode Native
-```
-
-المسارات الأساسية:
-
-```text
-http://localhost:8090/
-http://localhost:8090/account
-http://localhost:8090/initiatives
-http://localhost:8090/admin
-http://localhost:8090/swagger
-http://localhost:8090/health/live
-http://localhost:8090/health/ready
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Athar
 ```
 
 Default SQL connection:
@@ -149,42 +102,12 @@ Default SQL connection:
 Server=.;Database=Athar;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True
 ```
 
-لـSQL Express عدّل:
+## 6. Madar — المسار الأساسي للمستخدم/UAT
 
-```text
-.local/athar-product.env
-```
-
-مثال:
-
-```text
-ATHAR_NATIVE_CONNECTION_STRING=Server=.\SQLEXPRESS;Database=Athar;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True
-```
-
-ثم أوقف وأعد التشغيل.
-
-## 6. Madar — المسار الحقيقي للتجربة المحلية
-
-Madar هو المنتج التشغيلي تحت `apps/Madar`، والمسار المعتمد حاليًا لتجربته كاملة هو Docker.
-
-ابدأ:
+Madar هو المنتج التشغيلي تحت `apps/Madar`. المسار الأساسي على Windows هو Native:
 
 ```powershell
-.\foundationkit.ps1 start -Target Madar -Mode Docker
-```
-
-عند أول تشغيل ينشئ المشغل:
-
-```text
-.local/madar-product.env
-```
-
-ويولد أسرار تطوير عشوائية لـSQL Server وحساب Administrator وحساب Operator. على Windows يتم تقييد ACL للملف على حساب Windows الحالي.
-
-اعرض بيانات الدخول بعد أول تشغيل:
-
-```powershell
-.\scripts\madar-product.ps1 credentials
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
 ```
 
 الرابط:
@@ -193,17 +116,31 @@ Madar هو المنتج التشغيلي تحت `apps/Madar`، والمسار ا
 http://localhost:8100
 ```
 
+الـSQL الافتراضي:
+
+```text
+Server=.;Database=MadarDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True
+```
+
+عند أول تشغيل ينشئ المشغل إعدادات Development داخل `.local/` ويقيّد ملف credentials بـACL على Windows. Madar يُنشر إلى `.local/madar-native/app` ثم يعمل مباشرة من `Madar.Api.dll`؛ لا يعتمد على `launchSettings.json`.
+
+اعرض بيانات الدخول:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+```
+
 افتحه:
 
 ```powershell
-.\foundationkit.ps1 open -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 open -Target Madar
 ```
 
 الحالة والسجلات:
 
 ```powershell
-.\foundationkit.ps1 status -Target Madar
-.\foundationkit.ps1 logs -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 logs -Target Madar
 ```
 
 المسارات الأساسية:
@@ -219,38 +156,56 @@ http://localhost:8100/health/live
 http://localhost:8100/health/ready
 ```
 
-`/health/live` يثبت أن العملية حية. `/health/ready` يتحقق من جاهزية قاعدة البيانات وعدم وجود EF migrations معلقة.
-
-الإيقاف بدون حذف البيانات:
+الإيقاف يحافظ على SQL المحلي:
 
 ```powershell
-.\foundationkit.ps1 stop -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target Madar
 ```
 
-SQL volume يبقى محفوظًا.
+### ملاحظة credentials
 
-### جولة قبول Madar المقترحة
+Bootstrap لا يعيد ضبط كلمة مرور مستخدم موجود مسبقًا في `MadarDb`. لذلك إذا كانت القاعدة أقدم من `.local/madar-product.env` الحالي، قد لا تكون كلمة المرور المولدة حديثًا هي كلمة المرور الفعلية لذلك المستخدم الموجود.
 
-1. ادخل كـAdministrator.
-2. راجع الأقسام وعضوية المشغلين.
-3. أنشئ/افتح حالة.
-4. جرّب route/assign/reassign/transfer ضمن الصلاحيات.
-5. راجع التعليقات والموافقات والمرفقات والتدقيق.
-6. افتح البحث/التقارير.
-7. ادخل كـOperator وقارن نطاق الرؤية والإجراءات.
+## 7. مشاركة Madar مع مختبرين
 
-للتفاصيل الوظيفية:
+يجب أن يكون Madar `READY` أولًا.
 
-- [`MADAR-SPECIFICATION-AR.md`](MADAR-SPECIFICATION-AR.md)
-- [`MADAR-OPERATIONS-AR.md`](MADAR-OPERATIONS-AR.md)
-- [`MADAR-LOCAL-RUN-PUBLISH-AR.md`](MADAR-LOCAL-RUN-PUBLISH-AR.md)
+### Microsoft Dev Tunnels
 
-## 7. Madar Release Publish
-
-لا يحتاج أمر الـpublish إلى Docker، لكنه يحتاج .NET 10 SDK:
+بعد تثبيت `devtunnel` وتسجيل الدخول:
 
 ```powershell
-.\scripts\madar-product.ps1 publish
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Microsoft
+```
+
+يبدأ رابطًا عامًا مؤقتًا باستخدام `--allow-anonymous`. استخدم test data/accounts وأوقف الأمر بـ`Ctrl+C` بعد جلسة UAT.
+
+### Cloudflare Quick Tunnel
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Cloudflare
+```
+
+يظهر رابط `trycloudflare.com` مؤقت. لا تُخزَّن روابط أو credentials للأنفاق داخل Git.
+
+كلا المسارين **UAT/Development فقط** وليسا Production hosting.
+
+## 8. Madar — Docker regression path
+
+Docker لم يُحذف. لتشغيل topology الحاويات:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Docker
+```
+
+هذا المسار مهم للـCI، SQL container، readiness، container hardening، E2E، وsecurity scanning. لا تعتبر Docker SQL volume هو نفسه `MadarDb` المحلية المستخدمة في Native.
+
+## 9. Madar Release Publish
+
+لا يحتاج publish إلى Docker:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\madar-product.ps1 publish
 ```
 
 الناتج:
@@ -268,124 +223,90 @@ Get-FileHash .\artifacts\madar\Madar-net10.0-Release.zip -Algorithm SHA256
 Get-Content .\artifacts\madar\Madar-net10.0-Release.zip.sha256
 ```
 
-هذا Release artifact تقني، وليس Production deployment تلقائيًا.
+هذا artifact تقني، وليس Production deployment.
 
-## 8. تشغيل Docker للمنتجات
+## 10. تشغيل Docker للمنتجات
 
-يمكن للمدير استخدام Docker في المسارات المدعومة:
+يمكن استخدام Docker صراحةً في المسارات المدعومة:
 
 ```powershell
-.\foundationkit.ps1 start -Target Workbench -Mode Docker
-.\foundationkit.ps1 start -Target Athar -Mode Docker
-.\foundationkit.ps1 start -Target Madar -Mode Docker
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Workbench -Mode Docker
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Athar -Mode Docker
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Docker
 ```
 
-`-Target All -Mode Auto` يستخدم Docker عندما يكون جاهزًا ويطبق المسارات المدعومة لكل منتج.
+بالنسبة إلى Madar، `Auto` يفضّل Native على Windows عندما تتوفر .NET 10؛ يمكن طلب Docker صراحةً عند الحاجة.
 
-`-Target All -Mode Native` يحافظ على Workbench/Athar Native ويخطر بأن Madar لم يتم تشغيله لأن Madar لا يملك Native path موحدًا حاليًا.
-
-## 9. منافذ التطوير المعروفة
+## 11. منافذ التطوير المعروفة
 
 ```text
 Workbench Native  5057
 Workbench Docker  8080
 Athar              8090
 Madar              8100
-Workbench SQL      14333
-Athar SQL          14334
-Madar SQL          14335
+Workbench SQL      14333 (Docker topology)
+Athar SQL          14334 (Docker topology)
+Madar SQL          14335 (Docker topology)
 ```
 
-إذا كان منفذ مستخدمًا، `doctor` يساعد على إظهار listener/PID بدل الادعاء أن التطبيق متوقف.
+إذا كان منفذ مستخدمًا، `doctor` يظهر listener/PID بدل الادعاء أن التطبيق متوقف.
 
-## 10. Build/Test/Verify
-
-من جذر المستودع:
+## 12. Build/Test/Verify
 
 ```powershell
-.\foundationkit.ps1 restore
-.\foundationkit.ps1 build
-.\foundationkit.ps1 test
-.\foundationkit.ps1 verify
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 restore
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 test
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 verify
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 pack
 ```
 
-ولإنشاء حزم FoundationKit القابلة لإعادة الاستخدام:
-
-```powershell
-.\foundationkit.ps1 pack
-```
-
-الحزمة المتوقعة للمستودع هي:
+الحزمة المتوقعة:
 
 ```text
 17 .nupkg
 17 .snupkg
 ```
 
-## 11. GitHub Pages
+## 13. GitHub Pages
 
-FoundationKit Atlas تحت `site/` هو توثيق ثابت ويحتوي معاينات، منها:
+`site/athar-demo/` و`site/madar-demo/` معاينات ثابتة. Madar demo بلا خادم أو SQL أو Authentication حقيقي أو حفظ دائم، ولا تستبدل runtime المنتج.
 
-```text
-site/athar-demo/
-site/madar-demo/
-```
-
-Madar demo ثابتة بلا خادم أو SQL أو حفظ بيانات. لا تستخدمها كبديل عن التشغيل المحلي الحقيقي.
-
-## 12. إذا فشل Madar
-
-نفذ:
+## 14. إذا فشل Madar Native
 
 ```powershell
-.\foundationkit.ps1 status -Target Madar
-.\foundationkit.ps1 logs -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 logs -Target Madar
 ```
 
-ثم افحص:
+ثم راجع:
 
-```powershell
-docker compose --project-name madar-product -f deploy/madar-compose.yml ps
-```
+- خدمة SQL المحلية.
+- المنفذ 8100.
+- `.local/logs/madar-native.err.log`.
+- `.local/logs/madar-native.out.log`.
+- connection string إذا كان SQL instance مختلفًا.
 
-لا تبدأ بحذف volume. حافظ على البيانات حتى تعرف السبب.
+لا تبدأ بحذف `MadarDb`.
 
-إذا كانت بيئة تطوير قابلة للحذف بالكامل، راجع `MADAR-OPERATIONS-AR.md` قبل أي `down --volumes` متعمد.
+## 15. حدود Production
 
-## 13. حدود Production
-
-نجاح local run أو `dotnet publish` لا يثبت أن بيئة Production جاهزة. الاستضافة الحقيقية تحتاج قرارات بيئية مستقلة مثل:
-
-- domain/HTTPS/ingress.
-- secret store.
-- least-privilege database account.
-- Data Protection keys دائمة.
-- backup/restore.
-- central logs/metrics/traces/alerts.
-- object storage/malware scanning/retention عندما تستخدم المرفقات.
-- SLA values المعتمدة.
-- privacy/legal/performance acceptance.
+نجاح Native أو Docker أو Tunnel أو `dotnet publish` لا يثبت Production readiness. الاستضافة الحقيقية تحتاج قرارات بيئية مستقلة مثل domain/HTTPS/ingress، secret store، least-privilege database identity، Data Protection keys، backups، observability، object storage/malware scanning/retention، SLA الحقيقي، privacy/legal/performance acceptance.
 
 راجع [`PRODUCTION-READINESS-AR.md`](PRODUCTION-READINESS-AR.md).
 
-## 14. أقصر مسار لتجربة Madar
+## 16. أقصر مسار لتجربة Madar
 
 ```powershell
 git pull --ff-only origin main
-.\foundationkit.ps1 doctor
-.\foundationkit.ps1 start -Target Madar -Mode Docker
-.\scripts\madar-product.ps1 credentials
-.\foundationkit.ps1 open -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 open -Target Madar
 ```
 
-بعد التجربة:
+للمشاركة المؤقتة، شغّل Microsoft أو Cloudflare في Terminal مستقلة. بعد التجربة:
 
 ```powershell
-.\foundationkit.ps1 stop -Target Madar
-```
-
-ولإنشاء Release:
-
-```powershell
-.\scripts\madar-product.ps1 publish
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target Madar
 ```
