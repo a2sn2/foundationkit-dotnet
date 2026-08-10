@@ -113,7 +113,7 @@ public static class CrudEndpointExtensions
                 .WithName($"{module.Name}.Delete")
                 .WithMetadata(ApiExplorerMetadata(GetMarker(nameof(DeleteApiMarker), typeof(TId))))
                 .WithMetadata(
-                    new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent),
+                    new ProducesResponseTypeMetadata(StatusCodes.Status204NoContent, typeof(void), []),
                     ProblemResponse(StatusCodes.Status400BadRequest),
                     ProblemResponse(StatusCodes.Status403Forbidden),
                     ProblemResponse(StatusCodes.Status404NotFound));
