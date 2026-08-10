@@ -1,4 +1,0 @@
-[Migrations/*.cs]
-# EF Core migrations are generated schema source. Rewriting generated array
-# arguments to satisfy CA1861 creates drift from EF tooling without changing runtime security.
-dotnet_diagnostic.CA1861.severity = none
