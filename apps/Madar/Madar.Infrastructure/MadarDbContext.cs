@@ -12,6 +12,8 @@ public sealed class MadarDbContext(
     DbContextOptions<MadarDbContext> options)
     : IdentityDbContext<MadarUser, IdentityRole<Guid>, Guid>(options)
 {
+    private const int IdentityCompositeKeyMaxLength = 128;
+
     public DbSet<Case> Cases => Set<Case>();
 
     public DbSet<CaseComment> CaseComments => Set<CaseComment>();
@@ -56,12 +58,24 @@ public sealed class MadarDbContext(
             .ToTable("UserRoles", "identity");
         builder.Entity<IdentityUserClaim<Guid>>()
             .ToTable("UserClaims", "identity");
-        builder.Entity<IdentityUserLogin<Guid>>()
-            .ToTable("UserLogins", "identity");
+        builder.Entity<IdentityUserLogin<Guid>>(entity =>
+        {
+            entity.ToTable("UserLogins", "identity");
+            entity.Property(login => login.LoginProvider)
+                .HasMaxLength(IdentityCompositeKeyMaxLength);
+            entity.Property(login => login.ProviderKey)
+                .HasMaxLength(IdentityCompositeKeyMaxLength);
+        });
         builder.Entity<IdentityRoleClaim<Guid>>()
             .ToTable("RoleClaims", "identity");
-        builder.Entity<IdentityUserToken<Guid>>()
-            .ToTable("UserTokens", "identity");
+        builder.Entity<IdentityUserToken<Guid>>(entity =>
+        {
+            entity.ToTable("UserTokens", "identity");
+            entity.Property(token => token.LoginProvider)
+                .HasMaxLength(IdentityCompositeKeyMaxLength);
+            entity.Property(token => token.Name)
+                .HasMaxLength(IdentityCompositeKeyMaxLength);
+        });
     }
 
     private static void ConfigureOrganization(ModelBuilder builder)

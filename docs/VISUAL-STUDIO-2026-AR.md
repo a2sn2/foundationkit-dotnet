@@ -6,13 +6,15 @@
 
 > مهم: منافذ Visual Studio تختلف جزئيًا عن منافذ المدير الموحد `foundationkit.ps1`. Visual Studio يستخدم Workbench على `5057` وAthar على `5068`، بينما المدير الموحد Native يستخدم Workbench على `5057` وAthar على `8090`.
 
+> خط التطوير الحالي هو **.NET 10 LTS / `net10.0`**. راجع [`NET10-LTS-BASELINE.md`](NET10-LTS-BASELINE.md) لقرار الترقية وحدود التوافق.
+
 ## 1. المتطلبات
 
 ثبّت أو تأكد من وجود:
 
 - Visual Studio 2026.
 - Workload: **ASP.NET and web development**.
-- .NET 8 SDK، وفق `global.json` داخل المستودع.
+- .NET 10 SDK، وفق `global.json` داخل المستودع.
 - SQL Server محلي مثل SQL Server 2025 أو SQL Server Express.
 - SQL Server Management Studio لفحص قواعد البيانات.
 - Git.

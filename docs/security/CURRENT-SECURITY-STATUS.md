@@ -12,11 +12,11 @@ FoundationKit Core v0.1 is closed as a composable repository baseline. The reusa
 - Athar — complete Arabic reference product;
 - Madar — operational case-management product through v0.10.
 
-The latest dependency-servicing hardening before this truth-sync pass was PR #103 / merge `8dc335e05820bef2f69537c121b9b40befc16842`. Its exact tested head passed CI, Security Scan, CodeQL and Workbench/Athar/Madar SQL integration with 303/303 automated tests and the unchanged 17+17 package invariant.
+The active framework baseline now targets **.NET 10 LTS / `net10.0`**. The migration is coordinated across the SDK, ASP.NET Core/Identity/EF/DI servicing dependencies, SQL client floor, Composer-generated projects, CI SDKs, and Workbench/Athar/Madar container images. The framework migration does not change capability maturity/contracts, product schemas, or the 17+17 reusable-package invariant.
 
-Current direct .NET 8 servicing packages are aligned to 8.0.29 where applicable; deprecated `Azure.Identity 1.13.2` was replaced by 1.17.2, the SQL client security floor is 5.1.9, and Dependabot now also monitors the Madar Dockerfile.
+Current Microsoft framework-aligned package pins use the .NET 10 servicing line where applicable. `Azure.Identity` remains on the supported 1.17.2 line and the SQL client floor is raised to the EF Core 10-compatible 6.1.6 baseline. See `docs/NET10-LTS-BASELINE.md` for the compatibility and verification decision.
 
-Migration from the current `net8.0` baseline to .NET 10 LTS is tracked separately in Issue #104 before .NET 8 reaches end of support. The migration is **not** claimed as completed.
+Historical PR #103 remains evidence for the earlier .NET 8 servicing hardening and Madar Docker Dependabot coverage; it is not the current framework baseline.
 
 ## What repository automation currently proves
 
@@ -27,10 +27,12 @@ The normal pull-request gates cover, as applicable:
 - Release build with analyzers;
 - generated capability/contract/maturity-evidence drift protection;
 - FoundationKit, Workbench, Athar, and Madar tests;
+- Composer deterministic generated-project restore/build/test;
 - publish and exact reusable-package count;
 - Workbench/Athar/Madar SQL Server integration;
 - Athar authentication/authorization/CSRF/maker-checker/MFA/rate-limit negative coverage and backup/restore proof;
 - Madar lifecycle, routing, approvals, attachments and authorized search/reporting privacy regressions;
+- Windows launcher/doctor checks against the active .NET 10 SDK baseline;
 - container hardening and Trivy gates;
 - CodeQL for supported languages.
 

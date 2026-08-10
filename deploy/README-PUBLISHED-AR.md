@@ -5,7 +5,7 @@
 ## المتطلبات
 
 - Windows x64.
-- .NET 8 Runtime.
+- .NET 10 Runtime.
 - SQL Server يعمل محليًا.
 - اتصال Windows Authentication ناجح إلى `Server=.`.
 

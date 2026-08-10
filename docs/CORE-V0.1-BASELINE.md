@@ -62,7 +62,7 @@ catalog/foundationkit.maturity-evidence.json
 
 ## Composer v1
 
-Current commands:
+Current commands include:
 
 ```text
 capabilities
@@ -70,9 +70,11 @@ profiles
 validate <manifest>
 validate <manifest> --require-stable
 explain <manifest>
+new <manifest> --output <directory>
+new --interactive --output <directory>
 ```
 
-Composer validates and explains composition. It does **not** scaffold projects or install providers yet; `foundationkit new` remains future tooling.
+Composer now validates/explains composition and provides deterministic project generation plus an interactive questionnaire over the same capability graph. Generation remains bounded: it creates structural product layers and actual FoundationKit package/project bindings without inventing product schemas, business policy, providers, or a speculative runtime package.
 
 ## Consumer evidence
 
@@ -86,9 +88,9 @@ Madar's product-owned departments, SLA, attachments, search and reporting are ev
 
 ## Post-closure maintenance
 
-Core closure does not freeze dependencies or prevent bug/security fixes. PR #103 refreshed the supported .NET 8 servicing dependencies and Madar Docker dependency monitoring without changing public capability semantics, package count, or the v0.1 closure decision.
+Core closure does not freeze dependencies or prevent bug/security/support fixes. PR #103 refreshed the supported .NET 8 servicing dependencies and Madar Docker dependency monitoring without changing public capability semantics, package count, or the v0.1 closure decision.
 
-The current framework target remains `net8.0`; migration to .NET 10 LTS is tracked separately in Issue #104 before .NET 8 end of support.
+The repository baseline is now migrating coherently to **.NET 10 LTS / `net10.0`** under Issue #104. This support-lifecycle migration changes the framework target, SDK/runtime/container line, and matching Microsoft dependencies while preserving the closed capability model, package count, package version, product schemas, and conservative maturity policy unless exact compatibility evidence requires an explicit additional change.
 
 ## Stop rule
 

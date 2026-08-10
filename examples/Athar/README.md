@@ -79,11 +79,13 @@ Audit + status transition
 .\scripts\athar-product.ps1 -Action Start -Mode Auto
 ```
 
-`Auto` يستخدم Docker عندما يكون جاهزًا، وإلا يمكن استخدام Native على Windows مع .NET 8 وSQL Server محلي. التفاصيل الكانونية في:
+`Auto` يستخدم Docker عندما يكون جاهزًا، وإلا يمكن استخدام Native على Windows مع .NET 10 وSQL Server محلي. التفاصيل الكانونية في:
 
 ```text
 docs/LOCAL-RUN-WINDOWS-AR.md
 ```
+
+خط المشروع الحالي هو `net10.0` ضمن baseline .NET 10 LTS الموثق في `docs/NET10-LTS-BASELINE.md`.
 
 المنافذ تختلف حسب مسار التشغيل؛ استخدم `foundationkit.ps1 status` أو دليل التشغيل بدل الاعتماد على رقم قديم مكتوب في وثيقة منفصلة.
 

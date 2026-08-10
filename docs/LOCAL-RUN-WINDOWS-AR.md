@@ -4,13 +4,15 @@
 
 > لا تستخدم بيانات حقيقية أو حساسة أثناء الاختبار المحلي. إعدادات `.local/` وUser Secrets محلية فقط ولا تُرفع إلى Git.
 
+> خط التشغيل الحالي هو **.NET 10 LTS / `net10.0`**. راجع `docs/NET10-LTS-BASELINE.md` لقرار الترقية وحدود التوافق.
+
 ## 1. ما الذي تحتاجه
 
 الحد الأدنى لمسار Native الخاص بـWorkbench وAthar:
 
 - Git.
 - PowerShell 5.1 أو أحدث.
-- .NET 8 SDK؛ `global.json` يطلب خط .NET 8 ويقبل أحدث feature band متوافق.
+- .NET 10 SDK؛ `global.json` يطلب خط .NET 10 ويقبل أحدث feature band متوافق.
 - SQL Server محلي يعمل، مثل Default Instance (`MSSQLSERVER`) أو SQL Express.
 
 Madar يستخدم في المسار التشغيلي الحالي Docker Compose، لذلك تحتاج Docker Desktop/Engine جاهزًا إذا أردت تشغيل Madar محليًا من المدير الموحد.
@@ -59,7 +61,7 @@ dotnet --info
 - `git` = PASS.
 - `dotnet` = PASS.
 - `powershell` = PASS.
-- وجود .NET 8 SDK.
+- وجود .NET 10 SDK.
 - Git working tree = clean.
 - حالة Docker موضحة بوضوح.
 - فحص التطبيقات والمنافذ يشمل Workbench وAthar وMadar.

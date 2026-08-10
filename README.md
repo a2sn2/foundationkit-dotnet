@@ -17,6 +17,8 @@ Consumers
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model. Every capability identity also publishes a machine-readable contract version for composition compatibility; contract version is distinct from both package version and maturity.
 
+The active repository baseline targets **.NET 10 LTS / `net10.0`**. See [`docs/NET10-LTS-BASELINE.md`](docs/NET10-LTS-BASELINE.md) for the coordinated framework, SDK, dependency, container, CI, and compatibility decision.
+
 FoundationKit Composer consumes that same model and can generate a deterministic product skeleton plus an architecture decision report either from a strict manifest or through the interactive questionnaire, without adding another runtime package or inventing product semantics.
 
 > FoundationKit has a verified automated repository baseline for the documented scope. Production approval, organizational compliance, provider operations, and formal certification remain deployment- and organization-specific.
@@ -333,7 +335,7 @@ Useful commands:
 .\foundationkit.ps1 production-check
 ```
 
-`doctor` checks the required commands, availability of a .NET 8 SDK, visible local SQL Server services on Windows, the main local ports, Git state, and running application health where available, including Madar readiness on port `8100`.
+`doctor` checks the required commands, availability of a .NET 10 SDK, visible local SQL Server services on Windows, the main local ports, Git state, and running application health where available, including Madar readiness on port `8100`.
 
 Workbench, Athar, and Madar local credential/state files live under ignored `.local/` paths where applicable. The Windows launchers restrict credential files to the current Windows account and refuse to continue if required ACL protection cannot be applied.
 
@@ -540,27 +542,28 @@ That stop rule is intentional: FoundationKit should be broadly useful without si
 
 Start here:
 
-1. [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md) — Windows first run and diagnostics.
-2. [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md) — Madar local run, readiness, and operational diagnostics.
-3. [`docs/MADAR-DEPARTMENT-ROUTING-AR.md`](docs/MADAR-DEPARTMENT-ROUTING-AR.md) — Madar department queues, routing, and claim semantics.
-4. [`docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md) — department lifecycle and Operator membership administration.
-5. [`docs/MADAR-CASE-TRANSFER-AR.md`](docs/MADAR-CASE-TRANSFER-AR.md) — controlled reassignment and cross-department transfer.
-6. [`docs/MADAR-ATTACHMENTS-AR.md`](docs/MADAR-ATTACHMENTS-AR.md) — secure case attachment policy, storage boundary, API, and audit privacy.
-7. [`docs/MADAR-SEARCH-REPORTING-AR.md`](docs/MADAR-SEARCH-REPORTING-AR.md) — authorized case search, same-scope reporting, filters, and privacy boundary.
-8. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-9. [`docs/PACKAGES.md`](docs/PACKAGES.md)
-10. [`docs/FEATURES.md`](docs/FEATURES.md)
-11. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
-12. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
-13. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
-14. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
-15. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
-16. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
-17. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
-18. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
-19. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
-20. [`examples/Athar/README.md`](examples/Athar/README.md)
-21. [`apps/Madar/README.md`](apps/Madar/README.md)
+1. [`docs/NET10-LTS-BASELINE.md`](docs/NET10-LTS-BASELINE.md) — active .NET 10 LTS target, compatibility, and verification baseline.
+2. [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md) — Windows first run and diagnostics.
+3. [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md) — Madar local run, readiness, and operational diagnostics.
+4. [`docs/MADAR-DEPARTMENT-ROUTING-AR.md`](docs/MADAR-DEPARTMENT-ROUTING-AR.md) — Madar department queues, routing, and claim semantics.
+5. [`docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md) — department lifecycle and Operator membership administration.
+6. [`docs/MADAR-CASE-TRANSFER-AR.md`](docs/MADAR-CASE-TRANSFER-AR.md) — controlled reassignment and cross-department transfer.
+7. [`docs/MADAR-ATTACHMENTS-AR.md`](docs/MADAR-ATTACHMENTS-AR.md) — secure case attachment policy, storage boundary, API, and audit privacy.
+8. [`docs/MADAR-SEARCH-REPORTING-AR.md`](docs/MADAR-SEARCH-REPORTING-AR.md) — authorized case search, same-scope reporting, filters, and privacy boundary.
+9. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+10. [`docs/PACKAGES.md`](docs/PACKAGES.md)
+11. [`docs/FEATURES.md`](docs/FEATURES.md)
+12. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
+13. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
+14. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
+15. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
+16. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
+17. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
+18. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
+19. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
+20. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
+21. [`examples/Athar/README.md`](examples/Athar/README.md)
+22. [`apps/Madar/README.md`](apps/Madar/README.md)
 
 The GitHub Pages Atlas is generated from `site/portal-manifest.json` and provides a navigable view of the same repository surfaces.
 

@@ -57,7 +57,7 @@ All notable repository and package changes are documented here.
 - Added production-oriented Athar configuration checks, trusted proxy handling, MFA step-up, production SQL transport/principal rules, protected Data Protection key support, and real backup/restore verification.
 - Added repository security/risk/threat/production-governance documentation while explicitly retaining the experimental/pre-production boundary and Issue #35 before real Production.
 - Refreshed .NET 8 servicing dependencies to the current 8.0.29 line where applicable, replaced deprecated `Azure.Identity 1.13.2` with 1.17.2, raised the SQL client floor to 5.1.9, and added Madar Docker Dependabot monitoring (PR #103).
-- Tracked the required migration to .NET 10 LTS before .NET 8 end of support in Issue #104.
+- Migrated the coordinated repository baseline from `net8.0` to **.NET 10 LTS / `net10.0`**, including SDK selection, ASP.NET Core/Identity/EF/DI servicing dependencies, SQL client floor, Composer-generated projects, CI SDKs, container base images, and .NET 10 API/analyzer compatibility fixes while preserving the 17+17 reusable package invariant and package version `0.1.0`.
 
 ### Repository truth cleanup
 

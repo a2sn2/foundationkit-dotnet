@@ -30,8 +30,9 @@ Madar v0.10
 - Notifications + SMTP؛
 - Settings/Feature Management/Localization/Caching؛
 - capability graph، profiles، contract compatibility، maturity evidence؛
-- Composer للتحقق والشرح، وليس project generation بعد؛
-- CI/Security/CodeQL/package/integration gates.
+- Composer للتحقق والشرح والتوليد الحتمي، مع interactive questionnaire فوق نفس المحرك؛
+- CI/Security/CodeQL/package/integration gates؛
+- baseline نشط على .NET 10 LTS / `net10.0`.
 
 Package existence لا يعني `Stable` maturity ولا Production Approval.
 
@@ -109,7 +110,9 @@ Madar v0.10 هو المنتج التشغيلي الحالي في المستود�
 
 ## إطار .NET المدعوم
 
-المستودع حاليًا يستهدف `net8.0` مع servicing packages المحدثة إلى خط `8.0.29`. هذا baseline مدعوم حاليًا، لكنه له نهاية دعم زمنية. الانتقال إلى .NET 10 LTS قبل انتهاء دعم .NET 8 مُسجل في Issue #104 ويجب ألا يُترك حتى يتحول إلى دين صامت.
+المستودع الحالي يستهدف **`net10.0` على .NET 10 LTS**، مع SDK/runtime/container وMicrosoft framework dependencies على خط .NET 10 المتناسق. قرار التوافق والتغيير من baseline السابق موثق في `NET10-LTS-BASELINE.md`.
+
+الانتقال إلى LTS مدعوم يزيل مهلة انتهاء دعم .NET 8 من baseline النشط، لكنه لا يغيّر متطلبات Production أعلاه ولا يمنح اعتمادًا تشغيليًا تلقائيًا.
 
 ## قرار الجاهزية
 

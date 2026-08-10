@@ -371,10 +371,10 @@ internal static class ComposerInteractiveSession
 
     private static async Task WriteProfilesAsync(
         TextWriter output,
-        IReadOnlyList<CapabilityProfile> profiles)
+        CapabilityProfile[] profiles)
     {
         await output.WriteLineAsync("Profiles:");
-        for (var index = 0; index < profiles.Count; index++)
+        for (var index = 0; index < profiles.Length; index++)
         {
             var profile = profiles[index];
             await output.WriteLineAsync(
@@ -385,10 +385,10 @@ internal static class ComposerInteractiveSession
     private static async Task WriteCapabilitiesAsync(
         TextWriter output,
         string heading,
-        IReadOnlyList<CapabilityDescriptor> capabilities)
+        CapabilityDescriptor[] capabilities)
     {
         await output.WriteLineAsync($"{heading}:");
-        if (capabilities.Count == 0)
+        if (capabilities.Length == 0)
         {
             await output.WriteLineAsync("  - none");
             return;
