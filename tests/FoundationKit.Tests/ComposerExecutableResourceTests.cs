@@ -113,8 +113,8 @@ public sealed class ComposerExecutableResourceTests
     {
         var manifest = ComposerManifestParser.Parse(
             ValidExecutableManifest().Replace(
-                "\"includeCapabilities\": [\"idempotency\"]",
-                "\"includeCapabilities\": []",
+                "\"includeCapabilities\": [\"concurrency\", \"idempotency\"]",
+                "\"includeCapabilities\": [\"concurrency\"]",
                 StringComparison.Ordinal));
 
         var exception = Assert.Throws<ComposerManifestException>(() => CompositionAnalyzer.Analyze(manifest));
@@ -140,7 +140,7 @@ public sealed class ComposerExecutableResourceTests
           "schemaVersion": 2,
           "name": "GeneratedAlpha",
           "profile": "minimal",
-          "includeCapabilities": ["idempotency"],
+          "includeCapabilities": ["concurrency", "idempotency"],
           "excludeCapabilities": [],
           "providers": ["provider-sqlserver"],
           "modules": [
