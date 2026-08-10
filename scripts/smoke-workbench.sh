@@ -6,10 +6,10 @@ base_url="${WORKBENCH_URL:-http://localhost:8080}"
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
 
 # Empty framework status codes are normalized into the same Problem Details contract.
-missing_endpoint_status="$(curl --silent --output /tmp/foundation-http-not-found.json --write-out '%{http_code}' "$base_url/api/does-not-exist")"
-test "$missing_endpoint_status" = "404"
-grep -q 'Foundation.Http.NotFound' /tmp/foundation-http-not-found.json
-grep -q 'correlationId' /tmp/foundation-http-not-found.json
+method_status="$(curl --silent --output /tmp/foundation-http-method.json --write-out '%{http_code}' -X PATCH "$base_url/api/core-crud")"
+test "$method_status" = "405"
+grep -q 'Foundation.Http.MethodNotAllowed' /tmp/foundation-http-method.json
+grep -q 'correlationId' /tmp/foundation-http-method.json
 
 # Existing reference paths.
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
