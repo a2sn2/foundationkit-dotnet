@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   generated-project:
-    name: Generate, reproduce, build, and test Composer v1/v2 scaffolds
+    name: Generate, reproduce, build, and test Composer v1/v2/full-stack scaffolds
     runs-on: ubuntu-latest
 
     steps:
@@ -36,6 +36,8 @@ jobs:
           python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
           python3 -m json.tool docs/examples/foundationkit.project.golden.json >/dev/null
           python3 -m json.tool docs/examples/foundationkit.project.v2.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-b.json >/dev/null
 
       - name: Restore Composer
         run: dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
@@ -99,7 +101,7 @@ jobs:
           --configuration Release
           --no-build
 
-      - name: Validate Composer v2 project model
+      - name: Validate Composer v2 descriptor model
         run: >-
           dotnet run
           --project tools/FoundationKit.Composer
@@ -107,7 +109,7 @@ jobs:
           --no-build
           -- validate docs/examples/foundationkit.project.v2.json
 
-      - name: Generate repository-local v2 project model
+      - name: Generate repository-local v2 descriptor model
         run: >-
           dotnet run
           --project tools/FoundationKit.Composer
@@ -117,7 +119,7 @@ jobs:
           --output artifacts/composer-v2
           --foundation-root "$GITHUB_WORKSPACE"
 
-      - name: Prove deterministic v2 force regeneration
+      - name: Prove deterministic v2 descriptor force regeneration
         shell: bash
         run: |
           find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-before.sha256
@@ -132,7 +134,7 @@ jobs:
           find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-after.sha256
           diff -u /tmp/composer-v2-before.sha256 /tmp/composer-v2-after.sha256
 
-      - name: Verify v2 project-model artifacts
+      - name: Verify v2 descriptor project-model artifacts
         shell: bash
         run: |
           test -f artifacts/composer-v2/PROJECT-MODEL.md
@@ -143,17 +145,97 @@ jobs:
           grep -Fq 'CustomerManager' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
           grep -Fq 'require-if-match' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
 
-      - name: Restore v2 generated solution
+      - name: Restore v2 descriptor generated solution
         run: dotnet restore artifacts/composer-v2/ComposerProjectModel.sln
 
-      - name: Build v2 generated solution
+      - name: Build v2 descriptor generated solution
         run: >-
           dotnet build artifacts/composer-v2/ComposerProjectModel.sln
           --configuration Release
           --no-restore
 
-      - name: Test v2 generated solution
+      - name: Test v2 descriptor generated solution
         run: >-
           dotnet test artifacts/composer-v2/ComposerProjectModel.sln
           --configuration Release
           --no-build
+
+      - name: Validate executable full-stack manifests A and B
+        run: |
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- validate docs/examples/foundationkit.project.fullstack-a.json
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- validate docs/examples/foundationkit.project.fullstack-b.json
+
+      - name: Generate executable full-stack project A
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.fullstack-a.json
+          --output artifacts/composer-fullstack-a
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic executable A force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-fullstack-a -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-a-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.fullstack-a.json \
+            --output artifacts/composer-fullstack-a \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-fullstack-a -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-a-after.sha256
+          diff -u /tmp/composer-fullstack-a-before.sha256 /tmp/composer-fullstack-a-after.sha256
+
+      - name: Verify executable A generated surface and secret boundary
+        shell: bash
+        run: |
+          test -f artifacts/composer-fullstack-a/GENERATED-FULLSTACK.md
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Domain/GeneratedModules/Customers/Customer.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Application/GeneratedModules/Customers/CustomerContracts.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Infrastructure/GeneratedPlatform/GeneratedDbContext.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Infrastructure/GeneratedPlatform/Migrations/20260811000000_InitialGenerated.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Api/Program.cs
+          grep -Fq 'Swashbuckle.AspNetCore' artifacts/composer-fullstack-a/src/ComposerFullStackA.Api/ComposerFullStackA.Api.csproj
+          grep -Fq 'ConnectionStrings__Generated' artifacts/composer-fullstack-a/GENERATED-FULLSTACK.md
+          ! grep -R -E 'Password=|User Id=sa|ChangeMe' artifacts/composer-fullstack-a --exclude-dir=obj --exclude-dir=bin
+
+      - name: Restore build and test executable project A
+        run: |
+          dotnet restore artifacts/composer-fullstack-a/ComposerFullStackA.sln
+          dotnet build artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-build
+
+      - name: Generate executable full-stack project B
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.fullstack-b.json
+          --output artifacts/composer-fullstack-b
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic executable B force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-fullstack-b -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-b-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.fullstack-b.json \
+            --output artifacts/composer-fullstack-b \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-fullstack-b -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-b-after.sha256
+          diff -u /tmp/composer-fullstack-b-before.sha256 /tmp/composer-fullstack-b-after.sha256
+
+      - name: Restore build and test executable project B
+        run: |
+          dotnet restore artifacts/composer-fullstack-b/ComposerFullStackB.sln
+          dotnet build artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-build
