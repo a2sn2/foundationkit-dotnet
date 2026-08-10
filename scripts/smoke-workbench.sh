@@ -54,6 +54,15 @@ idempotency_status="$(curl --silent --output /tmp/core-crud-idempotency.json --w
 test "$idempotency_status" = "400"
 grep -q 'Foundation.Api.IdempotencyKey.Required' /tmp/core-crud-idempotency.json
 
+ambiguous_idempotency_status="$(curl --silent --output /tmp/core-crud-idempotency-ambiguous.json --write-out '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: one' \
+  -H 'Idempotency-Key: two' \
+  -d '{"name":"Ambiguous Key"}' \
+  "$base_url/api/core-crud")"
+test "$ambiguous_idempotency_status" = "400"
+grep -q 'Foundation.Api.IdempotencyKey.Invalid' /tmp/core-crud-idempotency-ambiguous.json
+
 # DataAnnotations remain the default structural validator after API-level header validation.
 annotation_status="$(curl --silent --output /tmp/core-crud-annotation.json --write-out '%{http_code}' \
   -H 'Content-Type: application/json' \
@@ -86,6 +95,16 @@ missing_precondition_status="$(curl --silent --output /tmp/core-crud-preconditio
   "$base_url/api/core-crud/$crud_id")"
 test "$missing_precondition_status" = "428"
 grep -q 'Foundation.Api.IfMatch.Required' /tmp/core-crud-precondition-required.json
+
+long_if_match="$(python3 -c 'print("x" * 300)')"
+invalid_precondition_status="$(curl --silent --output /tmp/core-crud-precondition-invalid.json --write-out '%{http_code}' -X PUT \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: invalid-precondition' \
+  -H "If-Match: $long_if_match" \
+  -d '{"name":"Invalid precondition"}' \
+  "$base_url/api/core-crud/$crud_id")"
+test "$invalid_precondition_status" = "400"
+grep -q 'Foundation.Api.IfMatch.Invalid' /tmp/core-crud-precondition-invalid.json
 
 crud_update="$(curl --fail --silent -D /tmp/core-crud-update.headers -X PUT \
   -H 'Content-Type: application/json' \
