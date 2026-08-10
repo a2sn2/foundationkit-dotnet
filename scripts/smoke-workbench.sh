@@ -5,6 +5,12 @@ base_url="${WORKBENCH_URL:-http://localhost:8080}"
 
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
 
+# Empty framework status codes are normalized into the same Problem Details contract.
+missing_endpoint_status="$(curl --silent --output /tmp/foundation-http-not-found.json --write-out '%{http_code}' "$base_url/api/does-not-exist")"
+test "$missing_endpoint_status" = "404"
+grep -q 'Foundation.Http.NotFound' /tmp/foundation-http-not-found.json
+grep -q 'correlationId' /tmp/foundation-http-not-found.json
+
 # Existing reference paths.
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
@@ -39,6 +45,15 @@ review_response="$(curl --fail --silent \
   "$base_url/api/admin/requests/$request_id/review")"
 echo "$review_response" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"status":"approved"'
+
+# DataAnnotations are the default structural validator; no module-specific validator is registered.
+annotation_status="$(curl --silent --output /tmp/core-crud-annotation.json --write-out '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":""}' \
+  "$base_url/api/core-crud")"
+test "$annotation_status" = "400"
+grep -q 'Foundation.Crud.Validation' /tmp/core-crud-annotation.json
+grep -q 'Name' /tmp/core-crud-annotation.json
 
 # Core vNext generic CRUD engine: request -> endpoint -> generic application service -> EF -> SQL.
 crud_create="$(curl --fail --silent \
@@ -76,4 +91,4 @@ curl --fail --silent --output /dev/null -X DELETE "$base_url/api/core-crud/$crud
 missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
 test "$missing_status" = "404"
 
-echo "Workbench SQL workflow plus generic Core CRUD create/read/list/update/concurrency/manager/delete proof passed."
+echo "Workbench SQL workflow plus generic Core CRUD validation/create/read/list/update/concurrency/manager/delete/error-contract proof passed."
