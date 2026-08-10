@@ -21,6 +21,38 @@ echo "$platform_reference" | grep -q '"textDirection":"RightToLeft"'
 echo "$platform_reference" | grep -q '"defaultTimeZone":"UTC"'
 echo "$platform_reference" | grep -q '"catalogPreviewEnabled":true'
 
+# Module composition exposes declared intent separately from dependency-expanded effective intent.
+modules_json="$(curl --fail --silent "$base_url/api/modules")"
+python3 - "$modules_json" <<'PY'
+import json
+import sys
+
+modules = json.loads(sys.argv[1])
+if len(modules) != 1:
+    raise SystemExit(f"Expected one Workbench module, got {len(modules)}")
+module = modules[0]
+if module.get("name") != "CoreCrud" or module.get("apiRoute") != "/api/core-crud":
+    raise SystemExit(f"Unexpected module snapshot: {module}")
+
+declared = module.get("declaredCapabilities", [])
+effective = module.get("effectiveCapabilities", [])
+expected_declared = [
+    "Crud",
+    "Auditing",
+    "Authorization",
+    "Concurrency",
+    "Caching",
+    "FeatureManagement",
+    "Localization",
+]
+if declared != expected_declared:
+    raise SystemExit(f"Unexpected declared capabilities: {declared}")
+for capability in ["Security", "Identity", "Settings"]:
+    if capability not in effective:
+        raise SystemExit(f"Effective capability closure is missing {capability}: {effective}")
+print("Workbench module composition runtime snapshot verified.")
+PY
+
 # Existing connected user/admin workflow.
 user_response="$(curl --fail --silent \
   -H 'Content-Type: application/json' \
@@ -154,4 +186,4 @@ curl --fail --silent --output /dev/null -X DELETE \
 missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
 test "$missing_status" = "404"
 
-echo "Workbench SQL workflow plus API Engine validation/idempotency/ETag/If-Match/filter/sort/CRUD/error-contract proof passed."
+echo "Workbench SQL workflow plus module composition/API Engine validation/idempotency/ETag/If-Match/filter/sort/CRUD/error-contract proof passed."
