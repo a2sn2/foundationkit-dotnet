@@ -1,5 +1,6 @@
 using FoundationKit.Application.Isolation;
 using FoundationKit.WebApi.Errors;
+using FoundationKit.WebApi.Idempotency;
 using FoundationKit.WebApi.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -12,13 +13,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddFoundationWebApi(
         this IServiceCollection services,
-        Action<FoundationErrorHandlingOptions>? configureErrorHandling = null)
+        Action<FoundationErrorHandlingOptions>? configureErrorHandling = null,
+        Action<FoundationIdempotencyOptions>? configureIdempotency = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddOptions<FoundationErrorHandlingOptions>();
         if (configureErrorHandling is not null)
             services.Configure(configureErrorHandling);
+
+        services.AddOptions<FoundationIdempotencyOptions>();
+        if (configureIdempotency is not null)
+            services.Configure(configureIdempotency);
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFoundationExceptionMapper, DefaultFoundationExceptionMapper>());
@@ -51,6 +58,7 @@ public static class DependencyInjection
 
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseExceptionHandler();
+        app.UseMiddleware<FoundationIdempotencyMiddleware>();
         app.UseStatusCodePages(async statusCodeContext =>
         {
             var httpContext = statusCodeContext.HttpContext;
