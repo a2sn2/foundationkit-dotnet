@@ -110,7 +110,7 @@ jobs:
           if-no-files-found: error
 
   sqlserver-integration-smoke:
-    name: Workbench SQL Server full-stack and CRUD engine
+    name: Workbench SQL Server full-stack and API Engine
     runs-on: ubuntu-latest
     needs: build-test-pack
     steps:
@@ -148,13 +148,12 @@ jobs:
           import json
           from pathlib import Path
 
-          path = Path("artifacts/openapi/workbench-swagger.json")
-          document = json.loads(path.read_text(encoding="utf-8"))
+          document = json.loads(Path("artifacts/openapi/workbench-swagger.json").read_text(encoding="utf-8"))
           paths = document.get("paths", {})
           collection = paths.get("/api/core-crud")
           item = paths.get("/api/core-crud/{id}")
           if not isinstance(collection, dict) or not isinstance(item, dict):
-              raise SystemExit("OpenAPI is missing the generic CRUD collection/item paths")
+              raise SystemExit("OpenAPI is missing the API Engine CRUD collection/item paths")
 
           for method in ("get", "post"):
               if method not in collection:
@@ -163,14 +162,34 @@ jobs:
               if method not in item:
                   raise SystemExit(f"OpenAPI is missing {method.upper()} /api/core-crud/{{id}}")
 
-          query_names = {parameter.get("name") for parameter in collection["get"].get("parameters", []) if parameter.get("in") == "query"}
-          if query_names != {"page", "pageSize"}:
+          query_names = {
+              parameter.get("name")
+              for parameter in collection["get"].get("parameters", [])
+              if parameter.get("in") == "query"
+          }
+          if query_names != {"page", "pageSize", "filter", "sort"}:
               raise SystemExit(f"Unexpected CRUD list query parameters: {sorted(query_names)}")
 
           for method in ("get", "put", "delete"):
-              path_parameters = [parameter for parameter in item[method].get("parameters", []) if parameter.get("in") == "path"]
+              path_parameters = [
+                  parameter for parameter in item[method].get("parameters", [])
+                  if parameter.get("in") == "path"
+              ]
               if len(path_parameters) != 1 or path_parameters[0].get("name") != "id" or not path_parameters[0].get("required"):
                   raise SystemExit(f"CRUD {method.upper()} must expose one required id path parameter")
+
+          def require_header(operation, name):
+              matches = [
+                  parameter for parameter in operation.get("parameters", [])
+                  if parameter.get("in") == "header" and parameter.get("name", "").lower() == name.lower()
+              ]
+              if len(matches) != 1 or matches[0].get("required") is not True:
+                  raise SystemExit(f"OpenAPI must expose required header {name}")
+
+          require_header(collection["post"], "Idempotency-Key")
+          require_header(item["put"], "Idempotency-Key")
+          require_header(item["put"], "If-Match")
+          require_header(item["delete"], "Idempotency-Key")
 
           create_schema = collection["post"]["requestBody"]["content"]["application/json"]["schema"].get("$ref", "")
           update_schema = item["put"]["requestBody"]["content"]["application/json"]["schema"].get("$ref", "")
@@ -179,8 +198,15 @@ jobs:
           if not update_schema.endswith("/CoreCrudUpdateRequest"):
               raise SystemExit(f"Unexpected update schema: {update_schema}")
 
-          if "409" not in item["put"].get("responses", {}):
-              raise SystemExit("CRUD update OpenAPI contract must advertise 409 concurrency conflict")
+          schemas = document.get("components", {}).get("schemas", {})
+          update_contract = schemas.get("CoreCrudUpdateRequest", {})
+          if "expectedVersion" in update_contract.get("properties", {}):
+              raise SystemExit("Concurrency token leaked back into the update JSON contract")
+
+          responses = item["put"].get("responses", {})
+          for status in ("409", "412", "428"):
+              if status not in responses:
+                  raise SystemExit(f"CRUD update OpenAPI contract must advertise HTTP {status}")
           if "204" not in item["delete"].get("responses", {}):
               raise SystemExit("CRUD delete OpenAPI contract must advertise 204 No Content")
 
@@ -191,12 +217,11 @@ jobs:
               "CoreCrudResponsePagedResult",
               "ProblemDetails",
           }
-          schemas = set(document.get("components", {}).get("schemas", {}))
-          missing = required_schemas - schemas
+          missing = required_schemas - set(schemas)
           if missing:
               raise SystemExit(f"OpenAPI is missing required schemas: {sorted(missing)}")
 
-          print("Generic CRUD OpenAPI contract structure verified.")
+          print("FoundationKit API Engine OpenAPI contract structure verified.")
           PY
 
       - name: Upload OpenAPI contract evidence
