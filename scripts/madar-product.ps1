@@ -328,7 +328,7 @@ switch ($Action) {
         Write-Host ("  Operator:      {0}" -f $config['MADAR_OPERATOR_EMAIL'])
         Write-Host ("  SLA enabled:   {0}" -f $config['MADAR_SLA_ENABLED'])
         Write-Host "Settings are stored in $ConfigPath with local-only ACLs on Windows."
-        Write-Host "Run '.\foundationkit.ps1 credentials -Target Madar' to display the generated passwords."
+        Write-Host "Run '.\scripts\madar-product.ps1 credentials' to display the generated passwords."
     }
 
     'status' {
