@@ -679,6 +679,25 @@ internal static class ComposerExecutableResourceGenerator
                     Name = "X-Foundation-Roles",
                     Description = "Generated reference adapter only: include admin for protected CRUD routes."
                 });
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "FoundationGeneratedUser"
+                        }
+                    }] = Array.Empty<string>(),
+                    [new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "FoundationGeneratedRoles"
+                        }
+                    }] = Array.Empty<string>()
+                });
                 """
             : string.Empty;
 
@@ -738,8 +757,9 @@ internal static class ComposerExecutableResourceGenerator
             var app = builder.Build();
             app.UseSwagger();
             app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Generated API v1"));
+            app.UseFoundationRequestDiagnostics();
             {{authPipeline}}
-            app.UseFoundationRequestPipeline();
+            app.UseFoundationIdempotency();
 
             await using (var scope = app.Services.CreateAsyncScope())
             {
@@ -781,7 +801,7 @@ internal static class ComposerExecutableResourceGenerator
         builder.AppendLine();
         builder.AppendLine("- Supply the SQL Server connection string at runtime through `ConnectionStrings__Generated`; Composer does not emit database credentials.");
         builder.AppendLine("- Generated proof authentication uses `X-Foundation-User` plus `X-Foundation-Roles: admin`; it is a bounded reference adapter, not a production identity system.");
-        builder.AppendLine("- Authentication/authorization execute before FoundationKit durable-idempotency replay in the generated host pipeline.");
+        builder.AppendLine("- Foundation diagnostics/security headers wrap authentication; authentication/authorization execute before durable-idempotency replay.");
         builder.AppendLine("- Runtime Postman must be derived from `/swagger/v1/swagger.json` through the FoundationKit OpenAPI-to-Postman generator; it is intentionally not hand-authored here.");
         return builder.ToString();
     }
