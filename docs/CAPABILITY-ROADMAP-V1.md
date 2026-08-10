@@ -20,6 +20,8 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] ETag/If-Match concurrency contract kept separate from update DTOs.
 - [x] API operation metadata for authorization, rate-limit policy, idempotency intent, and concurrency intent.
 - [x] runtime OpenAPI metadata for CRUD schemas, queries, headers, responses, and Workbench SQL proof.
+- [x] runtime OpenAPI as canonical serialized transport contract for derived client artifacts.
+- [x] deterministic OpenAPI-to-Postman generation with exact committed-artifact drift detection in CI.
 
 ## Next backend/platform families
 
@@ -41,7 +43,8 @@ These remain evidence-driven and are not automatically packages:
 
 ## Tooling and full-stack experience
 
-- [ ] derive deterministic Postman and later typed-client evidence from the runtime/OpenAPI contract source of truth.
+- [x] derive deterministic Postman evidence from the runtime/OpenAPI contract source of truth.
+- [ ] derive a future typed-client artifact from the same runtime/OpenAPI contract when the frontend phase begins.
 - [ ] Composer manifest model for Project → Modules → Resources → Capabilities → Providers → Overrides → API.
 - [ ] generated-project proof for Database + CRUD + Validation + Authorization + Audit + API + OpenAPI + Postman.
 - [ ] concurrent project-isolation and compatible legacy-consumer proof.
