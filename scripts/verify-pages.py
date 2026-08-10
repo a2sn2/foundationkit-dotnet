@@ -19,6 +19,14 @@ REQUIRED_SITE_FILES = {
     "portal-manifest.json",
     "favicon.svg",
 }
+REQUIRED_MADAR_HANDOFF_PATHS = (
+    ROOT / "docs/MADAR-SPECIFICATION-AR.md",
+    ROOT / "docs/MADAR-LOCAL-RUN-PUBLISH-AR.md",
+    ROOT / "docs/MADAR-ACCEPTANCE-CHECKLIST-AR.md",
+    SITE / "madar-demo/index.html",
+    SITE / "madar-demo/styles.css",
+    SITE / "madar-demo/app.js",
+)
 REQUIRED_GROUPS = {"overview", "core", "workbench", "athar", "madar", "docs", "operations"}
 ALLOWED_KINDS = {"ui", "api", "package", "document", "guide", "automation", "tool"}
 ALLOWED_RUNTIMES = {
@@ -98,10 +106,33 @@ def verify_razor_routes(pages: list[dict]) -> None:
         fail(f"portal UI entries do not match a Razor @page: {formatted}")
 
 
+def verify_madar_handoff() -> None:
+    missing = [path.relative_to(ROOT).as_posix() for path in REQUIRED_MADAR_HANDOFF_PATHS if not path.is_file()]
+    if missing:
+        fail(f"missing Madar handoff assets: {', '.join(missing)}")
+
+    demo_index = (SITE / "madar-demo/index.html").read_text(encoding="utf-8")
+    if "DEMO · بدون خادم أو SQL" not in demo_index:
+        fail("Madar static demo must remain explicitly labeled as no-server/no-SQL")
+    if "MADAR-LOCAL-RUN-PUBLISH-AR.md" not in demo_index:
+        fail("Madar static demo must link to the real local-run/publish guide")
+
+    portal_index = (SITE / "index.html").read_text(encoding="utf-8")
+    if 'href="madar-demo/"' not in portal_index:
+        fail("Atlas must expose the Madar static demo entry point")
+
+    product_readme = (ROOT / "apps/Madar/README.md").read_text(encoding="utf-8")
+    for required_doc in ("MADAR-SPECIFICATION-AR.md", "MADAR-LOCAL-RUN-PUBLISH-AR.md"):
+        if required_doc not in product_readme:
+            fail(f"Madar README must link to {required_doc}")
+
+
 def main() -> None:
     missing_files = REQUIRED_SITE_FILES - {path.name for path in SITE.iterdir()} if SITE.exists() else REQUIRED_SITE_FILES
     if missing_files:
         fail(f"missing site files: {', '.join(sorted(missing_files))}")
+
+    verify_madar_handoff()
 
     manifest = load_manifest()
     if manifest.get("schemaVersion") != 1:
@@ -152,8 +183,8 @@ def main() -> None:
     verify_razor_routes(pages)
 
     index = (SITE / "index.html").read_text(encoding="utf-8")
-    for required_reference in ("<base href=\"./\">", "styles.css", "app.js", "portal-manifest.json"):
-        if required_reference not in index and required_reference != "portal-manifest.json":
+    for required_reference in ("<base href=\"./\">", "styles.css", "app.js"):
+        if required_reference not in index:
             fail(f"index.html does not reference {required_reference}")
 
     app_js = (SITE / "app.js").read_text(encoding="utf-8")
@@ -164,7 +195,7 @@ def main() -> None:
 
     print(
         "FoundationKit Pages portal verification passed: "
-        f"{len(groups)} groups, {len(pages)} entries, {len(ui_route_keys)} Blazor routes."
+        f"{len(groups)} groups, {len(pages)} entries, {len(ui_route_keys)} Blazor routes, Madar handoff assets verified."
     )
 
 
