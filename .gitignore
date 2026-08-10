@@ -10,6 +10,8 @@
 .idea/
 .DS_Store
 Thumbs.db
+apps/Madar/Madar.Api/Properties/launchSettings.json
+apps/Madar/Madar.Client/Properties/launchSettings.json
 
 # Build, test, package, coverage, and tool output
 artifacts/
