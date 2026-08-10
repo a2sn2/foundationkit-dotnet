@@ -25,12 +25,12 @@ public sealed record IdempotencyResponse(
     public IdempotencyResponse Normalize(int maximumBodyBytes)
     {
         if (StatusCode is < 100 or > 599)
-            throw new ArgumentOutOfRangeException(nameof(StatusCode));
-        if (maximumBodyBytes < 0)
-            throw new ArgumentOutOfRangeException(nameof(maximumBodyBytes));
-        ArgumentNullException.ThrowIfNull(Body);
+            throw new InvalidOperationException("Replay response status code must be a valid HTTP status code.");
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumBodyBytes);
+        if (Body is null)
+            throw new InvalidOperationException("Replay response body cannot be null.");
         if (Body.Length > maximumBodyBytes)
-            throw new ArgumentOutOfRangeException(nameof(Body), $"Replay body cannot exceed {maximumBodyBytes} bytes.");
+            throw new InvalidOperationException($"Replay body cannot exceed {maximumBodyBytes} bytes.");
 
         return this with
         {
@@ -70,7 +70,7 @@ public sealed record IdempotencyAcquireRequest(
         var keyHash = NormalizeSha256(KeyHash, nameof(KeyHash));
         var fingerprint = NormalizeSha256(RequestFingerprint, nameof(RequestFingerprint));
         if (ReplayUntilUtc <= AcquiredUtc)
-            throw new ArgumentOutOfRangeException(nameof(ReplayUntilUtc), "Replay expiry must be later than acquisition time.");
+            throw new InvalidOperationException("Replay expiry must be later than acquisition time.");
         return this with
         {
             OperationScope = scope,
