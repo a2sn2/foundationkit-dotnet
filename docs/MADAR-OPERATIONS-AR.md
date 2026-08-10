@@ -1,53 +1,146 @@
-# تشغيل مدار محليًا وإثبات الجاهزية
+# تشغيل مدار محليًا وإثبات الجاهزية — v0.10
 
-هذه الوثيقة تخص **Madar** داخل `apps/Madar`. الهدف هو تشغيل المنتج محليًا والتحقق من الجاهزية واختبار SLA بشكل مقصود دون اعتبار ذلك نشرًا إنتاجيًا أو اعتمادًا لقيم SLA في بيئة حقيقية.
+هذه الوثيقة هي مرجع **تشغيل Madar** داخل `apps/Madar`. التفاصيل الوظيفية الكاملة موجودة في [`MADAR-SPECIFICATION-AR.md`](MADAR-SPECIFICATION-AR.md)، وخطوات التسليم للمستخدم وRelease Publish موجودة في [`MADAR-LOCAL-RUN-PUBLISH-AR.md`](MADAR-LOCAL-RUN-PUBLISH-AR.md).
 
-## حدود المسار الحالي
+## 1. حدود التشغيل الحالي
 
-المسار التشغيلي المعتمد هو Docker Compose:
+المسار المعتمد لتجربة Madar كاملة محليًا هو Docker Compose:
 
 ```text
-Madar.Client + Madar.Api
-          ↓
-      SQL Server
+Browser
+   ↓
+Madar.Client (Blazor)
+   ↓
+Madar.Api (ASP.NET Core)
+   ↓
+SQL Server
 ```
 
-يدعم مدير المستودع الموحد:
+GitHub Pages ليست runtime للمنتج؛ `site/madar-demo/` معاينة ثابتة بلا API أو SQL أو حفظ دائم.
+
+## 2. المتطلبات
+
+على Windows:
+
+- Git.
+- PowerShell 5.1 أو أحدث.
+- .NET 10 SDK وفق `global.json`.
+- Docker Desktop/Engine مع Docker Compose في حالة Ready.
+
+ابدأ دائمًا بـ:
 
 ```powershell
-.\foundationkit.ps1 start  -Target Madar -Mode Docker
-.\foundationkit.ps1 status -Target Madar
-.\foundationkit.ps1 logs   -Target Madar
-.\foundationkit.ps1 stop   -Target Madar
+.\foundationkit.ps1 doctor
 ```
 
-ويمكن استخدام المشغّل المتخصص:
+`doctor` يفحص الأدوات، SDK، Docker، المنافذ والحالة المحلية المعروفة. Madar يستخدم المنفذ `8100` للواجهة/API و`14335` لـSQL Server الخاص بـCompose.
+
+## 3. تشغيل المنتج
+
+```powershell
+.\foundationkit.ps1 start -Target Madar -Mode Docker
+```
+
+أو المشغل المتخصص:
 
 ```powershell
 .\scripts\madar-product.ps1 start
-.\scripts\madar-product.ps1 status
-.\scripts\madar-product.ps1 logs
-.\scripts\madar-product.ps1 stop
 ```
 
-`Madar` لا يملك مسار Native موحدًا حاليًا. لذلك:
-
-- `-Target Madar -Mode Native` مرفوض؛
-- `-Target All -Mode Auto` يشمل Madar إذا كان Docker جاهزًا؛
-- `-Target All -Mode Native` يحافظ على Athar/Workbench ويعرض أن Madar تم تجاوزه؛
-- `doctor` يفحص `/health/ready` على `8100`.
-
-## الملف المحلي
-
-عند أول تشغيل ينشئ المشغّل:
+عند أول تشغيل ينشأ ملف محلي:
 
 ```text
 .local/madar-product.env
 ```
 
-ويولّد كلمات مرور تطوير عشوائية لـSQL Server وAdministrator وOperator. على Windows يقيّد ACL للملف على حساب Windows الحالي ويرفض الاستمرار إذا تعذر تطبيق الحماية.
+ويحتوي secrets تطوير عشوائية لـSQL Server وحساب Administrator وحساب Operator. على Windows يتم تقييد ACL للملف على حساب المستخدم الحالي.
 
-الملف يحتوي أيضًا إعدادات SLA المحلية، لكن SLA يكون **معطلاً افتراضيًا**:
+لا ترفع `.local/` إلى Git ولا تعيد استخدام هذه القيم كأسرار Production.
+
+## 4. بيانات الدخول المحلية
+
+بعد أول تشغيل:
+
+```powershell
+.\scripts\madar-product.ps1 credentials
+```
+
+الحسابان الافتراضيان من حيث البريد:
+
+```text
+Administrator: admin@madar.local
+Operator:      operator@madar.local
+```
+
+كلمات المرور عشوائية وتظهر فقط من الإعداد المحلي الذي تم إنشاؤه على جهازك.
+
+## 5. الروابط المحلية
+
+بعد الجاهزية:
+
+```text
+http://localhost:8100/
+http://localhost:8100/login
+http://localhost:8100/cases
+http://localhost:8100/reports/cases
+http://localhost:8100/admin/departments
+http://localhost:8100/swagger
+http://localhost:8100/health/live
+http://localhost:8100/health/ready
+```
+
+يمكن فتح التطبيق مباشرة:
+
+```powershell
+.\foundationkit.ps1 open -Target Madar
+```
+
+## 6. Live وReady
+
+### Live
+
+```text
+GET /health/live
+```
+
+يثبت أن تطبيق ASP.NET Core يعمل.
+
+### Ready
+
+```text
+GET /health/ready
+```
+
+يثبت أن المنتج جاهز لخدمة الطلبات، بما في ذلك الاتصال بقاعدة البيانات وعدم وجود EF Core migrations معلقة.
+
+الحالة الطبيعية:
+
+```json
+{
+  "status": "ready",
+  "service": "madar-api"
+}
+```
+
+تفاصيل الاتصال وأسرار SQL لا تظهر في استجابة readiness.
+
+## 7. قاعدة البيانات والمهاجرات
+
+Madar يملك `MadarDbContext` ومهاجراته تحت:
+
+```text
+apps/Madar/Madar.Infrastructure/Migrations
+```
+
+هذه المهاجرات هي مصدر حقيقة schema المنتج.
+
+بيئة Development/CI تطبق المهاجرات بطريقة مضبوطة عند startup. عندما يعطل التطبيق الترحيل التلقائي، يجب أن يرفض readiness إذا كان schema غير محدث بدل العمل فوق قاعدة غير متوافقة.
+
+ترقية .NET 10 تحافظ صراحة على أطوال مفاتيح ASP.NET Identity المركبة القائمة (`128`) حتى لا تتحول ترقية framework وحدها إلى تغيير schema غير مطلوب.
+
+## 8. SLA في التشغيل المحلي
+
+الملف المحلي ينشئ افتراضيًا:
 
 ```text
 MADAR_SLA_ENABLED=false
@@ -57,47 +150,9 @@ MADAR_SLA_HIGH=01:00:00
 MADAR_SLA_CRITICAL=01:00:00
 ```
 
-قيم الساعة الواحدة هنا **placeholders للتطوير فقط** وليست سياسة إنتاج ولا توصية تجارية. عندما يكون `MADAR_SLA_ENABLED=false` لا تُطبق هذه المدد على الحالات الجديدة.
+قيم الساعة الواحدة placeholders للتطوير فقط. عندما يكون SLA معطلًا لا تستخدم كسياسة تشغيلية.
 
-لا ترفع `.local/` إلى Git.
-
-## أول تشغيل
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Docker
-```
-
-بعد النجاح:
-
-```text
-http://localhost:8100/
-http://localhost:8100/login
-http://localhost:8100/cases
-http://localhost:8100/swagger
-http://localhost:8100/health/live
-http://localhost:8100/health/ready
-```
-
-البريدان المحليان الافتراضيان:
-
-```text
-Administrator: admin@madar.local
-Operator:      operator@madar.local
-```
-
-كلمات المرور المولدة موجودة فقط في `.local/madar-product.env`.
-
-لإنشاء مجموعة أسرار محلية جديدة:
-
-```powershell
-.\scripts\madar-product.ps1 start -Reset
-```
-
-`-Reset` يعيد إنشاء ملف الإعدادات، لكنه لا يعيد تلقائيًا كتابة PasswordHash لمستخدم موجود في volume قديم. عند الحاجة إلى بيئة جديدة بالكامل يجب حذف volume عمدًا بعد التأكد أن البيانات تجريبية.
-
-## تفعيل SLA للتطوير
-
-عدّل `.local/madar-product.env` قبل تشغيل/إعادة تشغيل Madar، مثلًا:
+للاختبار اليدوي فقط يمكن تعديل الملف ثم إعادة تشغيل Madar، مثال:
 
 ```text
 MADAR_SLA_ENABLED=true
@@ -107,168 +162,53 @@ MADAR_SLA_HIGH=01:00:00
 MADAR_SLA_CRITICAL=00:30:00
 ```
 
-هذه الأرقام مجرد مثال تطويري. السياسة الحقيقية يجب أن تأتي من صاحب المنتج/الإجراءات التشغيلية.
+السياسة الحقيقية وقيمها يجب أن تأتي من صاحب العملية في بيئة الاستخدام الفعلية.
 
-ثم:
-
-```powershell
-.\foundationkit.ps1 stop -Target Madar
-.\foundationkit.ps1 start -Target Madar -Mode Docker
-```
-
-إعدادات ASP.NET Core المقابلة هي:
-
-```text
-Madar:Sla:Enabled
-Madar:Sla:Low
-Madar:Sla:Medium
-Madar:Sla:High
-Madar:Sla:Critical
-```
-
-عند `Enabled=true` يجب أن تكون المدد الأربع موجودة، أكبر من صفر، ولا تتجاوز 365 يومًا. فشل هذا التحقق يمنع startup بدل تشغيل سياسة SLA ناقصة أو غامضة.
-
-## معنى SLA في v0.2
-
-في الشريحة الحالية:
-
-```text
-SlaTargetUtc = CreatedUtc + duration snapshot
-```
-
-أي أن مدة الأولوية تُقرأ عند إنشاء الحالة ثم يُحفظ الموعد النهائي داخل الحالة نفسها. تغيير configuration لاحقًا لا يغير هدف الحالات القديمة.
-
-الحالات:
-
-```text
-not-applicable  السياسة كانت معطلة عند إنشاء الحالة
-active          الحالة غير محلولة والوقت <= الهدف
-met             تم الحل في أو قبل الهدف
-breached        تجاوز الوقت الهدف أو تم الحل بعده
-```
-
-قاعدة الحد الزمني دقيقة: عند `now == SlaTargetUtc` ما زالت الحالة ضمن المهلة. يبدأ الخرق فقط عندما يصبح الوقت **أكبر** من الهدف. والحل بالضبط عند الهدف يعد `met`.
-
-عند أول خرق يُحفظ:
-
-```text
-SlaBreachedUtc = SlaTargetUtc
-EscalatedUtc   = وقت أول اكتشاف/تقييم للخرق
-```
-
-الأول يمثل لحظة تجاوز العقد زمنيًا، والثاني يمثل وقت تسجيل Madar للتصعيد. إعادة التقييم لا تغيّر هذين الحقلين ولا تنشئ audit event آخر لنفس الخرق.
-
-## تقييم SLA يدويًا/تشغيليًا
-
-المسار الحالي:
+المسار التشغيلي للتقييم:
 
 ```text
 POST /api/cases/sla/evaluate
 ```
 
-Body:
+وهو command مخول ومحدود، وليس scheduler دائمًا بحد ذاته.
 
-```json
-{
-  "limit": 50
-}
-```
+## 9. المرفقات
 
-الحد المقبول `1..100`.
+بيئة Development/CI الحالية تخزن محتوى المرفقات في filesystem خاص خارج `wwwroot`، بينما metadata في SQL Server.
 
-هذا المسار:
-
-- يتطلب تسجيل الدخول؛
-- متاح حاليًا لـSupervisor وAdministrator؛
-- يمر عبر anti-CSRF وwrite rate limit؛
-- يعالج الحالات غير المحلولة والمتأخرة التي لم يسجل لها خرق مسبقًا؛
-- يعيد `evaluatedCount`, `breachedCount`, `hasMore`؛
-- يسجل `madar.case.sla-breached` مرة واحدة لكل حالة.
-
-هذا **ليس scheduler**. هو command واضح يمكن لمجدول مستقبلي استدعاؤه. لا يوجد في v0.2 اختيار Hangfire/Quartz/HostedService/Cloud Scheduler، ولا توجد حزمة `FoundationKit.Jobs`. اختيار التنفيذ الدوري مؤجل حتى وجود قرار تشغيل حقيقي.
-
-كذلك لا توجد business-hours/holidays/pause-resume semantics في هذه المرحلة؛ القياس الحالي elapsed UTC من وقت إنشاء الحالة.
-
-## Late resolution
-
-إذا تم حل الحالة بعد الهدف قبل تشغيل evaluator، يكتشف `CaseManager` الخرق أثناء عملية `resolve` نفسها ويسجل breach/escalation/audit. هذا يمنع اعتماد صحة SLA على توقيت scheduler غير الموجود حاليًا.
-
-## Live و Ready
-
-### Live
+حدود v0.10:
 
 ```text
-GET /health/live
+Maximum size: 10 MiB
+Allowed: PDF / PNG / JPEG / TXT
 ```
 
-يثبت أن ASP.NET Core يعمل فقط.
+التوقيع الأساسي يقلل type-confusion لكنه ليس malware scanner. Object storage/KMS/retention/malware-scanning الحقيقي قرار بيئة Production وليس جزءًا من Docker المحلي.
 
-### Ready
+## 10. البحث والتقارير
+
+المسار:
 
 ```text
-GET /health/ready
+GET /api/cases/search
 ```
 
-يتحقق من:
-
-1. إمكانية الاتصال بـSQL Server.
-2. عدم وجود EF Core migrations معلقة.
-
-عند الجاهزية:
-
-```json
-{
-  "status": "ready",
-  "service": "madar-api"
-}
-```
-
-وعند عدم الجاهزية يرجع HTTP `503` دون كشف connection string أو تفاصيل SQL.
-
-## Startup ومهاجرات قاعدة البيانات
+والواجهة:
 
 ```text
-Madar:DatabaseStartup:ApplyMigrationsOnStartup
-Madar:DatabaseStartup:SeedRolesOnStartup
-Madar:DatabaseStartup:MigrationAttempts
-Madar:DatabaseStartup:DelaySeconds
+/reports/cases
 ```
 
-القيم الافتراضية:
+يطبقان نطاق الرؤية قبل النتائج والعدادات. البحث الحالي SQL/EF product-owned وليس external search index ولا BI platform.
 
-```text
-ApplyMigrationsOnStartup = true
-SeedRolesOnStartup       = true
-MigrationAttempts        = 60
-DelaySeconds             = 2
-```
-
-الحدود:
-
-```text
-MigrationAttempts: 1..300
-DelaySeconds:      0..30
-```
-
-إذا كان `ApplyMigrationsOnStartup=false`، فلا يصبح startup ناجحًا إلا إذا كانت قاعدة البيانات قابلة للاتصال ولا توجد migrations معلقة.
-
-v0.2 يضيف migration خاصة بـSLA:
-
-```text
-20260808110000_AddMadarSla.cs
-```
-
-وتضيف `SlaTargetUtc`, `SlaBreachedUtc`, `EscalatedUtc` وفهرس الاستعلام عن الحالات المستحقة. EF migrations تبقى schema source of truth.
-
-## الحالة والسجلات والإيقاف
+## 11. الحالة والسجلات
 
 ```powershell
 .\foundationkit.ps1 status -Target Madar
 .\foundationkit.ps1 logs -Target Madar
-.\foundationkit.ps1 stop -Target Madar
 ```
 
-الحالة تعرض:
+الحالات المتوقعة:
 
 ```text
 STOPPED or unreachable
@@ -276,98 +216,109 @@ LIVE but NOT READY
 READY
 ```
 
-الإيقاف لا يحذف volume. اسم Compose المحلي:
+إذا فشل startup، المشغل يطبع آخر logs من Compose قبل إنهاء الأمر بخطأ.
 
-```text
-madar-product
-```
-
-الحذف اليدوي المتعمد فقط:
+## 12. الإيقاف وحفظ البيانات
 
 ```powershell
-docker compose --project-name madar-product -f deploy/madar-compose.yml down --volumes --remove-orphans
+.\foundationkit.ps1 stop -Target Madar
 ```
 
-قد يحتاج Compose قيم البيئة المطلوبة عند تفسير الملف؛ المسار العادي هو استخدام المشغّل. `reset -Target Madar` غير معروض عمدًا في المدير الموحد.
+الإيقاف يحافظ على SQL volume.
 
-## التحقق الآلي
+الحذف المتعمد للبيانات التجريبية عملية منفصلة ومدمرة، ولا يعرض المدير الموحد reset لـMadar عمدًا. لا تستخدم `down --volumes` إلا عندما تكون متأكدًا أن البيانات قابلة للحذف.
 
-التحقق الحالي يشمل:
+## 13. إعادة إنشاء secrets المحلية
+
+لإعادة ملف الإعداد المحلي:
+
+```powershell
+.\scripts\madar-product.ps1 start -Reset
+```
+
+مهم: تغيير كلمة المرور في ملف البيئة لا يعيد تلقائيًا PasswordHash لمستخدم موجود بالفعل داخل SQL volume. إذا أردت بيئة تطوير جديدة بالكامل، تعامل مع volume القديم عمدًا وبشكل منفصل.
+
+## 14. Release Publish
+
+```powershell
+.\scripts\madar-product.ps1 publish
+```
+
+ينتج:
 
 ```text
-Build/Test
-    ↓
-EF migration + SQL startup
-    ↓
-Readiness
-    ↓
-Auth + CSRF
-    ↓
-Critical CI-only SLA case
-    ↓
-Target snapshot
-    ↓
-Wait beyond short test target
-    ↓
-Authorized bounded evaluation
-    ↓
-Persist breach + escalation + audit exactly once
-    ↓
-Second evaluation proves idempotency
-    ↓
-Normal case assignment/lifecycle proves SLA met
-    ↓
-Container/Trivy/SARIF/CodeQL
+artifacts/madar/publish/
+artifacts/madar/Madar-net10.0-Release.zip
+artifacts/madar/Madar-net10.0-Release.zip.sha256
 ```
 
-في CI فقط تُمرر سياسة قصيرة جدًا لإثبات السلوك بسرعة، منها Critical = ثانيتان. هذه **قيمة اختبار آلي فقط** وليست قيمة المنتج.
+هذا framework-dependent Release artifact يحتوي Madar.Api والـBlazor assets المستضافة معه، لكنه لا يحتوي أسرار قاعدة بيانات Production ولا يختار لك ingress أو secret store أو SQL principal.
 
-الاختبارات البرمجية تغطي أيضًا:
+## 15. التحقق الآلي الحالي
 
-- عدم وجود SLA عندما تكون السياسة معطلة؛
-- snapshot للهدف؛
-- رفض target غير مستقبلي؛
-- exact-target boundary؛
-- late resolve breach؛
-- idempotency؛
-- صلاحية Supervisor/Administrator ومنع Operator من global evaluation؛
-- bounded batch + `hasMore`.
-
-## Atlas / Pages
-
-Atlas يقرأ مسارات Madar الحقيقية من:
+بوابات المستودع تثبت على نفس التغييرات:
 
 ```text
-apps/Madar/Madar.Client/Pages
+Repository verification
+        ↓
+Release restore/build/test
+        ↓
+Madar publish
+        ↓
+Docker + SQL startup/readiness
+        ↓
+UI assets + Swagger/API surface
+        ↓
+Auth + anti-CSRF + lifecycle + audit
+        ↓
+SLA + comments + approvals + notifications
+        ↓
+Departments + routing + claim + administration
+        ↓
+Transfer + reassignment
+        ↓
+Attachments
+        ↓
+Authorized search/reporting privacy
+        ↓
+Department-routing SQL workflow
+        ↓
+Security Scan + container scan + CodeQL
 ```
 
-والمسارات الحالية تبقى:
+CI يستخدم credentials وسياسات زمنية قصيرة خاصة بالاختبار ولا يحولها إلى default تجاري للمنتج.
 
-```text
-/
-/login
-/cases
-/cases/{CaseId:guid}
-```
+## 16. جولة القبول اليدوية
 
-SLA أضيف داخل الصفحات الحالية، لذلك لا توجد route UI جديدة. Swagger يوثق `EvaluateMadarCaseSla` ضمن API الحالي.
+بعد وصول Madar إلى `READY`:
 
-## ما الذي لا تثبته هذه الأدلة؟
+1. ادخل كـAdministrator.
+2. راجع `/admin/departments`.
+3. راجع `/cases` وأنشئ/افتح حالة.
+4. جرّب التوجيه والإسناد/إعادة الإسناد ضمن الصلاحية.
+5. افتح تفاصيل الحالة وراجع التعليقات والموافقات والمرفقات والتدقيق.
+6. راجع `/reports/cases`.
+7. ادخل كـOperator وقارن نطاق الرؤية والإجراءات.
+8. دوّن أي ملاحظة UX أو business rule؛ هذه هي المدخلات الصحيحة للإصدار التالي بدل إضافة ميزات عشوائية.
 
-لا تثبت تلقائيًا:
+## 17. حدود Production
 
-- Production Approval؛
-- Segregation-of-Duties مستقل؛
-- ISO/IEC 27001 certification؛
-- أن مدد SLA التجريبية مناسبة للأعمال؛
-- production scheduler/provider؛
-- production KMS/Vault أو network topology؛
-- RPO/RTO؛
-- penetration/load acceptance؛
-- retention/privacy policy قانونية.
+نجاح التشغيل المحلي وCI وRelease Publish لا يساوي Production Approval. البيئة الحقيقية ما زالت تحتاج، حسب استخدامها:
 
-هذه قرارات وأدلة تشغيلية وتنظيمية خارج ما يستطيع المستودع إثباته وحده.
+- HTTPS/domain/ingress.
+- secret store.
+- least-privilege SQL identity.
+- Data Protection keys دائمة.
+- object storage وmalware scanning وretention للمرفقات.
+- durable notification/background delivery إذا كانت مطلوبة.
+- central logs/metrics/traces/alerts.
+- backup/restore للبيئة المستهدفة.
+- قيم SLA المعتمدة.
+- privacy/legal/performance acceptance.
 
-## قاعدة التطوير التالية
+## 18. المراجع
 
-وجود command يحتاج تشغيلًا دوريًا لا يعني تلقائيًا إنشاء `FoundationKit.Jobs`. بعد إثبات SLA business command داخل Madar، يأتي قرار منفصل عن scheduler. وإذا ظهرت لاحقًا حاجة عامة حقيقية من أكثر من consumer، عندها فقط يُقيّم استخراج capability قابلة لإعادة الاستخدام.
+- [`MADAR-SPECIFICATION-AR.md`](MADAR-SPECIFICATION-AR.md) — المواصفة الوظيفية الحالية.
+- [`MADAR-LOCAL-RUN-PUBLISH-AR.md`](MADAR-LOCAL-RUN-PUBLISH-AR.md) — خطوات المستخدم من `git pull` حتى التشغيل والـpublish.
+- [`../apps/Madar/README.md`](../apps/Madar/README.md) — مدخل المنتج.
+- `site/madar-demo/` — Demo ثابتة لـGitHub Pages بلا خادم أو SQL.
