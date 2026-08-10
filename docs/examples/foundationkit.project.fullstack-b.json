@@ -2,13 +2,9 @@
   "schemaVersion": 2,
   "name": "ComposerFullStackB",
   "profile": "minimal",
-  "includeCapabilities": [
-    "idempotency"
-  ],
+  "includeCapabilities": ["concurrency", "idempotency"],
   "excludeCapabilities": [],
-  "providers": [
-    "provider-sqlserver"
-  ],
+  "providers": ["provider-sqlserver"],
   "capabilityContracts": {
     "auditing": 1,
     "authorization": 1,
@@ -25,25 +21,10 @@
           "name": "Customer",
           "route": "customers",
           "idType": "guid",
-          "behaviors": [
-            "crud",
-            "auditing",
-            "authorization",
-            "concurrency"
-          ],
+          "behaviors": ["crud", "auditing", "authorization", "concurrency"],
           "fields": [
-            {
-              "name": "Name",
-              "type": "text",
-              "required": true,
-              "maximumLength": 120
-            },
-            {
-              "name": "Note",
-              "type": "text",
-              "required": false,
-              "maximumLength": 400
-            }
+            {"name": "Name", "type": "text", "required": true, "maximumLength": 120},
+            {"name": "Note", "type": "text", "required": false, "maximumLength": 400}
           ],
           "api": {
             "routePrefix": "api",
