@@ -73,18 +73,17 @@ public sealed class DenyAllCrudAuthorizationPolicy<TEntity, TId> : ICrudAuthoriz
 
 public interface ICrudConcurrencyPolicy<TEntity, in TUpdate>
 {
+    Result Validate(TEntity entity, TUpdate request);
+
     Result Validate(
         TEntity entity,
         TUpdate request,
-        CrudConcurrencyPrecondition? precondition = null);
+        CrudConcurrencyPrecondition? precondition) => Validate(entity, request);
 }
 
 public sealed class NoOpCrudConcurrencyPolicy<TEntity, TUpdate> : ICrudConcurrencyPolicy<TEntity, TUpdate>
 {
-    public Result Validate(
-        TEntity entity,
-        TUpdate request,
-        CrudConcurrencyPrecondition? precondition = null) => Result.Success();
+    public Result Validate(TEntity entity, TUpdate request) => Result.Success();
 }
 
 public interface ICrudManager<TEntity, TId, in TCreate, in TUpdate>
