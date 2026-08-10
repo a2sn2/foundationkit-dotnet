@@ -104,4 +104,14 @@ public static class FoundationModuleComposition
             FoundationModuleCapabilityRules.Names(module.Capabilities),
             module.Api);
     }
+
+    public static IReadOnlyList<FoundationModuleCompositionSnapshot> Describe(
+        this IFoundationModuleRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        return registry.Modules
+            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(Describe)
+            .ToArray();
+    }
 }
