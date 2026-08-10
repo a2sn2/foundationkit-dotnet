@@ -9,359 +9,384 @@ Project
   → Modules
     → Resources
       → Behaviors
+      → optional Fields
       → Overrides
       → API
   → Providers
 ```
 
-It reuses the same canonical FoundationKit capability catalog, dependency resolver, capability-contract versions, maturity evidence, and deterministic generator. It does not create a second capability graph or a low-code runtime.
+It reuses the same canonical FoundationKit capability catalog, dependency resolver, capability-contract versions, maturity evidence, Module/API Engine, and deterministic generator. It does not create a second capability graph or an opaque low-code runtime.
 
-The v2 model is configuration intent. Business rules, database fields, authorization semantics, external integrations, secrets, and product-specific workflows remain consumer code/configuration.
+Schema v2 now supports two compatible resource modes:
+
+```text
+resource without fields
+→ descriptor-only project intent
+
+resource with explicit fields
+→ bounded executable full-stack generation
+```
+
+Business logic and environment-specific production controls remain consumer-owned in both modes.
 
 ## Compatibility
 
-Schema v1 remains supported unchanged.
+Schema v1 remains supported unchanged:
 
 ```text
 schemaVersion: 1
 → profile/capability/provider composition
-→ Composer generator contract 1
+→ generator contract 1
 ```
 
-Schema v2 is additive:
+Schema v2 remains generator contract 2:
 
 ```text
 schemaVersion: 2
-→ the same profile/capability/provider composition
-+ modules/resources/behaviors/overrides/API intent
-→ Composer generator contract 2
+→ same canonical profile/capability/provider composition
++ modules/resources/behaviors/overrides/API
++ optional executable fields
+→ generator contract 2
 ```
 
 Rules:
 
 - v1 manifests do not accept `modules`;
 - v2 manifests require at least one module;
-- the `new` command chooses the generator from `schemaVersion`; there is no parallel v2 command;
-- no v1 manifest rewrite is required to keep using FoundationKit;
-- `--force` keeps the same owned-file and SHA-256 safety model in both versions;
-- future breaking changes to v2 manifest semantics require a new schema version rather than redefining accepted v2 meaning.
+- `new` chooses the generator from `schemaVersion`; there is no parallel v2 command;
+- v1 manifests require no rewrite;
+- existing descriptor-only v2 manifests require no rewrite;
+- `fields` is additive to schema v2;
+- `--force` keeps exact owned-file and SHA-256 protection;
+- unsupported executable intent fails closed rather than producing partially wired code;
+- future breaking v2 semantics require a new schema version.
 
-The dedicated Composer CI workflow generates, force-regenerates, restores, builds, and tests both a v1 golden project and a v2 project-model project on the same repository head.
+CI independently generates, force-regenerates, restores, builds, and tests schema v1, descriptor-only schema v2, and two executable schema-v2 products on the same repository head.
 
-## Manifest shape
+## Descriptor-only resource shape
 
-Example:
+The Phase 11 model remains valid. Example:
 
 ```json
 {
-  "schemaVersion": 2,
-  "name": "MyPlatform",
-  "profile": "minimal",
-  "includeCapabilities": ["auditing", "authorization", "caching"],
-  "excludeCapabilities": [],
-  "providers": [],
-  "capabilityContracts": {
-    "authorization": 1
+  "name": "Customer",
+  "route": "customers",
+  "idType": "guid",
+  "behaviors": ["crud", "authorization", "caching"],
+  "overrides": {
+    "manager": "CustomerManager"
   },
-  "modules": [
-    {
-      "name": "Customers",
-      "resources": [
-        {
-          "name": "Customer",
-          "route": "customers",
-          "idType": "guid",
-          "behaviors": [
-            "crud",
-            "auditing",
-            "authorization",
-            "concurrency",
-            "caching"
-          ],
-          "overrides": {
-            "manager": "CustomerManager"
-          },
-          "api": {
-            "routePrefix": "api",
-            "idempotency": "required",
-            "concurrency": "require-if-match",
-            "maximumFilters": 4,
-            "maximumSorts": 2,
-            "rateLimitPolicyName": "customer-write"
-          }
-        }
-      ]
-    }
-  ]
+  "api": {
+    "routePrefix": "api",
+    "idempotency": "optional",
+    "concurrency": "application-policy",
+    "maximumFilters": 4,
+    "maximumSorts": 2,
+    "rateLimitPolicyName": "customer-write"
+  }
 }
 ```
 
-The repository example is `docs/examples/foundationkit.project.v2.json`. The machine-readable schema is `catalog/foundationkit.project.schema.json`.
+Without `fields`, Composer records deterministic intent/descriptors and does not invent a product domain model, database schema, business manager, query semantics, or provider behavior.
 
-## Modules
+## Executable resource shape
 
-A module is a bounded grouping of resources. Module names are safe C# identifiers because current generated resource descriptors use the module name in an inspectable namespace.
-
-Current bounds:
-
-- at least 1 module in schema v2;
-- at most 32 modules;
-- module names are unique case-insensitively;
-- each module contains 1–64 resources;
-- the entire project contains at most 256 resources.
-
-## Resources
-
-A resource declares reusable platform behavior for one named resource boundary.
-
-Required fields:
+Adding explicit `fields` requests the bounded Phase 12 executable overlay. Repository examples:
 
 ```text
-name
-route
-idType
-behaviors
+docs/examples/foundationkit.project.fullstack-a.json
+docs/examples/foundationkit.project.fullstack-b.json
 ```
 
-Resource names are safe C# identifiers. Effective API routes must be unique across the entire manifest.
+Example resource:
 
-### ID types
-
-The current closed set is:
-
-```text
-guid
-string
-long
-int
+```json
+{
+  "name": "Customer",
+  "route": "customers",
+  "idType": "guid",
+  "behaviors": [
+    "crud",
+    "auditing",
+    "authorization",
+    "concurrency"
+  ],
+  "fields": [
+    {
+      "name": "Name",
+      "type": "text",
+      "required": true,
+      "maximumLength": 120
+    },
+    {
+      "name": "Note",
+      "type": "text",
+      "required": false,
+      "maximumLength": 400
+    }
+  ],
+  "api": {
+    "routePrefix": "api",
+    "idempotency": "required",
+    "concurrency": "require-if-match",
+    "maximumFilters": 0,
+    "maximumSorts": 0
+  }
+}
 ```
 
-Composer does not accept arbitrary C# type text from JSON.
+The executable manifests explicitly select the canonical capabilities they rely on:
 
-### Routes
-
-Resource route and API route-prefix values are bounded ASCII route segments containing only letters, digits, and `-`. Empty segments, control characters, leading/trailing `-`, and unsafe arbitrary route syntax are rejected.
-
-## Behaviors versus global capabilities
-
-`behaviors` intentionally does not mean the same thing as the top-level capability ID list.
-
-Top-level capability IDs represent the canonical FoundationKit capability graph, such as:
-
-```text
-authorization
-workflow
-provider-sqlserver
-web-api
+```json
+"includeCapabilities": ["concurrency", "idempotency"],
+"providers": ["provider-sqlserver"]
 ```
 
-Resource behaviors describe module/resource intent:
+Composer does not silently turn a broad resource behavior into an unrelated global capability selection.
+
+## Fields
+
+Current executable field contract is intentionally narrow:
+
+- `fields` is optional;
+- if present it must contain 1–32 fields;
+- field names are safe C# identifiers and unique case-insensitively;
+- `Id` and `Version` are reserved;
+- field type is currently `text` only;
+- `maximumLength` is required and bounded to 1..4000;
+- `required` defaults to `true`.
+
+This boundary exists so generated code can be completely inspectable and executable. Arbitrary CLR types, raw SQL, source expressions, relationship declarations, scripts, or custom templates are not accepted from JSON.
+
+## Executable behavior boundary
+
+Descriptor-only resources may keep the broader v2 behavior vocabulary. Executable resources currently accept only:
 
 ```text
 crud
 auditing
 authorization
 concurrency
-workflow
-caching
-security
-identity
-approvals
-notifications
-settings
-feature-management
-localization
 ```
 
-Where a reusable Core capability exists, Composer maps the behavior back into the same canonical capability resolver. For example:
+Executable generation also requires:
+
+```text
+idType = guid
+provider-sqlserver
+maximumFilters = 0
+maximumSorts = 0
+```
+
+When concurrency is declared:
+
+```text
+api.concurrency = require-if-match
+includeCapabilities contains concurrency
+```
+
+When HTTP idempotency is enabled:
+
+```text
+includeCapabilities contains idempotency
+```
+
+Executable resources currently reject manager overrides and rate-limit policy names because Composer does not yet generate the corresponding product-specific business manager or host policy registration. Query generation is also not claimed yet. Those restrictions prevent a manifest from promising behavior the generated product does not implement.
+
+## What executable generation produces
+
+The normal Domain/Application/Infrastructure/API/Test scaffold remains. The executable overlay then adds product-owned source such as:
+
+```text
+src/<Product>.Domain/GeneratedModules/<Module>/<Resource>.cs
+src/<Product>.Application/GeneratedModules/<Module>/<Resource>Contracts.cs
+src/<Product>.Application/GeneratedModules/<Module>/<Resource>Application.cs
+src/<Product>.Infrastructure/GeneratedModules/<Module>/<Resource>EntityConfiguration.cs
+src/<Product>.Infrastructure/GeneratedPlatform/GeneratedDbContext.cs
+src/<Product>.Infrastructure/GeneratedPlatform/Migrations/<Initial>.cs
+src/<Product>.Api/GeneratedPlatform/GeneratedHttpIdentity.cs
+src/<Product>.Api/GeneratedPlatform/GeneratedApiSupport.cs
+src/<Product>.Api/Program.cs
+GENERATED-FULLSTACK.md
+README.md
+ARCHITECTURE.md
+```
+
+The generated product composes existing FoundationKit surfaces rather than duplicating their infrastructure logic:
+
+```text
+explicit fields
+→ product entity/contracts
+→ DataAnnotations validation metadata
+→ FoundationKit generic CRUD service
+→ semantic authorization/audit/concurrency seams
+→ product-owned EF SQL Server persistence/migration
+→ FoundationKit API Engine
+→ runtime OpenAPI
+→ deterministic Postman
+```
+
+## Database ownership and project isolation
+
+Reusable FoundationKit packages still own no product schema or migration. The generated DbContext/migration live in the generated product.
+
+Composer derives deterministic project-scoped identities for:
+
+```text
+FoundationProjectId
+resource table names
+idempotency table
+EF migrations-history table
+```
+
+The Phase 12 CI proof generates Project A and Project B from the same resource shape, runs both simultaneously against one SQL Server database, and directly verifies that each project owns separate resource, idempotency, and migration-history tables. Each project can use the same HTTP idempotency key without consuming the other's replay state, and neither project can read the other's resource ID.
+
+No database credential is generated into source. The generated app requires a runtime connection string such as:
+
+```text
+ConnectionStrings__Generated
+```
+
+## Authorization reference adapter
+
+Executable authorization uses the Core CRUD authorization seam and an intentionally small generated reference authentication adapter so the generated product can be executed in CI.
+
+Reference headers:
+
+```text
+X-Foundation-User: <non-empty GUID>
+X-Foundation-Roles: admin
+X-Foundation-Email: optional
+```
+
+This adapter is **not** FoundationKit's final production Identity composition. Real account persistence, login, MFA, recovery, federation, credential handling, and deployment identity policy remain separate product/platform work.
+
+## Auth-safe request pipeline
+
+FoundationKit WebApi exposes:
+
+```csharp
+UseFoundationRequestDiagnostics();
+UseFoundationIdempotency();
+```
+
+while preserving the existing combined `UseFoundationRequestPipeline()` helper.
+
+The generated authenticated host uses:
+
+```text
+Correlation / Problem Details / Security Headers
+→ Authentication
+→ Authorization
+→ Durable idempotency
+→ Endpoint
+```
+
+This means unauthorized requests still receive FoundationKit's diagnostics/security envelope, while a previously completed idempotent response cannot be replayed before the current request passes authorization. The runtime proof creates an idempotent response with admin credentials and then repeats the same key/body without credentials; the replay remains unauthorized rather than returning the stored success.
+
+## OpenAPI and Postman
+
+Runtime C# DTOs, endpoint metadata, module API configuration, idempotency/concurrency metadata, and authorization metadata remain the transport source of truth.
+
+```text
+C# / endpoint metadata
+→ runtime OpenAPI
+→ deterministic Postman
+```
+
+The generated host defines the reference auth schemes in OpenAPI, then attaches security requirements only to operations carrying authorization endpoint metadata. Anonymous health endpoints remain anonymous in both runtime behavior and OpenAPI.
+
+The dedicated Phase 12 workflow captures OpenAPI independently from Project A and B and derives Postman with the existing `generate-postman-from-openapi.py` tool plus `--check`; Postman is not hand-maintained in the executable template.
+
+## Modules, IDs, and routes
+
+General schema-v2 bounds remain:
+
+- 1–32 modules;
+- 1–64 resources per module;
+- at most 256 resources per project;
+- module/resource names are safe identifiers and unique at their scopes;
+- effective API routes are unique across the project;
+- descriptor ID types remain `guid`, `string`, `long`, `int`;
+- executable Phase 12 currently narrows that set to `guid`;
+- route/prefix values use bounded safe ASCII segments.
+
+## Behaviors versus canonical capabilities
+
+Resource behaviors remain resource intent; the top-level capability graph remains canonical. Where resource behavior maps to an existing Core capability, Composer uses the same dependency resolver and reasons. There is no second dependency graph.
+
+Example:
 
 ```text
 Customer behavior: authorization
-       ↓
-canonical authorization capability
-       ↓
-canonical dependency graph
-       ↓
-identity
-       ↓
-security
+→ authorization capability
+→ identity
+→ security
 ```
 
-`explain` therefore reports reasons such as:
+Executable concurrency/idempotency additionally require their explicit canonical top-level capability selections, so `explain` can show their contract/maturity/reason truth rather than having hidden generator-only dependencies.
+
+## Determinism and destructive safety
+
+For the same manifest, generator contract, FoundationKit baseline, and reference mode, Composer produces the same generated bytes.
+
+CI proves for v1, descriptor-v2, A, and B:
 
 ```text
-resource:Customers.Customer:authorization
-required-by:authorization
-```
-
-There is no separate resource dependency graph.
-
-`crud` and `concurrency` are current module/application-engine behaviors rather than separate catalog capability IDs, so they do not invent new global identities.
-
-### Current executable boundary
-
-Schema v2 currently requires every resource to include `crud` because the proven executable Module Engine is CRUD-based. Accepting a non-CRUD resource today would imply an executable engine that does not exist yet.
-
-When FoundationKit gains independently proven non-CRUD resource engines, a later compatible schema/version decision can expand this boundary deliberately.
-
-## Overrides
-
-Current v2 override surface:
-
-```json
-{
-  "manager": "CustomerManager"
-}
-```
-
-The manager value is a safe identifier only. Composer does not accept arbitrary source code, namespaces, scripts, expressions, templates, or executable hooks from the manifest.
-
-The generated descriptor records the override intent so later executable composition can bind it through the Foundation Module/Manager seam.
-
-## API intent
-
-Per-resource API configuration supports:
-
-```text
-routePrefix
-idempotency
-concurrency
-maximumFilters
-maximumSorts
-rateLimitPolicyName
-```
-
-Idempotency modes:
-
-```text
-disabled
-optional
-required
-```
-
-Concurrency modes:
-
-```text
-application-policy
-require-if-match
-```
-
-Bounds:
-
-```text
-maximumFilters: 0..25
-maximumSorts:   0..10
-```
-
-The API section records intent compatible with the existing API Engine. Phase 11 does not yet claim that every v2 descriptor becomes an executable database/API resource automatically; that is the Phase 12 pre-frontend proof.
-
-## Global capability/provider resolution
-
-The existing top-level fields remain authoritative for project composition:
-
-```text
-profile
-includeCapabilities
-excludeCapabilities
-providers
-capabilityContracts
-```
-
-Resource behaviors contribute required runtime capability IDs to that same composition before resolution.
-
-A resource-required capability cannot be globally excluded. Provider IDs still belong only in `providers`, tooling IDs cannot be selected as runtime capabilities, and capability-contract compatibility remains exact and fail-closed.
-
-Because the current executable resource model is HTTP based, a valid schema-v2 resource composition must resolve `web-api`.
-
-## Deterministic generation
-
-For schema v2, `new` first invokes the proven v1 structural scaffold generator, then overlays v2 project-model artifacts and rebuilds the ownership marker.
-
-Generated v2 additions include:
-
-```text
-foundationkit.project.json
-PROJECT-MODEL.md
-src/<Product>.Application/GeneratedModules/<Module>/<Resource>Definition.g.cs
-.foundationkit-generated.json
-```
-
-`foundationkit.project.json` is the normalized machine-readable v2 manifest. `PROJECT-MODEL.md` is a human-readable report. Resource descriptors are small inspectable C# configuration artifacts; they do not contain hidden business logic.
-
-The ownership marker records:
-
-```json
-"generatorContractVersion": "2"
-```
-
-and SHA-256 for the generated set. A user-added file or edited generated file blocks destructive `--force` regeneration.
-
-The same input, FoundationKit baseline, reference mode, and generator contract produce the same filenames and bytes. No timestamp, random identifier, machine name, secret, or local absolute path is emitted.
-
-## v1 preservation
-
-The v1 generator itself remains the v1 generator. Phase 11 does not route v1 through the v2 overlay.
-
-CI proves:
-
-```text
-v1 manifest
-→ generate
-→ hash
+generate
+→ hash generated set
 → --force regenerate
 → identical hashes
 → restore
 → build
 → test
-
-v2 manifest
-→ validate
-→ generate
-→ hash
-→ --force regenerate
-→ identical hashes
-→ verify project-model artifacts
-→ restore
-→ build
-→ test
 ```
 
-This is the compatibility gate for the Composer model evolution.
+The ownership marker remains generator contract 2 for all schema-v2 output and records SHA-256 for the full generated set. User-added or edited files block destructive `--force` regeneration.
 
-## Interactive and visual composition
+Generated output contains no timestamp, random project identifier, machine name, database password, or local absolute path. Runtime entity IDs may naturally be created by the running application; that does not affect deterministic source generation.
 
-The current interactive CLI questionnaire still produces schema v1. It remains a simple profile/capability/provider input layer over the same analyzer/generator.
-
-A future FoundationKit Studio/Workbench composer should author the v2 model visually, but it must serialize the same v2 manifest and invoke the same deterministic engine. It must not maintain a parallel graph or hidden project model.
-
-## Security and trust boundary
+## Security and anti-low-code boundary
 
 Composer v2:
 
 - rejects unknown JSON fields at every modeled level;
-- rejects unsafe identifiers/routes and unsupported ID types;
-- rejects duplicate modules/resources/effective API routes;
-- rejects duplicate/unknown behaviors;
-- rejects resource-required capabilities that are globally excluded;
+- rejects unsafe identifiers/routes, unsupported executable field/ID types, duplicate fields/resources/routes, and unsupported executable behavior combinations;
 - never executes manifest content;
-- never accepts arbitrary C# source through overrides;
+- never accepts arbitrary C#/SQL/script/template bodies from JSON;
 - never infers package IDs from user-controlled text;
 - keeps package/project bindings catalog-owned;
-- keeps destructive regeneration protected by exact ownership/hash verification.
+- keeps product business rules and production identity explicit;
+- keeps destructive regeneration protected by ownership/hash verification;
+- fails closed when an executable request exceeds the generator's proven surface.
 
-## Phase 11 acceptance boundary
+The intended rule remains:
 
-Phase 11 is complete when one exact repository head proves:
+> Convention over repetition + configuration over boilerplate + code when business logic requires it.
+
+## Interactive and visual composition
+
+The existing interactive CLI remains a compatible schema-v1 questionnaire. A future FoundationKit Studio/Workbench composer should author schema v2 visually, including executable fields where supported, but must serialize this same model and call the same deterministic analyzer/generator. It must not maintain a parallel graph or hidden project format.
+
+## Phase 12 acceptance boundary
+
+The formal completion gate is documented in `COMPOSER-FULLSTACK-PROOF-V1.md`.
+
+Phase 12 requires one exact head to prove:
 
 ```text
-strict v1 parser compatibility
-+ strict v2 parser/model validation
-+ canonical capability resolution for resource behaviors
-+ deterministic normalized v2 manifest
-+ deterministic v2 descriptors/report/ownership marker
-+ v1 generation/reproduction/build/test
-+ v2 generation/reproduction/build/test
-+ normal repository build/test/package/security gates
+schema-v1 compatibility
++ descriptor-v2 compatibility
++ deterministic executable A/B generation/build/test
++ product-owned SQL migrations
++ CRUD + validation + authorization + audit
++ ETag/If-Match concurrency
++ durable idempotency replay/fingerprint behavior
++ authorization before replay
++ shared-database A/B isolation
++ runtime OpenAPI with truthful operation-level security
++ deterministic Postman derivation
++ normal repository/package/security gates
 ```
 
-Phase 11 does **not** claim the final full-stack generated-resource scenario. Phase 12 must prove that separately before frontend work begins.
+Passing this gate closes the backend/generated-product proof required before first-party frontend/design-system work begins. It does not claim production approval or a complete production Identity system.
