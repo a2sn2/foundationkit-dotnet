@@ -32,6 +32,7 @@ public static class CompositionAnalyzer
         ValidateManifestKinds(manifest, catalog);
 
         var resolved = manifest.ToProjectManifest().Resolve(resolver);
+        ValidateProjectModelComposition(manifest, resolved);
         var compatibility = CapabilityCompatibility.Evaluate(
             resolved,
             manifest.ContractRequirements);
@@ -61,9 +62,7 @@ public static class CompositionAnalyzer
         foreach (var id in manifest.IncludeCapabilities.Concat(manifest.ExcludeCapabilities))
         {
             if (!catalog.TryGetValue(id, out var capability))
-            {
                 throw new ComposerManifestException($"Unknown capability '{id}'.");
-            }
 
             if (capability.Kind == CapabilityKind.Provider)
             {
@@ -78,12 +77,19 @@ public static class CompositionAnalyzer
             }
         }
 
+        foreach (var id in manifest.ResourceCapabilityIds)
+        {
+            if (!catalog.TryGetValue(id, out var capability) || capability.Kind != CapabilityKind.Runtime)
+            {
+                throw new ComposerManifestException(
+                    $"Resource behavior maps to invalid runtime capability '{id}'.");
+            }
+        }
+
         foreach (var providerId in manifest.Providers)
         {
             if (!catalog.TryGetValue(providerId, out var provider))
-            {
                 throw new ComposerManifestException($"Unknown provider '{providerId}'.");
-            }
 
             if (provider.Kind != CapabilityKind.Provider)
             {
@@ -102,6 +108,23 @@ public static class CompositionAnalyzer
         }
     }
 
+    private static void ValidateProjectModelComposition(
+        ComposerManifest manifest,
+        IReadOnlyList<CapabilityDescriptor> resolved)
+    {
+        if (manifest.ProjectModel is null)
+            return;
+
+        var resolvedIds = resolved
+            .Select(capability => capability.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!resolvedIds.Contains(FoundationCapabilityIds.WebApi))
+        {
+            throw new ComposerManifestException(
+                "Schema v2 resources require the 'web-api' capability because the current executable Module/API Engine is HTTP based.");
+        }
+    }
+
     private static Dictionary<string, HashSet<string>> BuildReasons(
         ComposerManifest manifest,
         CapabilityProfile profile,
@@ -115,19 +138,34 @@ public static class CompositionAnalyzer
         foreach (var id in profile.CapabilityIds)
         {
             if (selectedIds.Contains(id) && !manifest.ExcludeCapabilities.Contains(id, StringComparer.OrdinalIgnoreCase))
-            {
                 AddReason(reasons, id, $"profile:{profile.Id}");
-            }
         }
 
         foreach (var id in manifest.IncludeCapabilities)
-        {
             AddReason(reasons, id, "explicit-include");
-        }
 
         foreach (var id in manifest.Providers)
-        {
             AddReason(reasons, id, "explicit-provider");
+
+        if (manifest.ProjectModel is not null)
+        {
+            foreach (var module in manifest.ProjectModel.Modules)
+            {
+                foreach (var resource in module.Resources)
+                {
+                    foreach (var behavior in resource.Behaviors)
+                    {
+                        var capabilityId = MapBehaviorCapability(behavior);
+                        if (capabilityId is not null && selectedIds.Contains(capabilityId))
+                        {
+                            AddReason(
+                                reasons,
+                                capabilityId,
+                                $"resource:{module.Name}.{resource.Name}:{BehaviorName(behavior)}");
+                        }
+                    }
+                }
+            }
         }
 
         foreach (var parent in resolved)
@@ -135,14 +173,36 @@ public static class CompositionAnalyzer
             foreach (var dependency in parent.Dependencies)
             {
                 if (selectedIds.Contains(dependency) && catalog.ContainsKey(dependency))
-                {
                     AddReason(reasons, dependency, $"required-by:{parent.Id}");
-                }
             }
         }
 
         return reasons;
     }
+
+    private static string? MapBehaviorCapability(ComposerResourceBehavior behavior) => behavior switch
+    {
+        ComposerResourceBehavior.Crud => null,
+        ComposerResourceBehavior.Concurrency => null,
+        ComposerResourceBehavior.Auditing => FoundationCapabilityIds.Auditing,
+        ComposerResourceBehavior.Authorization => FoundationCapabilityIds.Authorization,
+        ComposerResourceBehavior.Workflow => FoundationCapabilityIds.Workflow,
+        ComposerResourceBehavior.Caching => FoundationCapabilityIds.Caching,
+        ComposerResourceBehavior.Security => FoundationCapabilityIds.Security,
+        ComposerResourceBehavior.Identity => FoundationCapabilityIds.Identity,
+        ComposerResourceBehavior.Approvals => FoundationCapabilityIds.Approvals,
+        ComposerResourceBehavior.Notifications => FoundationCapabilityIds.Notifications,
+        ComposerResourceBehavior.Settings => FoundationCapabilityIds.Settings,
+        ComposerResourceBehavior.FeatureManagement => FoundationCapabilityIds.FeatureManagement,
+        ComposerResourceBehavior.Localization => FoundationCapabilityIds.Localization,
+        _ => throw new InvalidOperationException($"Unsupported resource behavior '{behavior}'.")
+    };
+
+    private static string BehaviorName(ComposerResourceBehavior behavior) => behavior switch
+    {
+        ComposerResourceBehavior.FeatureManagement => "feature-management",
+        _ => behavior.ToString().ToLowerInvariant()
+    };
 
     private static void AddReason(
         Dictionary<string, HashSet<string>> reasons,
