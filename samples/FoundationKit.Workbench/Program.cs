@@ -2,7 +2,6 @@ using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Crud;
 using FoundationKit.Application.Events;
 using FoundationKit.Application.Persistence;
-using FoundationKit.Application.Validation;
 using FoundationKit.Auditing;
 using FoundationKit.Caching;
 using FoundationKit.FeatureManagement;
@@ -87,8 +86,6 @@ builder.Services.AddScoped<IRepository<BuildBrief, Guid>, EfRepository<BuildBrie
 builder.Services.AddScoped<IRepository<AdminReview, Guid>, EfRepository<AdminReview, Guid, WorkbenchDbContext>>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 
-builder.Services.AddScoped<IValidator<CoreCrudCreateRequest>, CoreCrudValidator>();
-builder.Services.AddScoped<IValidator<CoreCrudUpdateRequest>, CoreCrudValidator>();
 builder.Services.AddScoped<ICrudAuthorizationPolicy<CoreCrudRecord, Guid>, CoreCrudAuthorizationPolicy>();
 builder.Services.AddScoped<ICrudConcurrencyPolicy<CoreCrudRecord, CoreCrudUpdateRequest>, CoreCrudConcurrencyPolicy>();
 builder.Services.AddFoundationEfCrudModule<
