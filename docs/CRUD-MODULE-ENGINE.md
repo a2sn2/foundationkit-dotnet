@@ -32,7 +32,9 @@ app.MapFoundationCrud<
     CustomerResponse>(customerModule);
 ```
 
-That gives the enabled v1 operations under `/api/customers` without reproducing controller/service orchestration.
+With default API options that gives the enabled v1 operations under `/api/customers` without reproducing controller/service orchestration.
+
+API-specific module configuration is documented in `API-ENGINE.md` and includes bounded filtering/sorting, idempotency-header intent, HTTP concurrency preconditions, rate-limit metadata, and route-prefix configuration.
 
 ## Business customization
 
@@ -50,7 +52,9 @@ Mapping is explicit through `ICrudMapper`. This avoids reflection-based entity o
 
 ## Validation
 
-The service uses the existing `IValidator<T>` contracts. A host may register create/update validators before module registration. If no validator is supplied, the default is a no-op validator.
+The service uses the existing `IValidator<T>` contracts. `AddFoundationEfCrudModule` registers `DataAnnotationsValidator<T>` by default, so simple field-level constraints should normally live on the request contract through attributes such as `Required`, `StringLength`, `Range`, and `RegularExpression`.
+
+A host can replace that default with a custom validator for cross-field, contextual, asynchronous, or external rules. Domain methods must still protect true invariants independently of HTTP validation.
 
 Validation failures become the standard FoundationKit validation result and HTTP Problem Details mapping.
 
@@ -62,13 +66,27 @@ If the host does not register `ICrudAuthorizationPolicy<TEntity,TId>`, the engin
 
 A module can also provide an ASP.NET authorization policy name through `.Authorization("policy-name")`; the endpoint group then requires that host policy in addition to the application-layer semantic policy.
 
-The generic list operation authorizes the list operation as a whole. It does not invent row-level filtering. Applications requiring ownership/tenant/department row scope should supply a dedicated query/specification until FoundationKit defines a provider-neutral scoped-query contract.
+The generic list operation authorizes the list operation as a whole. It does not invent row-level filtering. Applications requiring ownership/tenant/department row scope should implement that scope explicitly in their query policy/specification.
+
+## Queries, paging, filtering, and sorting
+
+List uses `PageRequest` / `PagedResult<T>` and Specification infrastructure. Page size is bounded by the Core global maximum and module maximum.
+
+The API Engine parses the bounded transport syntax for `filter` and `sort`, but field semantics are owned by `ICrudQueryPolicy<TEntity,TId>`. The default policy accepts ordinary paging and rejects filter/sort expressions. This prevents generic reflection from accidentally exposing persistence fields.
 
 ## Concurrency
 
-`.Concurrency()` records the capability intent. The application service always supports an `ICrudConcurrencyPolicy<TEntity,TUpdate>` extension point so a request can carry an expected version/token.
+`.Concurrency()` records capability intent. `ICrudConcurrencyPolicy<TEntity,TUpdate>` receives the current entity, update request, and an optional `CrudConcurrencyPrecondition`.
 
-For EF, `ConcurrencyAwareEfUnitOfWork<TDbContext>` translates `DbUpdateConcurrencyException` into the provider-neutral Foundation conflict contract, producing HTTP 409 through the normal result mapper.
+API modules may require `If-Match`; when they do, the HTTP token is passed separately from the JSON DTO. An `IFoundationApiEntityTagProvider<TRead>` can emit the corresponding ETag on successful responses.
+
+For EF, `ConcurrencyAwareEfUnitOfWork<TDbContext>` still translates `DbUpdateConcurrencyException` into the provider-neutral conflict contract. Explicit stale HTTP preconditions use `412`; missing required preconditions use `428`; persistence/application conflicts can still use `409`.
+
+## Idempotency
+
+The API Engine can declare `Idempotency-Key` as disabled, optional, or required and validates the header when enabled.
+
+This module-engine phase does not claim durable replay or duplicate-response storage. Those require a dedicated reliability/persistence boundary and are tracked separately. Header acceptance alone is not called idempotency.
 
 ## Auditing
 
@@ -76,11 +94,11 @@ The engine exposes `ICrudOperationObserver`. `FoundationKit.Auditing` provides `
 
 Observers execute after database persistence. This gives a clean provider-neutral seam but does not pretend an arbitrary external sink is transactionally atomic with the application's database.
 
-## Paging and API behavior
-
-List uses the existing `PageRequest` / `PagedResult<T>` and Specification infrastructure. Module page size is bounded by the Core's global maximum.
+## API behavior
 
 Create/read/list/update/delete use the standard FoundationKit `Result`/`Error` and WebApi Problem Details mapping. Disabled operations are not mapped by the generic HTTP mapper.
+
+`FoundationApiOperationMetadata` records operation, route, authorization, rate-limit policy, idempotency mode, and concurrency mode. ApiExplorer metadata exposes the concrete request/response/query/header contract to OpenAPI.
 
 ## Isolation
 
@@ -88,12 +106,13 @@ The application registers one `FoundationProjectId`. Module metadata is held ins
 
 ## Current boundaries
 
-v1 deliberately does not claim:
+The engine deliberately does not claim:
 
-- generic row-level security filtering;
+- automatic row-level authorization semantics;
 - soft delete/archive policy;
-- generic search/filter DSL;
+- reflection-based filter-field exposure;
 - automatic object mapping by reflection;
+- durable idempotency replay;
 - multi-resource distributed transactions;
 - automatic cache invalidation;
 - workflow/approval behavior for every entity;
