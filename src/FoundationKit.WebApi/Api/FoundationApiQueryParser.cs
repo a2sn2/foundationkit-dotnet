@@ -104,8 +104,8 @@ internal static class FoundationApiQueryParser
         if (mode == FoundationApiIdempotencyMode.Disabled)
             return true;
 
-        var raw = context.Request.Headers["Idempotency-Key"].ToString();
-        if (string.IsNullOrWhiteSpace(raw))
+        var values = context.Request.Headers["Idempotency-Key"];
+        if (values.Count == 0 || values.All(string.IsNullOrWhiteSpace))
         {
             if (mode == FoundationApiIdempotencyMode.Optional)
                 return true;
@@ -116,7 +116,15 @@ internal static class FoundationApiQueryParser
             return false;
         }
 
-        var key = raw.Trim();
+        if (values.Count != 1 || string.IsNullOrWhiteSpace(values[0]))
+        {
+            error = Error.Validation(
+                "Foundation.Api.IdempotencyKey.Invalid",
+                "Exactly one non-empty Idempotency-Key header value is allowed.");
+            return false;
+        }
+
+        var key = values[0]!.Trim();
         if (key.Length > MaximumIdempotencyKeyLength || key.Any(char.IsControl))
         {
             error = Error.Validation(
