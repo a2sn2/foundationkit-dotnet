@@ -2,18 +2,20 @@ name: FoundationKit Catalog Regeneration Evidence
 
 on:
   pull_request:
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  regenerate:
-    name: Regenerate catalog from canonical Core model
+  regenerate-and-commit:
+    if: github.head_ref == 'core-vnext/final-prefrontend-proof-phase-12' && github.actor != 'github-actions[bot]'
+    name: Regenerate and commit canonical catalog
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out pull-request head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -23,18 +25,21 @@ jobs:
       - name: Regenerate canonical derived catalog files
         run: dotnet run --project tools/FoundationKit.CatalogGenerator -- --root "$GITHUB_WORKSPACE"
 
-      - name: Verify generated files are valid
+      - name: Verify generated files
         run: |
           python3 -m json.tool catalog/foundationkit.capabilities.json >/dev/null
           python3 -m json.tool catalog/foundationkit.maturity-evidence.json >/dev/null
           dotnet run --project tools/FoundationKit.CatalogGenerator -- --root "$GITHUB_WORKSPACE" --check
 
-      - name: Upload generated catalog bytes
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: phase12-generated-catalog
-          path: |
-            catalog/foundationkit.capabilities.json
-            catalog/foundationkit.maturity-evidence.json
-            docs/FEATURES.md
-          if-no-files-found: error
+      - name: Commit generator output when changed
+        shell: bash
+        run: |
+          if git diff --quiet -- catalog/foundationkit.capabilities.json catalog/foundationkit.maturity-evidence.json docs/FEATURES.md; then
+            echo "Generated catalog is already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalog/foundationkit.capabilities.json catalog/foundationkit.maturity-evidence.json docs/FEATURES.md
+          git commit -m "Phase 12: regenerate canonical capability catalog"
+          git push origin "HEAD:${{ github.head_ref }}"
