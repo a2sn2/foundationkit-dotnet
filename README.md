@@ -31,23 +31,23 @@ Madar v0.10: SQL-backed operational product
 
 ## Start here: run Madar locally
 
-If your goal is to **use the real product**, start here.
+The primary **Windows human/UAT path** is Native Madar + local SQL Server. Docker remains available for container, CI, integration, and regression coverage; it is not required for the normal Windows UAT flow.
 
 Requirements on Windows:
 
 - Git
 - PowerShell 5.1 or later
 - .NET 10 SDK selected by `global.json`
-- Docker Desktop/Engine with Docker Compose
+- a running local SQL Server instance reachable as `Server=.` by default
 
 From the repository root:
 
 ```powershell
 git pull
-.\foundationkit.ps1 doctor
-.\foundationkit.ps1 start -Target Madar -Mode Docker
-.\scripts\madar-product.ps1 credentials
-.\foundationkit.ps1 open -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 open -Target Madar
 ```
 
 Default URL:
@@ -59,20 +59,40 @@ http://localhost:8100
 Useful commands while testing:
 
 ```powershell
-.\foundationkit.ps1 status -Target Madar
-.\foundationkit.ps1 logs -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 logs -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target Madar
 ```
 
-Stop without deleting the SQL volume:
+Native stop preserves the local `MadarDb` SQL database. Visual Studio-generated `launchSettings.json` files are ignored and are not used by the canonical Native launcher, so they cannot move Madar away from port `8100`.
+
+### Temporary UAT sharing
+
+A running, ready Madar instance can be shared temporarily with testers through either independent route:
 
 ```powershell
-.\foundationkit.ps1 stop -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Microsoft
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Cloudflare
 ```
 
-Create a Release publish artifact:
+The Microsoft path uses an anonymous Dev Tunnel while the command is running. The Cloudflare path uses a temporary Quick Tunnel. These are **Development/UAT exposure paths only**, not Production hosting. Anyone who receives an anonymous UAT URL may be able to reach the Development app, so use test data/accounts and stop the tunnel with `Ctrl+C` when the session ends.
+
+### Docker regression path
+
+Docker remains deliberately supported:
 
 ```powershell
-.\scripts\madar-product.ps1 publish
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Docker
+```
+
+This preserves the container/readiness/security topology used by repository integration and CI evidence without making Docker a prerequisite for human UAT.
+
+### Release publish
+
+Create a Release publish artifact with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\madar-product.ps1 publish
 ```
 
 Output:
@@ -86,11 +106,11 @@ artifacts/madar/Madar-net10.0-Release.zip.sha256
 Read before acceptance/testing:
 
 - [`docs/MADAR-SPECIFICATION-AR.md`](docs/MADAR-SPECIFICATION-AR.md) — canonical v0.10 product specification.
-- [`docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) — exact local run, credentials, acceptance and publish flow.
+- [`docs/MADAR-LOCAL-RUN-PUBLISH-AR.md`](docs/MADAR-LOCAL-RUN-PUBLISH-AR.md) — exact Native/Docker run, UAT sharing, credentials, acceptance, and publish flow.
 - [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md) — operational behavior/readiness/database/SLA/runtime details.
 - [`apps/Madar/README.md`](apps/Madar/README.md) — product entry point.
 
-GitHub Pages also exposes a **static Madar demo** under `site/madar-demo/`. It is deliberately labeled as a no-server demo: it does not run ASP.NET Core, SQL Server, authentication, or persistent storage. The real product is the local/server runtime above.
+GitHub Pages also exposes a **static Madar demo** under `site/madar-demo/`. It is deliberately labeled as a no-server demo: it does not run ASP.NET Core, SQL Server, authentication, or persistent storage. The real product is the Native/server or Docker runtime above.
 
 ---
 
@@ -357,35 +377,33 @@ Read [`examples/Athar/README.md`](examples/Athar/README.md).
 
 ## Windows unified manager
 
-The main local manager is:
+The unified manager is designed to be invoked through Windows PowerShell 5.1-compatible syntax:
 
 ```powershell
-.\foundationkit.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 help
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
 ```
 
-Common commands:
+Common product commands:
 
 ```powershell
-.\foundationkit.ps1 help
-.\foundationkit.ps1 doctor
-.\foundationkit.ps1 start -Target Athar -Mode Auto
-.\foundationkit.ps1 start -Target Workbench -Mode Auto
-.\foundationkit.ps1 start -Target Madar -Mode Docker
-.\foundationkit.ps1 status -Target All
-.\foundationkit.ps1 stop -Target All
-.\foundationkit.ps1 verify
-.\foundationkit.ps1 pack
-.\foundationkit.ps1 production-check
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Athar -Mode Auto
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Workbench -Mode Auto
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target All
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target All
 ```
 
-Madar currently uses the Docker operational path. Athar and Workbench retain their supported native/Docker behavior. `doctor` checks the .NET 10 SDK and reports known local application health/listener state.
-
-For Madar-specific credentials and Release publish:
+For Madar-specific credentials, sharing, and Release publish:
 
 ```powershell
-.\scripts\madar-product.ps1 credentials
-.\scripts\madar-product.ps1 publish
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Microsoft
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Cloudflare
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\madar-product.ps1 publish
 ```
+
+`doctor` reports .NET 10, local SQL Server services, Docker readiness, optional tunnel CLIs, ports, Git state, and known application health/listener state. Madar Native tracks its local process through ignored `.local` state. Docker remains a supported explicit mode for container regression and integration evidence.
 
 Read:
 
@@ -416,16 +434,16 @@ Security Scan / Trivy / SARIF
 CodeQL
 ```
 
-The Madar handoff additionally verifies the user-facing `scripts/madar-product.ps1 publish` path on Windows PowerShell 5.1, including the generated ZIP and its SHA-256 sidecar.
+The Madar handoff additionally verifies the user-facing Release publish path on Windows PowerShell 5.1, including the generated ZIP and its SHA-256 sidecar. Native UAT launcher behavior is checked separately from the existing Docker/SQL/E2E regression topology.
 
 Run locally where supported:
 
 ```powershell
-.\foundationkit.ps1 restore
-.\foundationkit.ps1 build
-.\foundationkit.ps1 test
-.\foundationkit.ps1 verify
-.\foundationkit.ps1 pack
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 restore
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 build
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 test
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 verify
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 pack
 ```
 
 ---
@@ -450,7 +468,7 @@ The real Madar runtime is:
 Blazor + ASP.NET Core + SQL Server
 ```
 
-and should be tested locally using the commands at the top of this README or deployed to a suitable server environment with explicit environment configuration.
+and should be tested through the Native/server or Docker path with explicit environment configuration.
 
 ---
 
@@ -531,7 +549,7 @@ The repository can prove technical behavior in its automated/local scope, but a 
 - performance/load acceptance;
 - incident response and rollback procedures.
 
-Do not treat the static Pages demo or a successful `dotnet publish` as evidence that those external gates have been completed.
+Do not treat a temporary UAT tunnel, static Pages demo, or successful `dotnet publish` as evidence that those external gates have been completed.
 
 ---
 
