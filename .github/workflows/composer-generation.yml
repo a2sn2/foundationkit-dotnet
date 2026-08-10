@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   generated-project:
-    name: Generate, reproduce, build, and test Composer scaffold
+    name: Generate, reproduce, build, and test Composer v1/v2 scaffolds
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +40,7 @@ jobs:
           --configuration Release
           --no-restore
 
-      - name: Generate repository-local golden project
+      - name: Generate repository-local v1 golden project
         run: >-
           dotnet run
           --project tools/FoundationKit.Composer
@@ -50,10 +50,10 @@ jobs:
           --output artifacts/composer-golden
           --foundation-root "$GITHUB_WORKSPACE"
 
-      - name: Prove deterministic force regeneration
+      - name: Prove deterministic v1 force regeneration
         shell: bash
         run: |
-          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-before.sha256
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v1-before.sha256
           dotnet run \
             --project tools/FoundationKit.Composer \
             --configuration Release \
@@ -62,10 +62,10 @@ jobs:
             --output artifacts/composer-golden \
             --foundation-root "$GITHUB_WORKSPACE" \
             --force
-          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-after.sha256
-          diff -u /tmp/composer-before.sha256 /tmp/composer-after.sha256
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v1-after.sha256
+          diff -u /tmp/composer-v1-before.sha256 /tmp/composer-v1-after.sha256
 
-      - name: Verify full generated layer set
+      - name: Verify full v1 generated layer set
         shell: bash
         run: |
           test -f artifacts/composer-golden/src/ComposerGolden.Domain/ComposerGolden.Domain.csproj
@@ -76,18 +76,78 @@ jobs:
           test -f artifacts/composer-golden/tests/ComposerGolden.Tests/ComposerGolden.Tests.csproj
           grep -Fq 'FoundationKit.Notifications.Smtp.csproj' artifacts/composer-golden/src/ComposerGolden.Infrastructure/ComposerGolden.Infrastructure.csproj
           grep -Fq 'FoundationKit.Auditing.csproj' artifacts/composer-golden/src/ComposerGolden.Application/ComposerGolden.Application.csproj
+          grep -Fq '"schemaVersion": 1' artifacts/composer-golden/foundationkit.project.json
 
-      - name: Restore generated solution
+      - name: Restore v1 generated solution
         run: dotnet restore artifacts/composer-golden/ComposerGolden.sln
 
-      - name: Build generated solution
+      - name: Build v1 generated solution
         run: >-
           dotnet build artifacts/composer-golden/ComposerGolden.sln
           --configuration Release
           --no-restore
 
-      - name: Test generated solution
+      - name: Test v1 generated solution
         run: >-
           dotnet test artifacts/composer-golden/ComposerGolden.sln
+          --configuration Release
+          --no-build
+
+      - name: Validate Composer v2 project model
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- validate docs/examples/foundationkit.project.v2.json
+
+      - name: Generate repository-local v2 project model
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.v2.json
+          --output artifacts/composer-v2
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic v2 force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.v2.json \
+            --output artifacts/composer-v2 \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-after.sha256
+          diff -u /tmp/composer-v2-before.sha256 /tmp/composer-v2-after.sha256
+
+      - name: Verify v2 project-model artifacts
+        shell: bash
+        run: |
+          test -f artifacts/composer-v2/PROJECT-MODEL.md
+          test -f artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+          test -f artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Agents/AgentDefinition.g.cs
+          grep -Fq '"schemaVersion": 2' artifacts/composer-v2/foundationkit.project.json
+          grep -Fq '"generatorContractVersion": "2"' artifacts/composer-v2/.foundationkit-generated.json
+          grep -Fq 'CustomerManager' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+          grep -Fq 'require-if-match' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+
+      - name: Restore v2 generated solution
+        run: dotnet restore artifacts/composer-v2/ComposerProjectModel.sln
+
+      - name: Build v2 generated solution
+        run: >-
+          dotnet build artifacts/composer-v2/ComposerProjectModel.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test v2 generated solution
+        run: >-
+          dotnet test artifacts/composer-v2/ComposerProjectModel.sln
           --configuration Release
           --no-build
