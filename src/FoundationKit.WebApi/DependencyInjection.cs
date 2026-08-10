@@ -1,3 +1,4 @@
+using FoundationKit.Application.Isolation;
 using FoundationKit.WebApi.Errors;
 using FoundationKit.WebApi.Middleware;
 using Microsoft.AspNetCore.Builder;
@@ -30,6 +31,14 @@ public static class DependencyInjection
                 context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
                 context.ProblemDetails.Extensions["correlationId"] =
                     context.HttpContext.TraceIdentifier;
+
+                var projectContext = context.HttpContext.RequestServices
+                    .GetService<IFoundationProjectContext>();
+                if (projectContext is not null)
+                {
+                    context.ProblemDetails.Extensions["projectId"] =
+                        projectContext.ProjectId.Value;
+                }
             };
         });
 
