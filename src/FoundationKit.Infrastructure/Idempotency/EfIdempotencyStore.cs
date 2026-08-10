@@ -6,11 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FoundationKit.Infrastructure.Idempotency;
 
-internal enum FoundationIdempotencyState
+internal static class FoundationIdempotencyStates
 {
-    InProgress = 0,
-    Completed = 1,
-    NonReplayable = 2
+    public const string InProgress = "InProgress";
+    public const string Completed = "Completed";
+    public const string NonReplayable = "NonReplayable";
 }
 
 internal sealed class FoundationIdempotencyEntry
@@ -19,7 +19,7 @@ internal sealed class FoundationIdempotencyEntry
     public required string OperationScope { get; set; }
     public required string KeyHash { get; set; }
     public required string RequestFingerprint { get; set; }
-    public FoundationIdempotencyState State { get; set; }
+    public required string State { get; set; }
     public DateTimeOffset AcquiredUtc { get; set; }
     public DateTimeOffset ReplayUntilUtc { get; set; }
     public DateTimeOffset? CompletedUtc { get; set; }
@@ -58,7 +58,7 @@ public static class FoundationIdempotencyModelBuilderExtensions
         entity.Property(entry => entry.OperationScope).HasMaxLength(IdempotencyAcquireRequest.MaximumOperationScopeLength).IsRequired();
         entity.Property(entry => entry.KeyHash).HasMaxLength(IdempotencyAcquireRequest.Sha256HexLength).IsFixedLength().IsRequired();
         entity.Property(entry => entry.RequestFingerprint).HasMaxLength(IdempotencyAcquireRequest.Sha256HexLength).IsFixedLength().IsRequired();
-        entity.Property(entry => entry.State).HasConversion<string>().HasMaxLength(24).IsRequired();
+        entity.Property(entry => entry.State).HasMaxLength(24).IsRequired();
         entity.Property(entry => entry.ResponseContentType).HasMaxLength(IdempotencyResponse.MaximumContentTypeLength);
         entity.Property(entry => entry.ResponseLocation).HasMaxLength(IdempotencyResponse.MaximumLocationLength);
         entity.Property(entry => entry.ResponseEntityTag).HasMaxLength(IdempotencyResponse.MaximumEntityTagLength);
@@ -95,7 +95,7 @@ public sealed class EfIdempotencyStore<TDbContext>(TDbContext dbContext) : IIdem
             OperationScope = normalized.OperationScope,
             KeyHash = normalized.KeyHash,
             RequestFingerprint = normalized.RequestFingerprint,
-            State = FoundationIdempotencyState.InProgress,
+            State = FoundationIdempotencyStates.InProgress,
             AcquiredUtc = normalized.AcquiredUtc,
             ReplayUntilUtc = normalized.ReplayUntilUtc
         };
@@ -140,10 +140,10 @@ public sealed class EfIdempotencyStore<TDbContext>(TDbContext dbContext) : IIdem
             ?? throw new InvalidOperationException("The acquired idempotency entry no longer exists.");
 
         EnsureOwner(entry, normalizedFingerprint);
-        if (entry.State != FoundationIdempotencyState.InProgress)
+        if (!string.Equals(entry.State, FoundationIdempotencyStates.InProgress, StringComparison.Ordinal))
             throw new InvalidOperationException("Only an in-progress idempotency entry can be completed.");
 
-        entry.State = FoundationIdempotencyState.Completed;
+        entry.State = FoundationIdempotencyStates.Completed;
         entry.CompletedUtc = completedUtc;
         entry.ResponseStatusCode = normalizedResponse.StatusCode;
         entry.ResponseContentType = normalizedResponse.ContentType;
@@ -170,9 +170,9 @@ public sealed class EfIdempotencyStore<TDbContext>(TDbContext dbContext) : IIdem
             return;
 
         EnsureOwner(entry, normalizedFingerprint);
-        if (entry.State == FoundationIdempotencyState.InProgress)
+        if (string.Equals(entry.State, FoundationIdempotencyStates.InProgress, StringComparison.Ordinal))
         {
-            entry.State = FoundationIdempotencyState.NonReplayable;
+            entry.State = FoundationIdempotencyStates.NonReplayable;
             entry.CompletedUtc = markedUtc;
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -204,15 +204,18 @@ public sealed class EfIdempotencyStore<TDbContext>(TDbContext dbContext) : IIdem
         if (!string.Equals(existing.RequestFingerprint, requestFingerprint, StringComparison.Ordinal))
             return IdempotencyAcquireResult.FingerprintConflict();
 
-        return existing.State switch
+        if (string.Equals(existing.State, FoundationIdempotencyStates.InProgress, StringComparison.Ordinal))
+            return IdempotencyAcquireResult.InProgress();
+        if (string.Equals(existing.State, FoundationIdempotencyStates.NonReplayable, StringComparison.Ordinal))
+            return IdempotencyAcquireResult.NonReplayable();
+        if (string.Equals(existing.State, FoundationIdempotencyStates.Completed, StringComparison.Ordinal))
         {
-            FoundationIdempotencyState.InProgress => IdempotencyAcquireResult.InProgress(),
-            FoundationIdempotencyState.NonReplayable => IdempotencyAcquireResult.NonReplayable(),
-            FoundationIdempotencyState.Completed when now <= existing.ReplayUntilUtc =>
-                IdempotencyAcquireResult.Replay(ToResponse(existing)),
-            FoundationIdempotencyState.Completed => IdempotencyAcquireResult.NonReplayable(),
-            _ => throw new InvalidOperationException("Unknown idempotency entry state.")
-        };
+            return now <= existing.ReplayUntilUtc
+                ? IdempotencyAcquireResult.Replay(ToResponse(existing))
+                : IdempotencyAcquireResult.NonReplayable();
+        }
+
+        throw new InvalidOperationException("Unknown idempotency entry state.");
     }
 
     private static IdempotencyResponse ToResponse(FoundationIdempotencyEntry entry)
