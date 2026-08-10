@@ -23,6 +23,7 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] runtime OpenAPI as canonical serialized transport contract for derived client artifacts.
 - [x] deterministic OpenAPI-to-Postman generation with exact committed-artifact drift detection in CI.
 - [x] unified module capability composition with declared/effective separation, dependency closure, fluent cross-cutting capability intent, deterministic registry snapshots, and Workbench runtime discovery.
+- [x] durable/replay-safe HTTP idempotency behind the Phase 7 contract using provider-neutral Application contracts, a relational EF adapter, bounded WebApi replay orchestration, consumer-owned schema, and Workbench SQL replay/fingerprint proof.
 
 ## Next backend/platform families
 
@@ -35,7 +36,6 @@ These remain evidence-driven and are not automatically packages:
 - [ ] jobs, durable messaging, outbox/inbox;
 - [ ] webhooks and realtime;
 - [ ] distributed caching provider;
-- [ ] durable/replay-safe idempotency implementation behind the Phase 7 HTTP contract;
 - [ ] external HTTP resilience conventions;
 - [ ] search, reporting, import/export;
 - [ ] privacy/PII, retention/anonymization;
