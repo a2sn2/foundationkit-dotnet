@@ -30,7 +30,7 @@ public sealed class CoreCrudValidator :
     public ValueTask<IReadOnlyList<ValidationFailure>> ValidateAsync(
         CoreCrudCreateRequest instance,
         CancellationToken cancellationToken = default) =>
-        ValueTask.FromResult(ValidateName(instance.Name));
+        ValueTask.FromResult<IReadOnlyList<ValidationFailure>>(ValidateName(instance.Name));
 
     public ValueTask<IReadOnlyList<ValidationFailure>> ValidateAsync(
         CoreCrudUpdateRequest instance,
@@ -48,7 +48,7 @@ public sealed class CoreCrudValidator :
         return ValueTask.FromResult<IReadOnlyList<ValidationFailure>>(failures);
     }
 
-    private static IReadOnlyList<ValidationFailure> ValidateName(string? name)
+    private static ValidationFailure[] ValidateName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -66,7 +66,7 @@ public sealed class CoreCrudValidator :
                 "Name cannot exceed 120 characters.")];
         }
 
-        return Array.Empty<ValidationFailure>();
+        return [];
     }
 }
 
