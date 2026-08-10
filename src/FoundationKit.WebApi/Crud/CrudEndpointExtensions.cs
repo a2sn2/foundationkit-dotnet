@@ -28,8 +28,11 @@ public static class CrudEndpointExtensions
             $"Module '{module.Name}' does not enable CRUD.");
 
         var group = endpoints.MapGroup($"/api/{module.Route}").WithTags(module.Name);
-        if (module.HasCapability(FoundationModuleCapabilities.Authorization))
-            group.RequireAuthorization();
+        if (module.HasCapability(FoundationModuleCapabilities.Authorization) &&
+            !string.IsNullOrWhiteSpace(module.AuthorizationPolicyPrefix))
+        {
+            group.RequireAuthorization(module.AuthorizationPolicyPrefix);
+        }
 
         if (options.ListEnabled)
         {

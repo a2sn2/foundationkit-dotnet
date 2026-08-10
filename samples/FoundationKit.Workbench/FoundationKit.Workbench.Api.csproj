@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Settings\FoundationKit.Settings.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.FeatureManagement\FoundationKit.FeatureManagement.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Localization\FoundationKit.Localization.csproj" />
