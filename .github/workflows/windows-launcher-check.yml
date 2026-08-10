@@ -319,7 +319,7 @@ jobs:
           if (-not $unified.Contains("start -Target Madar -Mode Native")) {
             throw "Unified help does not document Madar Native start."
           }
-          if (-not $login.Contains("<form @onsubmit=\"LoginAsync\" @onsubmit:preventDefault>")) {
+          if (-not $login.Contains('<form @onsubmit="LoginAsync" @onsubmit:preventDefault>')) {
             throw "Madar login must keep password controls inside form semantics."
           }
           if (-not $index.Contains('rel="icon" type="image/svg+xml" href="favicon.svg"')) {
