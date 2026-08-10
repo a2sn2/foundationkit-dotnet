@@ -24,6 +24,7 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] deterministic OpenAPI-to-Postman generation with exact committed-artifact drift detection in CI.
 - [x] unified module capability composition with declared/effective separation, dependency closure, fluent cross-cutting capability intent, deterministic registry snapshots, and Workbench runtime discovery.
 - [x] durable/replay-safe HTTP idempotency behind the Phase 7 contract using provider-neutral Application contracts, a relational EF adapter, bounded WebApi replay orchestration, consumer-owned schema, and Workbench SQL replay/fingerprint proof.
+- [x] Composer schema v2 project model for Project → Modules → Resources → Behaviors → Overrides → API, mapped back into the canonical capability graph and generated deterministically while preserving schema v1 generation/build/test compatibility.
 
 ## Next backend/platform families
 
@@ -46,10 +47,10 @@ These remain evidence-driven and are not automatically packages:
 
 - [x] derive deterministic Postman evidence from the runtime/OpenAPI contract source of truth.
 - [ ] derive a future typed-client artifact from the same runtime/OpenAPI contract when the frontend phase begins.
-- [ ] Composer manifest model for Project → Modules → Resources → Capabilities → Providers → Overrides → API.
+- [x] Composer manifest model for Project → Modules → Resources → Behaviors → Providers → Overrides → API.
 - [ ] generated-project proof for Database + CRUD + Validation + Authorization + Audit + API + OpenAPI + Postman.
 - [ ] concurrent project-isolation and compatible legacy-consumer proof.
-- [ ] visual Workbench composer using the same deterministic engine.
+- [ ] visual Workbench/Studio composer using the same schema-v2 deterministic engine.
 - [ ] first-party frontend template/design system after backend phases are stable.
 
 ## Definition of done
