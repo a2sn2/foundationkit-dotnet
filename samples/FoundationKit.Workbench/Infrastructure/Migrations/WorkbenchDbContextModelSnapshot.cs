@@ -63,6 +63,26 @@ public partial class WorkbenchDbContextModelSnapshot : ModelSnapshot
             entity.ToTable("CoreCrudRecords");
         });
 
+        modelBuilder.Entity("FoundationKit.Infrastructure.Idempotency.FoundationIdempotencyEntry", entity =>
+        {
+            entity.Property<string>("ProjectId").HasMaxLength(64).HasColumnType("nvarchar(64)");
+            entity.Property<string>("OperationScope").HasMaxLength(160).HasColumnType("nvarchar(160)");
+            entity.Property<string>("KeyHash").IsFixedLength().HasMaxLength(64).HasColumnType("nchar(64)");
+            entity.Property<string>("RequestFingerprint").IsRequired().IsFixedLength().HasMaxLength(64).HasColumnType("nchar(64)");
+            entity.Property<string>("State").IsRequired().HasMaxLength(24).HasColumnType("nvarchar(24)");
+            entity.Property<DateTimeOffset>("AcquiredUtc").HasColumnType("datetimeoffset");
+            entity.Property<DateTimeOffset>("ReplayUntilUtc").HasColumnType("datetimeoffset");
+            entity.Property<DateTimeOffset?>("CompletedUtc").HasColumnType("datetimeoffset");
+            entity.Property<int?>("ResponseStatusCode").HasColumnType("int");
+            entity.Property<string>("ResponseContentType").HasMaxLength(128).HasColumnType("nvarchar(128)");
+            entity.Property<byte[]>("ResponseBody").HasColumnType("varbinary(max)");
+            entity.Property<string>("ResponseLocation").HasMaxLength(2048).HasColumnType("nvarchar(2048)");
+            entity.Property<string>("ResponseEntityTag").HasMaxLength(256).HasColumnType("nvarchar(256)");
+            entity.HasKey("ProjectId", "OperationScope", "KeyHash");
+            entity.HasIndex("ReplayUntilUtc");
+            entity.ToTable("FoundationIdempotencyEntries");
+        });
+
         modelBuilder.Entity("FoundationKit.Workbench.Domain.AdminReview", entity =>
         {
             entity.HasOne("FoundationKit.Workbench.Domain.BuildBrief", null)

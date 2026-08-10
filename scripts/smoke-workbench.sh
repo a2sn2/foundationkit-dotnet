@@ -78,7 +78,7 @@ review_response="$(curl --fail --silent \
 echo "$review_response" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"status":"approved"'
 
-# Mutating API operations prove a declared idempotency-key contract.
+# Mutating API operations prove the declared idempotency-key contract before durable acquisition.
 idempotency_status="$(curl --silent --output /tmp/core-crud-idempotency.json --write-out '%{http_code}' \
   -H 'Content-Type: application/json' \
   -d '{"name":"Missing Key"}' \
@@ -106,7 +106,7 @@ grep -q 'Foundation.Crud.Validation' /tmp/core-crud-annotation.json
 grep -q 'Name' /tmp/core-crud-annotation.json
 grep -q 'foundationkit-workbench' /tmp/core-crud-annotation.json
 
-# API Engine -> generic CRUD service -> EF -> SQL.
+# API Engine -> durable idempotency -> generic CRUD service -> EF -> SQL.
 crud_create="$(curl --fail --silent -D /tmp/core-crud-create.headers \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: create-core-crud' \
@@ -115,6 +115,26 @@ crud_create="$(curl --fail --silent -D /tmp/core-crud-create.headers \
 crud_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$crud_create")"
 echo "$crud_create" | grep -q '"version":1'
 grep -qi '^etag: "1"' /tmp/core-crud-create.headers
+
+# Same key + same fingerprint replays the exact create result instead of inserting another row.
+crud_create_replay="$(curl --fail --silent -D /tmp/core-crud-create-replay.headers \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: create-core-crud' \
+  -d '{"name":"CI Core CRUD"}' \
+  "$base_url/api/core-crud")"
+replayed_crud_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$crud_create_replay")"
+test "$replayed_crud_id" = "$crud_id"
+echo "$crud_create_replay" | grep -q '"version":1'
+grep -qi '^etag: "1"' /tmp/core-crud-create-replay.headers
+
+# Same key cannot be silently reused for changed request data.
+create_conflict_status="$(curl --silent --output /tmp/core-crud-create-fingerprint.json --write-out '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: create-core-crud' \
+  -d '{"name":"Changed Body"}' \
+  "$base_url/api/core-crud")"
+test "$create_conflict_status" = "409"
+grep -q 'Foundation.Api.Idempotency.FingerprintConflict' /tmp/core-crud-create-fingerprint.json
 
 curl --fail --silent -D /tmp/core-crud-get.headers "$base_url/api/core-crud/$crud_id" | grep -q 'CI Core CRUD'
 grep -qi '^etag: "1"' /tmp/core-crud-get.headers
@@ -148,6 +168,28 @@ echo "$crud_update" | grep -q 'CI Core CRUD Updated'
 echo "$crud_update" | grep -q '"version":2'
 grep -qi '^etag: "2"' /tmp/core-crud-update.headers
 
+# Replay happens before the now-stale If-Match reaches the application service, so version stays 2.
+crud_update_replay="$(curl --fail --silent -D /tmp/core-crud-update-replay.headers -X PUT \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: update-core-crud' \
+  -H 'If-Match: "1"' \
+  -d '{"name":"CI Core CRUD Updated"}' \
+  "$base_url/api/core-crud/$crud_id")"
+echo "$crud_update_replay" | grep -q '"version":2'
+grep -qi '^etag: "2"' /tmp/core-crud-update-replay.headers
+
+# If-Match is part of the fingerprint: changing it under the same key is a conflict, not a new update.
+update_fingerprint_status="$(curl --silent --output /tmp/core-crud-update-fingerprint.json --write-out '%{http_code}' -X PUT \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: update-core-crud' \
+  -H 'If-Match: "2"' \
+  -d '{"name":"CI Core CRUD Updated"}' \
+  "$base_url/api/core-crud/$crud_id")"
+test "$update_fingerprint_status" = "409"
+grep -q 'Foundation.Api.Idempotency.FingerprintConflict' /tmp/core-crud-update-fingerprint.json
+
+curl --fail --silent "$base_url/api/core-crud/$crud_id" | grep -q '"version":2'
+
 precondition_status="$(curl --silent --output /tmp/core-crud-precondition.json --write-out '%{http_code}' -X PUT \
   -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: stale-core-crud' \
@@ -180,10 +222,17 @@ manager_status="$(curl --silent --output /tmp/core-crud-manager.json --write-out
 test "$manager_status" = "422"
 grep -q 'CoreCrud.Name.Reserved' /tmp/core-crud-manager.json
 
-curl --fail --silent --output /dev/null -X DELETE \
+# Delete is replay-safe too: the second attempt stays 204 instead of executing again and becoming 404.
+delete_status="$(curl --silent --output /dev/null --write-out '%{http_code}' -X DELETE \
   -H 'Idempotency-Key: delete-core-crud' \
-  "$base_url/api/core-crud/$crud_id"
+  "$base_url/api/core-crud/$crud_id")"
+test "$delete_status" = "204"
+delete_replay_status="$(curl --silent --output /dev/null --write-out '%{http_code}' -X DELETE \
+  -H 'Idempotency-Key: delete-core-crud' \
+  "$base_url/api/core-crud/$crud_id")"
+test "$delete_replay_status" = "204"
+
 missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
 test "$missing_status" = "404"
 
-echo "Workbench SQL workflow plus module composition/API Engine validation/idempotency/ETag/If-Match/filter/sort/CRUD/error-contract proof passed."
+echo "Workbench SQL workflow plus durable replay-safe idempotency/module composition/API Engine proof passed."

@@ -8,6 +8,7 @@ using FoundationKit.Caching;
 using FoundationKit.FeatureManagement;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
+using FoundationKit.Infrastructure.Idempotency;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Infrastructure.Platform;
 using FoundationKit.Localization;
@@ -83,6 +84,7 @@ builder.Services.AddDbContext<WorkbenchDbContext>((serviceProvider, options) =>
         sqlServer.MigrationsAssembly(typeof(WorkbenchDbContext).Assembly.FullName));
     options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
 });
+builder.Services.AddFoundationEfIdempotencyStore<WorkbenchDbContext>();
 
 builder.Services.AddScoped<IRepository<BuildBrief, Guid>, EfRepository<BuildBrief, Guid, WorkbenchDbContext>>();
 builder.Services.AddScoped<IRepository<AdminReview, Guid>, EfRepository<AdminReview, Guid, WorkbenchDbContext>>();

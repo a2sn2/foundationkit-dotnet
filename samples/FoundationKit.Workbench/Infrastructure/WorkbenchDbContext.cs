@@ -1,3 +1,4 @@
+using FoundationKit.Infrastructure.Idempotency;
 using FoundationKit.Workbench.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(WorkbenchDbContext).Assembly);
+        modelBuilder.AddFoundationIdempotencyStore();
         base.OnModelCreating(modelBuilder);
     }
 }

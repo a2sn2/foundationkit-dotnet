@@ -1,5 +1,6 @@
 using FoundationKit.Application.Isolation;
 using FoundationKit.WebApi.Errors;
+using FoundationKit.WebApi.Idempotency;
 using FoundationKit.WebApi.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +20,9 @@ public static class DependencyInjection
         services.AddOptions<FoundationErrorHandlingOptions>();
         if (configureErrorHandling is not null)
             services.Configure(configureErrorHandling);
+
+        services.AddOptions<FoundationIdempotencyOptions>();
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFoundationExceptionMapper, DefaultFoundationExceptionMapper>());
@@ -42,6 +46,16 @@ public static class DependencyInjection
             };
         });
 
+        return services;
+    }
+
+    public static IServiceCollection ConfigureFoundationIdempotency(
+        this IServiceCollection services,
+        Action<FoundationIdempotencyOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+        services.Configure(configure);
         return services;
     }
 
@@ -76,6 +90,7 @@ public static class DependencyInjection
             }
         });
         app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseMiddleware<FoundationIdempotencyMiddleware>();
         return app;
     }
 }

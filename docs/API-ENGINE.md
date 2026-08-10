@@ -1,20 +1,14 @@
 # FoundationKit API Engine
 
-## Problem
+## Purpose
 
-A reusable backend foundation is incomplete if every consumer still rebuilds route composition, request parsing, pagination, filtering syntax, validation boundaries, error contracts, concurrency headers, idempotency headers, security metadata, and OpenAPI plumbing.
+FoundationKit treats repeated HTTP behavior as part of the module/platform contract rather than controller plumbing that every consumer rewrites. The API Engine composes explicit application contracts into bounded routes, validation, Problem Details, pagination/filter/sort transport rules, security metadata, concurrency preconditions, idempotency metadata, and runtime OpenAPI.
 
-FoundationKit therefore treats HTTP behavior as part of the module contract rather than as controller boilerplate owned independently by each application.
+The engine does not replace product business logic. Request/response DTOs, allowed query fields, semantic authorization, concurrency comparison, managers/handlers, and persistence mappings remain explicit seams.
 
-## Evidence
+## Module API configuration
 
-The Phase 1–6 CRUD vertical slice proved that the existing Domain, Application, Infrastructure, WebApi, Authorization, Auditing, validation, Result/Error, EF Core, and Workbench boundaries can execute one full SQL-backed resource lifecycle. Phase 7 hardens that repeated HTTP surface instead of adding another runtime package.
-
-## Scope
-
-Phase 7 extends the existing `FoundationKit.Application`, `FoundationKit.Infrastructure`, and `FoundationKit.WebApi` packages. Package count remains 17.
-
-A module can configure API behavior alongside CRUD:
+A resource can configure API behavior alongside CRUD:
 
 ```csharp
 module
@@ -30,69 +24,63 @@ module
     });
 ```
 
-The default route remains `/api/{module-route}` for compatibility.
+The compatibility default remains `/api/{module-route}`.
 
-## Request and response contract
+## Explicit contracts
 
-The generic CRUD API continues to expose create/read/list/update/delete through the configured module route. Request DTOs remain explicit application contracts; FoundationKit does not bind arbitrary entity properties or perform reflection-based over-posting.
+The generic CRUD API maps create/read/list/update/delete over explicit request/response types. FoundationKit does not bind arbitrary entity properties and does not infer writable/filterable fields through unsafe reflection.
 
-Expected application failures use `Result` / `Result<T>` and the centralized FoundationKit Problem Details contract. Unexpected runtime exceptions continue through `FoundationExceptionHandler` with safe public output and correlation-based diagnostics.
+Expected application failures use `Result` / `Result<T>` and the centralized FoundationKit Problem Details contract. Unexpected exceptions continue through `FoundationExceptionHandler` with safe output and correlation diagnostics.
 
 ## Structural validation
 
-Simple field constraints use the existing `DataAnnotationsValidator<T>` default. Attributes such as `Required`, `StringLength`, `Range`, and `RegularExpression` therefore do not require a second hand-written validator.
+Simple field constraints use `DataAnnotationsValidator<T>` by default. Cross-field, contextual, asynchronous, or external validation can replace that with an explicit `IValidator<T>`. Domain entities still protect true domain invariants independently of HTTP binding.
 
-A custom `IValidator<T>` remains appropriate for cross-field, contextual, asynchronous, or external validation. Domain entities must still protect true invariants in their own methods because entities can be created or mutated outside HTTP request binding.
+## Pagination, filtering, and sorting
 
-## Pagination
+List endpoints accept positive `page` and `pageSize`; page size is bounded by both Core and module limits.
 
-List endpoints accept:
-
-- `page` — positive integer, default `1`;
-- `pageSize` — positive integer, bounded by both the Core maximum and module maximum.
-
-Invalid values return the standard validation Problem Details response rather than relying on consumer-specific controller logic.
-
-## Filtering
-
-The transport syntax is bounded and owned by Core:
+Filter syntax is:
 
 ```text
 ?filter=field|operator|value
 ```
 
-Multiple `filter` parameters are allowed up to the module's `MaximumFilters`.
+Supported transport operators are `eq`, `ne`, `contains`, `startswith`, `endswith`, `gt`, `gte`, `lt`, and `lte`.
 
-Built-in operator identifiers are:
-
-```text
-eq
-ne
-contains
-startswith
-endswith
-gt
-gte
-lt
-lte
-```
-
-FoundationKit deliberately does **not** reflect over entity properties to decide what can be queried. Field semantics belong to an explicit `ICrudQueryPolicy<TEntity,TId>` supplied by the module. The default policy rejects filtering and sorting. This prevents accidental exposure of persistence fields and keeps authorization/data-scope decisions visible.
-
-## Sorting
-
-The transport syntax is:
+Sort syntax is:
 
 ```text
 ?sort=field|asc
 ?sort=field|desc
 ```
 
-Multiple sort expressions are bounded by `MaximumSorts`. As with filtering, allowed fields and their expression mapping are owned by the module query policy.
+FoundationKit owns parsing/bounds only. `ICrudQueryPolicy<TEntity,TId>` owns which fields are valid and how they map to expressions. The default policy rejects filtering/sorting, preventing accidental exposure of persistence fields.
 
-## Idempotency contract
+## Concurrency
 
-Mutating operations can declare one of:
+API concurrency modes are:
+
+```text
+ApplicationPolicy
+RequireIfMatch
+```
+
+With `RequireIfMatch`, update requires one bounded `If-Match` header. The token becomes `CrudConcurrencyPrecondition` and is passed separately to the concurrency policy; it is intentionally not duplicated inside the update JSON DTO.
+
+A module may register `IFoundationApiEntityTagProvider<TRead>` to emit ETags on create/read/update.
+
+Relevant outcomes include:
+
+- `412 Precondition Failed` when the supplied token does not match current state;
+- `428 Precondition Required` when a required precondition is missing;
+- `409 Conflict` for other application/provider conflicts.
+
+The original two-argument `ICrudConcurrencyPolicy<TEntity,TUpdate>.Validate(entity, request)` contract is preserved, while the richer default-interface overload accepts an optional HTTP precondition.
+
+## Idempotency — HTTP contract
+
+Mutating operations declare:
 
 ```text
 Disabled
@@ -100,119 +88,133 @@ Optional
 Required
 ```
 
-When required, `Idempotency-Key` is validated at the API boundary and is emitted as a required OpenAPI header. Exactly one non-empty bounded header value is accepted.
+The API boundary validates exactly one bounded `Idempotency-Key` when required and reflects requiredness in OpenAPI. This contract was established before durable replay existed, so consumers that do not install a durable store retain header validation without a false replay guarantee.
 
-**Phase 7 does not claim durable request replay or duplicate-result storage.** It establishes the HTTP contract and operation metadata only. Durable/replay-safe idempotency requires a persistence/provider boundary and belongs to the later reliability capability phase.
+## Idempotency — durable replay
 
-This distinction is intentional: accepting a header is not the same as implementing idempotency.
+Phase 10 adds an opt-in durable implementation while retaining the Phase 7 API contract.
 
-## Concurrency and HTTP preconditions
-
-Concurrency has two API modes:
+The existing packages own the layers:
 
 ```text
-ApplicationPolicy
-RequireIfMatch
+Application    → IIdempotencyStore contracts
+Infrastructure → provider-neutral relational EF adapter
+WebApi         → request fingerprint/acquire/replay orchestration
+Consumer       → provider selection + schema/migration + operations
 ```
 
-With `RequireIfMatch`, updates require the `If-Match` header. The token is represented as `CrudConcurrencyPrecondition` and is passed separately to `ICrudConcurrencyPolicy<TEntity,TUpdate>`.
+A relational consumer opts in with:
 
-The token is intentionally **not** copied into the JSON update DTO. There is one source of truth for the HTTP precondition.
+```csharp
+builder.Services.AddFoundationEfIdempotencyStore<MyDbContext>();
+```
 
-A module may register `IFoundationApiEntityTagProvider<TRead>` to emit an `ETag` on successful create/read/update responses. The module concurrency policy owns comparison semantics because FoundationKit cannot infer a product's version token safely.
+and includes:
 
-Relevant HTTP responses are:
+```csharp
+modelBuilder.AddFoundationIdempotencyStore();
+```
 
-- `412 Precondition Failed` — supplied token does not match the current resource state;
-- `428 Precondition Required` — required `If-Match` is missing;
-- `409 Conflict` — provider/application concurrency conflict outside the explicit HTTP precondition path remains available.
+inside its own model before creating its application-owned migration.
+
+The durable identity is project scoped:
+
+```text
+ProjectId + operation scope + SHA256(Idempotency-Key)
+```
+
+The persisted request fingerprint covers method, actual path/query, content type, `If-Match` when applicable, and SHA-256 of the body. Raw idempotency keys and raw request bodies are not stored.
+
+Durable acquisition outcomes are:
+
+- `Acquired`;
+- `Replay`;
+- `FingerprintConflict`;
+- `InProgress`;
+- `NonReplayable`.
+
+A replayable response stores bounded status/body/content type/Location/ETag. Exact retry within the replay window returns that response without invoking the application mutation again. Same key with changed body/path/query/content type/precondition is a `409` fingerprint conflict.
+
+Indeterminate behavior is fail-closed: exceptions, `5xx`, oversized replay responses, or unsafe finalization are not automatically executed again under the same key. This is replay-safe HTTP idempotency, **not** a distributed exactly-once claim. See `DURABLE-IDEMPOTENCY.md`.
+
+The original `AddFoundationWebApi(IServiceCollection, Action<FoundationErrorHandlingOptions>?)` CLR signature is preserved. Durable settings use the additive `ConfigureFoundationIdempotency(...)` extension, and applications without an `IIdempotencyStore` keep the previous behavior.
 
 ## Security metadata
 
-`FoundationApiOperationMetadata` is attached to generated CRUD endpoints and records:
+`FoundationApiOperationMetadata` records module, operation, method/route, authorization intent/policy, rate-limit policy, idempotency mode, and concurrency mode.
 
-- module name;
-- CRUD operation;
-- HTTP method and route;
-- authorization intent and policy name;
-- rate-limit policy name;
-- idempotency mode;
-- concurrency mode.
+Declared ASP.NET authorization policies are attached to route groups. Semantic authorization remains fail-closed when declared without an explicit `ICrudAuthorizationPolicy`. Rate-limit registration remains host-owned because actual limits are environment/product decisions.
 
-If a module declares an ASP.NET authorization policy, the route group requires it. If a module declares semantic authorization but no `ICrudAuthorizationPolicy`, the existing fail-closed policy remains in force.
+Durable replay is inside the standard Foundation response pipeline so security headers, status handling, exception handling, and correlation behavior are not bypassed.
 
-A configured rate-limit policy name is attached through ASP.NET Core endpoint metadata. The host still owns registration of the concrete rate-limit policy because limits are environment/product decisions.
+## OpenAPI and derived contracts
 
-## OpenAPI
+Generated endpoints expose ApiExplorer metadata for request/response schemas, route/query parameters, headers, requiredness, and Problem Details outcomes.
 
-The generic endpoint mapper provides ApiExplorer metadata for:
+Workbench CI captures the **running** Swagger document and verifies it structurally. That runtime OpenAPI document is the canonical serialized transport contract. Phase 8 derives the committed Postman collection deterministically from it and CI proves:
 
-- create/update JSON request schemas;
-- read/create/update/list response schemas;
-- path parameters;
-- `page`, `pageSize`, `filter`, and `sort` query parameters;
-- `Idempotency-Key` and `If-Match` headers, including requiredness implied by module configuration;
-- standard Problem Details responses including `409`, `412`, `422`, and `428` where applicable.
+```text
+runtime OpenAPI
+→ generate Postman A
+→ generate Postman B
+→ A == B byte-for-byte
+→ A == committed generated artifact
+→ --check synchronized
+```
 
-Workbench CI captures the real runtime Swagger document and verifies its structure. Phase 8 will make OpenAPI the derivation input for deterministic Postman and later typed-client artifacts so those representations cannot drift independently.
+Postman is therefore a derived representation, not an independent source of request truth. A future typed frontend client must use the same one-way contract path.
 
-## API impact and compatibility
+## Compatibility and migration
 
-Phase 7 is additive to the reusable Core surface. Existing modules that do not call `.Api(...)` retain the default `/api/{route}`, disabled idempotency-header requirement, and application-level concurrency behavior.
+API Engine evolution remains additive on the pre-1.0 Core vNext surface:
 
-The existing two-argument `ICrudConcurrencyPolicy<TEntity,TUpdate>.Validate(entity, request)` contract is preserved. A new default interface overload accepts `CrudConcurrencyPrecondition?` and forwards to the original method unless the consumer overrides it. This means an existing concurrency policy continues to compile and behave as before, while a module that opts into HTTP preconditions can override the richer overload.
+- modules not configuring API options retain default routing/concurrency/idempotency behavior;
+- legacy concurrency policies continue through the preserved two-argument contract;
+- existing `AddFoundationWebApi` consumers retain the same CLR method signature;
+- durable idempotency is opt-in;
+- adopting the relational adapter requires an additive host-owned migration;
+- no package #18 is introduced;
+- package version, capability contract version, and maturity remain separate concepts.
 
-The Workbench reference DTO intentionally moves its version token from JSON to the standards-based `If-Match` header. Workbench is executable reference evidence, not a published application contract.
+Consumers adopting HTTP preconditions should remove duplicate expected-version transport fields, require `If-Match`, implement the richer concurrency policy overload, and emit ETags where appropriate.
 
-## Contract versioning and migration
+Consumers adopting durable idempotency should register a store, add the model mapping, create their own migration, select replay/body limits, and define operational retention/reconciliation policy for non-replayable/expired entries.
 
-The current packages remain pre-1.0 `0.1.0`; Core vNext is still an unreleased compatibility surface. No stable 1.0 guarantee is claimed by this phase.
+## Runtime evidence
 
-No migration is required for an existing module that keeps its current API defaults and two-argument concurrency policy.
+The Workbench SQL reference proves the full stack:
 
-Migration for a module **choosing** HTTP preconditions:
+```text
+module configuration
+→ API Engine metadata
+→ durable idempotency acquisition
+→ CRUD application service
+→ EF Core
+→ SQL Server
+→ HTTP response
+→ durable completion/replay
+```
 
-1. remove duplicated expected-version fields from the transport DTO when they only represent HTTP concurrency;
-2. configure `api.Concurrency = RequireIfMatch`;
-3. override the richer concurrency-policy overload that receives `CrudConcurrencyPrecondition`;
-4. register an `IFoundationApiEntityTagProvider<TRead>` when ETags should be returned;
-5. send the ETag back through `If-Match` on updates.
+The smoke suite proves missing/ambiguous headers, DataAnnotations, CRUD, ETag/If-Match, filter/sort policy, manager rejection, Problem Details, create replay with the same ID, update replay without a second version increment, fingerprint conflict when body or `If-Match` changes, and delete replay remaining `204` instead of re-executing.
 
-## Tests
+## Acceptance gate
 
-Tests focus on FoundationKit boundaries rather than retesting framework annotations. Required evidence includes:
-
-- module API option bounds;
-- legacy two-argument concurrency-policy source compatibility;
-- generic application-service compatibility;
-- Problem Details/error-type mapping;
-- runtime OpenAPI structure;
-- SQL-backed DataAnnotations validation;
-- required idempotency header behavior;
-- ETag emission;
-- missing and stale `If-Match` behavior;
-- module-owned filter/sort behavior;
-- unsupported filter rejection;
-- existing authorization, manager, auditing, CRUD, project-isolation, package, security, and Composer regression gates.
-
-## CI and acceptance criteria
-
-Phase 7 is complete only when the exact PR head proves:
+An API Engine/reliability increment is complete only when the exact PR head proves:
 
 ```text
 Repository verification
 → Release build
-→ Core tests
-→ Workbench tests
-→ Catalog drift check
-→ 17 package + 17 symbol-package integrity
-→ Composer generation regression
+→ Core + Workbench tests
+→ generated catalog checks
+→ exactly 17 packages + 17 symbol packages
+→ Composer regression
 → Security scan
 → CodeQL
 → Windows manager check
-→ Workbench SQL Server startup
-→ runtime OpenAPI structural verification
-→ API Engine HTTP/SQL smoke
+→ Workbench SQL Server startup/migrations
+→ runtime OpenAPI verification
+→ deterministic Postman drift gate
+→ API/SQL positive and negative smoke
 ```
 
-A green unit test alone is not sufficient evidence for this phase.
+Green unit tests alone are not sufficient evidence.
