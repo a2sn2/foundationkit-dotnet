@@ -79,7 +79,8 @@ public static class CompositionAnalyzer
 
         foreach (var id in manifest.ResourceCapabilityIds)
         {
-            if (!catalog.TryGetValue(id, out var capability) || capability.Kind != CapabilityKind.Runtime)
+            if (!catalog.TryGetValue(id, out var capability) ||
+                capability.Kind is CapabilityKind.Provider or CapabilityKind.Tooling)
             {
                 throw new ComposerManifestException(
                     $"Resource behavior maps to invalid runtime capability '{id}'.");
