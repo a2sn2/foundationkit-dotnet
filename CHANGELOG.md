@@ -1,85 +1,21 @@
 # Changelog
 
-All notable repository and package changes are documented here.
+All notable FoundationKit Core changes are recorded here. Repository history before the Core-only refocus remains available through Git, but removed application-specific release notes are not part of the active product documentation.
 
-## [Unreleased]
+## Unreleased — Core vNext
 
-### FoundationKit Core v0.1
+- Refocused the repository on FoundationKit Core, Composer, and Workbench.
+- Added immutable `FoundationProjectId`, host-local project context, and canonical project-scoped resource namespacing.
+- Added project-isolation, SemVer, capability-contract, migration, and deprecation rules.
+- Added Module/Service Engine v1 definitions and host-local registry.
+- Added generic CRUD application orchestration over existing repository/UoW/specification/validation/result contracts.
+- Added explicit mapper, manager, authorization, concurrency, and operation-observer extension points.
+- Added fail-closed CRUD authorization when authorization is declared without an explicit semantic policy.
+- Added EF concurrency translation and generic CRUD endpoint mapping.
+- Added a Workbench SQL vertical proof for CRUD create/read/list/update/delete, concurrency conflict, manager override, auditing seam, OpenAPI, and Problem Details.
+- Strengthened Core-only repository verification and CI.
 
-- Expanded the reusable output from the original five architectural packages to the current **17 NuGet packages + 17 symbol packages** through evidence-driven optional/reference capabilities.
-- Added Auditing, Security, Identity, Authorization, Workflow, Approvals, Notifications, SMTP, Settings, Feature Management, Localization, and Caching without moving product schemas/policies into the reusable foundation.
-- Added Capability Model v1, seven composition profiles, strict project manifests, dependency resolution, exact capability contract-version compatibility, and machine-readable maturity evidence.
-- Added `FoundationKit.Composer` composition discovery, validation, explanation, and deterministic manifest-driven project generation.
-- Closed **FoundationKit Core v0.1 Composable Baseline** without creating a speculative eighteenth runtime package.
+## 0.1.0
 
-### Composer
-
-- Added `new <manifest.json> --output <directory>` as the deterministic project-generation engine over the existing strict capability graph.
-- Added `new --interactive --output <directory>` as a thin questionnaire over the same manifest/analyzer/generator path, with canonical profile/capability/provider selection, dependency-first preview, cancellation, and explicit confirmation before writes.
-- Added package-reference output for portable dependency declarations and `--foundation-root` project-reference mode for repository-local exact-head verification.
-- Added bounded Domain/Application/Infrastructure/API/Client/Test scaffolding, a normalized manifest, generated ownership marker, README, and architecture/decision report.
-- Added guarded `--force` regeneration that refuses unowned or user-added files instead of deleting arbitrary non-empty directories.
-- Added golden generation tests and a dedicated CI workflow that proves byte-stable regeneration, then restores, builds, and tests the generated solution.
-- Added automated interactive-session tests covering successful generation, invalid selection retry, confirmation cancellation, stable-only fail-closed behavior, and manifest/interactive mutual exclusion.
-- Kept visual Workbench composition, business-domain templates, and speculative runtime package generation outside this slice.
-
-### Workbench
-
-- Established `FoundationKit.Workbench` as the executable architecture/reference consumer with connected User/Admin SQL-backed vertical slices.
-- Added Blazor/MudBlazor, typed contracts/clients, Swagger/Postman, SQL Server migrations, Docker integration, and GitHub Pages reference surfaces.
-- Added runtime consumer evidence for Settings, Feature Management, Localization, and Caching.
-
-### Athar
-
-- Added the complete Arabic reference product under `examples/Athar` with Domain/Application/Infrastructure/Contracts/API/Blazor projects.
-- Added ASP.NET Core Identity, secure cookie authentication, account lifecycle, MFA, authorization, maker-checker, anti-CSRF, rate limiting, idempotency, optimistic concurrency, auditing, notifications/SMTP, SQL Server migrations, readiness, Docker, E2E, and backup/restore verification.
-- Adopted reusable Security, Identity, Authorization, Workflow, Approvals, Auditing, Notifications, and SMTP boundaries while keeping product policy/schema/copy in Athar.
-
-### Madar
-
-- Added the operational case-management product under `apps/Madar` and integrated it into the solution, repository manager, Atlas, CI, security scanning, and SQL integration.
-- v0.1 — authentication/authorization, SQL persistence, case lifecycle, audit, Arabic API/Blazor.
-- v0.1.1 — readiness, bounded startup retry, operational launch integration.
-- v0.2 — SLA target/breach/escalation evidence.
-- v0.3 — append-only case comments.
-- v0.4 — sensitive-case maker-checker approval gate using `FoundationKit.Approvals`.
-- v0.5 — bounded operational notifications using `FoundationKit.Notifications` and optional SMTP.
-- v0.6 — department queues/routing and Operator claim.
-- v0.7 — department and membership administration.
-- v0.8 — controlled transfer and reassignment.
-- v0.9 — private append-only case attachments/documents.
-- v0.10 — authorization-preserving SQL case search and same-scope operational reporting.
-- Kept departments/routing, SLA, attachments, search, and reporting product-owned rather than creating speculative generic packages.
-
-### Security, supply chain, and operations
-
-- Added tracked-source secret scanning, repository hygiene/boundary checks, NuGet vulnerability audit, CycloneDX dependency inventory, package/publish SHA-256 evidence, CodeQL, Trivy, negative-security testing, container-hardening checks, and SQL-backed product regressions.
-- Added production-oriented Athar configuration checks, trusted proxy handling, MFA step-up, production SQL transport/principal rules, protected Data Protection key support, and real backup/restore verification.
-- Added repository security/risk/threat/production-governance documentation while explicitly retaining the experimental/pre-production boundary and Issue #35 before real Production.
-- Refreshed .NET 8 servicing dependencies to the current 8.0.29 line where applicable, replaced deprecated `Azure.Identity 1.13.2` with 1.17.2, raised the SQL client floor to 5.1.9, and added Madar Docker Dependabot monitoring (PR #103).
-- Migrated the coordinated repository baseline from `net8.0` to **.NET 10 LTS / `net10.0`**, including SDK selection, ASP.NET Core/Identity/EF/DI servicing dependencies, SQL client floor, Composer-generated projects, CI SDKs, container base images, and .NET 10 API/analyzer compatibility fixes while preserving the 17+17 reusable package invariant and package version `0.1.0`.
-
-### Repository truth cleanup
-
-- Reclassified repository roles consistently: Workbench = executable architecture/reference consumer, Athar = complete Arabic reference product, Madar = operational product through v0.10.
-- Removed superseded Athar implementation/native-run documentation and legacy Athar run/stop wrappers replaced by `foundationkit.ps1` / `scripts/athar-product.ps1`.
-- Synchronized architecture, package, capability, product, security, production-readiness, and new-product guidance with the current repository state.
-- Preserved historical security/release evidence as audit history rather than deleting it as “unused”.
-
-## [0.1.0] - 2026-08-06
-
-### Added
-
-- Five reusable FoundationKit packages for Domain, Application, Infrastructure, WebApi, and Blazor.
-- Provider-neutral EF Core persistence adapters and in-process domain-event dispatch.
-- Result mapping, correlation IDs, security headers, typed API results, and asynchronous UI state.
-- Package, symbol-package, architecture-test, documentation, and CI foundations.
-- Local SQL Server Workbench consumer, canonical capability catalog, generated capability documentation, Docker launchers, and persistence smoke testing.
-- Blazor WebAssembly + MudBlazor client, shared API contracts, Swagger, Postman, and GitHub Pages deployment.
-- Explicit User Full Stack and Admin Full Stack reference paths connected through a SQL-backed review workflow.
-
-### Fixed
-
-- Synchronous and asynchronous post-save domain-event interception.
-- Event clearing before handler dispatch to prevent accidental redispatch after handler failure.
-- Invalid JSON handling for successful typed HTTP responses.
+- Closed the 17-package composable baseline on .NET 10.
+- Added capability graph, profiles, contract compatibility, maturity evidence, deterministic Composer generation, interactive Composer questionnaire, packaging/security gates, and Workbench reference execution.
