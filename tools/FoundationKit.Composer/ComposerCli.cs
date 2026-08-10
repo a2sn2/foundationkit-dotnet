@@ -68,9 +68,7 @@ public static class ComposerCli
         TextWriter output)
     {
         if (args.Count != 1)
-        {
             throw new ComposerManifestException("Usage: capabilities");
-        }
 
         await output.WriteLineAsync("ID | Contract | Kind | Maturity | Category | Dependencies");
         foreach (var capability in FoundationCapabilityCatalog.All
@@ -94,9 +92,7 @@ public static class ComposerCli
         TextWriter output)
     {
         if (args.Count != 1)
-        {
             throw new ComposerManifestException("Usage: profiles");
-        }
 
         await output.WriteLineAsync("ID | Name | Capabilities");
         foreach (var profile in FoundationCapabilityProfiles.All
@@ -115,39 +111,32 @@ public static class ComposerCli
         CancellationToken cancellationToken)
     {
         if (args.Count is < 2 or > 3)
-        {
-            throw new ComposerManifestException(
-                "Usage: validate <manifest.json> [--require-stable]");
-        }
+            throw new ComposerManifestException("Usage: validate <manifest.json> [--require-stable]");
 
         var requireStable = args.Count == 3;
         if (requireStable && !args[2].Equals("--require-stable", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ComposerManifestException(
-                "The only supported validate option is '--require-stable'.");
-        }
+            throw new ComposerManifestException("The only supported validate option is '--require-stable'.");
 
         var manifest = await ComposerManifestParser.ParseFileAsync(args[1], cancellationToken);
         var analysis = CompositionAnalyzer.Analyze(manifest);
 
         await output.WriteLineAsync(
-            $"Manifest valid: {manifest.Name} ({manifest.Profile}), {analysis.Entries.Count} resolved capabilities.");
-
-        if (analysis.CompatibilityResults.Count > 0)
+            $"Manifest valid: {manifest.Name} (schema v{manifest.SchemaVersion}, profile {manifest.Profile}), {analysis.Entries.Count} resolved capabilities.");
+        if (manifest.ProjectModel is not null)
         {
             await output.WriteLineAsync(
-                $"Contract requirements satisfied: {analysis.CompatibilityResults.Count}.");
+                $"Project model: {manifest.ProjectModel.Modules.Count} modules, {manifest.ProjectModel.Resources.Count} resources.");
         }
 
+        if (analysis.CompatibilityResults.Count > 0)
+            await output.WriteLineAsync($"Contract requirements satisfied: {analysis.CompatibilityResults.Count}.");
+
         foreach (var warning in analysis.Warnings)
-        {
             await output.WriteLineAsync($"WARNING: {warning}");
-        }
 
         if (requireStable && !analysis.IsStableOnly)
         {
-            await output.WriteLineAsync(
-                "NOT READY: this composition includes capabilities that are not Stable.");
+            await output.WriteLineAsync("NOT READY: this composition includes capabilities that are not Stable.");
             return 3;
         }
 
@@ -160,9 +149,7 @@ public static class ComposerCli
         CancellationToken cancellationToken)
     {
         if (args.Count != 2)
-        {
             throw new ComposerManifestException("Usage: explain <manifest.json>");
-        }
 
         var manifest = await ComposerManifestParser.ParseFileAsync(args[1], cancellationToken);
         var analysis = CompositionAnalyzer.Analyze(manifest);
@@ -171,9 +158,24 @@ public static class ComposerCli
             StringComparer.OrdinalIgnoreCase);
 
         await output.WriteLineAsync($"Project: {manifest.Name}");
+        await output.WriteLineAsync($"Manifest schema: v{manifest.SchemaVersion}");
         await output.WriteLineAsync($"Profile: {manifest.Profile}");
-        await output.WriteLineAsync("Resolved capabilities (dependency-first):");
+        if (manifest.ProjectModel is not null)
+        {
+            await output.WriteLineAsync(
+                $"Project model: {manifest.ProjectModel.Modules.Count} modules / {manifest.ProjectModel.Resources.Count} resources");
+            foreach (var module in manifest.ProjectModel.Modules)
+            {
+                foreach (var resource in module.Resources)
+                {
+                    await output.WriteLineAsync(
+                        $"- resource {module.Name}.{resource.Name} -> /{resource.Api.RoutePrefix}/{resource.Route} " +
+                        $"[{string.Join(",", resource.Behaviors.Select(BehaviorName))}]");
+                }
+            }
+        }
 
+        await output.WriteLineAsync("Resolved capabilities (dependency-first):");
         foreach (var entry in analysis.Entries)
         {
             var contractVersion = FoundationCapabilityContracts.Get(entry.Capability.Id).ContractVersion;
@@ -190,9 +192,7 @@ public static class ComposerCli
         {
             await output.WriteLineAsync("Maturity warnings:");
             foreach (var warning in analysis.Warnings)
-            {
                 await output.WriteLineAsync($"- {warning}");
-            }
         }
 
         return 0;
@@ -209,40 +209,28 @@ public static class ComposerCli
         ComposerManifest? manifest;
         if (options.Interactive)
         {
-            manifest = await ComposerInteractiveSession.CollectManifestAsync(
-                input,
-                output,
-                cancellationToken);
+            manifest = await ComposerInteractiveSession.CollectManifestAsync(input, output, cancellationToken);
             if (manifest is null)
-            {
                 return 4;
-            }
         }
         else
         {
-            manifest = await ComposerManifestParser.ParseFileAsync(
-                options.ManifestPath!,
-                cancellationToken);
+            manifest = await ComposerManifestParser.ParseFileAsync(options.ManifestPath!, cancellationToken);
         }
 
         var analysis = CompositionAnalyzer.Analyze(manifest);
 
         if (options.Interactive)
-        {
             await ComposerInteractiveSession.WritePreviewAsync(analysis, output);
-        }
         else
         {
             foreach (var warning in analysis.Warnings)
-            {
                 await output.WriteLineAsync($"WARNING: {warning}");
-            }
         }
 
         if (options.RequireStable && !analysis.IsStableOnly)
         {
-            await output.WriteLineAsync(
-                "NOT GENERATED: this composition includes capabilities that are not Stable.");
+            await output.WriteLineAsync("NOT GENERATED: this composition includes capabilities that are not Stable.");
             return 3;
         }
 
@@ -255,12 +243,16 @@ public static class ComposerCli
             return 4;
         }
 
-        var result = await ComposerProjectGenerator.GenerateAsync(
-            analysis,
-            new ProjectGenerationOptions(options.OutputDirectory, options.FoundationRoot, options.Force),
-            cancellationToken);
+        var generationOptions = new ProjectGenerationOptions(
+            options.OutputDirectory,
+            options.FoundationRoot,
+            options.Force);
+        var result = manifest.SchemaVersion == 2
+            ? await ComposerProjectModelGenerator.GenerateAsync(analysis, generationOptions, cancellationToken)
+            : await ComposerProjectGenerator.GenerateAsync(analysis, generationOptions, cancellationToken);
 
         await output.WriteLineAsync($"Generated project: {manifest.Name}");
+        await output.WriteLineAsync($"Manifest schema: v{manifest.SchemaVersion}");
         await output.WriteLineAsync($"Output: {result.OutputDirectory}");
         await output.WriteLineAsync($"Solution: {result.SolutionPath}");
         await output.WriteLineAsync($"Foundation references: {result.ReferenceMode}");
@@ -271,9 +263,7 @@ public static class ComposerCli
     private static NewCommandOptions ParseNewCommandOptions(IReadOnlyList<string> args)
     {
         if (args.Count < 2)
-        {
             throw new ComposerManifestException(NewUsage);
-        }
 
         string? manifestPath = null;
         string? outputDirectory = null;
@@ -288,46 +278,31 @@ public static class ComposerCli
             if (option.Equals("--interactive", StringComparison.OrdinalIgnoreCase))
             {
                 if (interactive)
-                {
                     throw new ComposerManifestException("Option '--interactive' can be specified only once.");
-                }
-
                 interactive = true;
             }
             else if (option.Equals("--output", StringComparison.OrdinalIgnoreCase))
             {
                 if (outputDirectory is not null)
-                {
                     throw new ComposerManifestException("Option '--output' can be specified only once.");
-                }
-
                 outputDirectory = ReadOptionValue(args, ref index, "--output");
             }
             else if (option.Equals("--foundation-root", StringComparison.OrdinalIgnoreCase))
             {
                 if (foundationRoot is not null)
-                {
                     throw new ComposerManifestException("Option '--foundation-root' can be specified only once.");
-                }
-
                 foundationRoot = ReadOptionValue(args, ref index, "--foundation-root");
             }
             else if (option.Equals("--force", StringComparison.OrdinalIgnoreCase))
             {
                 if (force)
-                {
                     throw new ComposerManifestException("Option '--force' can be specified only once.");
-                }
-
                 force = true;
             }
             else if (option.Equals("--require-stable", StringComparison.OrdinalIgnoreCase))
             {
                 if (requireStable)
-                {
                     throw new ComposerManifestException("Option '--require-stable' can be specified only once.");
-                }
-
                 requireStable = true;
             }
             else if (option.StartsWith("--", StringComparison.Ordinal))
@@ -345,21 +320,11 @@ public static class ComposerCli
         }
 
         if (interactive && manifestPath is not null)
-        {
-            throw new ComposerManifestException(
-                "Interactive generation cannot be combined with a manifest path.");
-        }
-
+            throw new ComposerManifestException("Interactive generation cannot be combined with a manifest path.");
         if (!interactive && string.IsNullOrWhiteSpace(manifestPath))
-        {
-            throw new ComposerManifestException(
-                "The new command requires a manifest path or '--interactive'.");
-        }
-
+            throw new ComposerManifestException("The new command requires a manifest path or '--interactive'.");
         if (string.IsNullOrWhiteSpace(outputDirectory))
-        {
             throw new ComposerManifestException("The new command requires '--output <directory>'.");
-        }
 
         return new NewCommandOptions(
             manifestPath,
@@ -376,18 +341,19 @@ public static class ComposerCli
         string optionName)
     {
         if (index + 1 >= args.Count)
-        {
             throw new ComposerManifestException($"Option '{optionName}' requires a value.");
-        }
 
         var value = args[++index];
         if (string.IsNullOrWhiteSpace(value) || value.StartsWith("--", StringComparison.Ordinal))
-        {
             throw new ComposerManifestException($"Option '{optionName}' requires a value.");
-        }
-
         return value;
     }
+
+    private static string BehaviorName(ComposerResourceBehavior behavior) => behavior switch
+    {
+        ComposerResourceBehavior.FeatureManagement => "feature-management",
+        _ => behavior.ToString().ToLowerInvariant()
+    };
 
     private static async Task<int> UnknownCommandAsync(string command, TextWriter error)
     {
@@ -402,7 +368,7 @@ public static class ComposerCli
 
     private static async Task WriteHelpAsync(TextWriter output)
     {
-        await output.WriteLineAsync("FoundationKit Composer CLI v1");
+        await output.WriteLineAsync("FoundationKit Composer CLI");
         await output.WriteLineAsync();
         await output.WriteLineAsync("Commands:");
         await output.WriteLineAsync("  capabilities");
@@ -415,7 +381,7 @@ public static class ComposerCli
             "  new --interactive --output <directory> [--foundation-root <directory>] [--force] [--require-stable]");
         await output.WriteLineAsync();
         await output.WriteLineAsync(
-            "The v1 composer validates the canonical capability graph and supports deterministic manifest-driven or interactive project generation. Visual composition remains future work.");
+            "Schema v1 remains supported for profile/capability generation. Schema v2 adds strict Project -> Modules -> Resources -> behaviors/overrides/API intent while reusing the same canonical capability graph. Interactive generation currently produces schema v1; visual project-model composition remains future Workbench/Studio work.");
     }
 
     private const string NewUsage =

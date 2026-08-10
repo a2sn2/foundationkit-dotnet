@@ -21,6 +21,8 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Reconciled the incomplete initial Phase 9 merge before starting the next reliability increment so the repository returned to an internally consistent buildable baseline.
 - Added Phase 10 durable replay-safe HTTP idempotency behind the existing Phase 7 contract: provider-neutral Application contracts, relational EF acquisition/replay storage, project-scoped hashed keys, request fingerprints including `If-Match`, bounded response replay, fail-closed indeterminate outcomes, and consumer-owned schema/migrations.
 - Added Workbench SQL evidence proving create/update/delete replay, duplicate-side-effect prevention, and fingerprint conflicts while retaining the same 17-package boundary.
+- Added Phase 11 Composer schema v2: strict Project → Modules → Resources → Behaviors → Overrides → API intent, canonical capability reuse, bounded safe identifiers/routes/ID types, deterministic normalized v2 manifests and inspectable resource descriptors, while preserving schema-v1 generator contract and generated-project compatibility.
+- Expanded Composer CI to independently generate, force-regenerate, restore, build, and test both v1 and v2 scaffolds on the same exact head.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0

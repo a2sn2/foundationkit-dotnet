@@ -17,7 +17,8 @@ internal static class ComposerGeneratedOwnership
         string productName,
         string projectPrefix,
         string referenceMode,
-        IReadOnlyDictionary<string, string> files)
+        IReadOnlyDictionary<string, string> files,
+        string? generatorContractVersion = null)
     {
         ArgumentNullException.ThrowIfNull(files);
 
@@ -33,15 +34,13 @@ internal static class ComposerGeneratedOwnership
         var contentSha256 = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
         foreach (var file in ownedFiles)
-        {
             contentSha256[file.Key] = HashText(file.Value);
-        }
 
         var marker = new
         {
             schemaVersion = 1,
             generator = "FoundationKit.Composer",
-            generatorContractVersion = ComposerProjectGenerator.GeneratorContractVersion,
+            generatorContractVersion = generatorContractVersion ?? ComposerProjectGenerator.GeneratorContractVersion,
             productName,
             projectPrefix,
             referenceMode,
@@ -136,9 +135,7 @@ internal static class ComposerGeneratedOwnership
 
                 var hash = property.Value.GetString();
                 if (hash is null || hash.Length != 64 || !hash.All(IsLowerHexDigit))
-                {
                     throw new ComposerGenerationException("The FoundationKit generated marker contains an invalid content hash.");
-                }
 
                 hashes[property.Name] = hash;
             }
@@ -182,9 +179,7 @@ internal static class ComposerGeneratedOwnership
     private static bool IsUnsafeRelativePath(string path)
     {
         if (Path.IsPathRooted(path))
-        {
             return true;
-        }
 
         var normalized = NormalizeRelativePath(path);
         return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)

@@ -1,14 +1,8 @@
-# FoundationKit Composer CLI v1
+# FoundationKit Composer CLI and Project Model
 
-FoundationKit Composer is the executable developer-facing layer over the canonical Capability Model.
+`COMPOSER-CLI-V1.md` remains at this path for existing links, but Composer now supports both manifest schema v1 and schema v2.
 
-Its v1 surface now has three responsibilities:
-
-1. **analyze compositions** — list, validate, and explain profiles/capabilities/contracts/maturity;
-2. **generate a deterministic product skeleton** from the same strict manifest and resolved capability graph;
-3. **collect an interactive project selection** and feed it into that same deterministic analyzer/generator path.
-
-The generator does not introduce a second hidden template model. Manifest-driven and interactive generation both consume the existing manifest parser, dependency resolver, capability contract metadata, maturity diagnostics, and project generator.
+FoundationKit Composer is the developer-facing deterministic layer over the canonical capability model. It validates project intent, explains dependency/maturity/contract decisions, and generates inspectable project scaffolds without introducing a second capability graph.
 
 ## Commands
 
@@ -16,154 +10,18 @@ From the repository root:
 
 ```bash
 dotnet run --project tools/FoundationKit.Composer -- capabilities
-```
-
-Lists every capability with its contract version, kind, maturity, category, and direct dependencies.
-
-```bash
 dotnet run --project tools/FoundationKit.Composer -- profiles
+dotnet run --project tools/FoundationKit.Composer -- validate <manifest.json> [--require-stable]
+dotnet run --project tools/FoundationKit.Composer -- explain <manifest.json>
+dotnet run --project tools/FoundationKit.Composer -- new <manifest.json> --output <directory> [--foundation-root <directory>] [--force] [--require-stable]
+dotnet run --project tools/FoundationKit.Composer -- new --interactive --output <directory> [--foundation-root <directory>] [--force] [--require-stable]
 ```
 
-Lists the current composition profiles.
+`validate`, `explain`, and `new` inspect `schemaVersion` and use the correct compatible path automatically. There is no separate `new-v2` command.
 
-```bash
-dotnet run --project tools/FoundationKit.Composer -- validate docs/examples/foundationkit.project.minimal.json
-```
+## Manifest schema v1
 
-Parses the manifest strictly, validates profile/capability/provider choices, resolves transitive dependencies, enforces explicit capability-contract requirements, and reports maturity warnings.
-
-```bash
-dotnet run --project tools/FoundationKit.Composer -- validate docs/examples/foundationkit.project.minimal.json --require-stable
-```
-
-Returns a non-zero exit code when any resolved capability is not `Stable`.
-
-```bash
-dotnet run --project tools/FoundationKit.Composer -- explain docs/examples/foundationkit.project.example.json
-```
-
-Prints the dependency-first resolved composition, contract version, maturity, selection reasons, and explicit compatibility requirements.
-
-```text
-authorization [Optional/ReferenceOnly/contract:v1] <- required-by:approvals | requires:v1=compatible
-kernel [Kernel/Stable/contract:v1] <- profile:enterprise, required-by:web-api
-```
-
-### Deterministic manifest-driven project generation
-
-```bash
-dotnet run --project tools/FoundationKit.Composer -- \
-  new docs/examples/foundationkit.project.minimal.json \
-  --output ./generated/MinimalApi
-```
-
-`new` performs the same strict parse, dependency resolution, and contract compatibility validation before writing files. The default mode writes FoundationKit `PackageReference` declarations for reusable packages that exist today.
-
-For repository-local development and CI proof, use project-reference mode:
-
-```bash
-dotnet run --project tools/FoundationKit.Composer -- \
-  new docs/examples/foundationkit.project.minimal.json \
-  --output ./artifacts/composer-golden \
-  --foundation-root .
-```
-
-`--foundation-root` must point at a FoundationKit source tree containing `src/FoundationKit.Domain/FoundationKit.Domain.csproj`. This mode emits `ProjectReference` entries instead of requiring FoundationKit packages from an external NuGet feed. It is the mode used by the repository's generated-project CI gate.
-
-### Interactive project generation
-
-```bash
-dotnet run --project tools/FoundationKit.Composer -- \
-  new --interactive \
-  --output ./generated/MySystem
-```
-
-Interactive mode is a thin input layer over the same deterministic engine. It currently asks for:
-
-1. project name;
-2. one of the canonical seven profiles, by number or profile ID;
-3. optional extra runtime capability IDs not already supplied by the selected profile;
-4. optional provider capability IDs;
-5. explicit confirmation after the dependency-first composition preview.
-
-The preview shows the normalized project/profile selections plus every resolved capability with kind, maturity, and contract version. Maturity warnings are visible before confirmation. Type `cancel`, `quit`, or `q` at a questionnaire prompt to stop before generation. A blank or negative confirmation also exits without writing files.
-
-The questionnaire does **not** invent capability IDs, infer packages from free text, create business-domain semantics, or maintain a second capability graph. Project-name validation is routed through the strict manifest parser; capability/profile/provider choices come from the canonical model; resolution goes through `CompositionAnalyzer`; writing goes through `ComposerProjectGenerator`.
-
-Advanced manifest-only controls such as explicit `excludeCapabilities` and `capabilityContracts` remain available through the manifest-driven path. Interactive v1 intentionally keeps those policy choices explicit rather than hiding them behind inferred answers.
-
-Optional generation flags apply to both manifest-driven and interactive generation:
-
-- `--require-stable` — refuse generation when any resolved capability is not `Stable`; interactive mode shows the preview and fails before the confirmation/write step;
-- `--force` — regenerate only a directory previously created by Composer whose recorded file set and generated-file SHA-256 hashes are still unchanged;
-- `--foundation-root <directory>` — use known FoundationKit source projects for repository-local verification.
-
-A manifest path and `--interactive` are mutually exclusive. Unknown options, duplicate options, incompatible contracts, invalid manifests, unsafe destinations, non-empty unowned directories, user-added files, and edited generated files fail closed.
-
-## What is generated
-
-The v1 generator creates a bounded product skeleton rather than business-domain code:
-
-```text
-<Output>/
-├─ <Product>.sln
-├─ Directory.Build.props
-├─ Directory.Packages.props
-├─ foundationkit.project.json
-├─ .foundationkit-generated.json
-├─ README.md
-├─ ARCHITECTURE.md
-├─ src/
-│  ├─ <Product>.Domain/
-│  ├─ <Product>.Application/
-│  ├─ <Product>.Infrastructure/
-│  ├─ <Product>.Api/          when web-api resolves
-│  └─ <Product>.Client/       when blazor resolves
-└─ tests/
-   └─ <Product>.Tests/
-```
-
-The generated source is intentionally small:
-
-- Domain/Application/Infrastructure marker boundaries prove dependency direction;
-- the API skeleton exposes only a basic `/health` endpoint;
-- the Client project is only created when `blazor` resolves;
-- a generated test proves the product markers agree on the manifest name;
-- no product aggregate, workflow, role, tenant model, database schema, migration, secret, or deployment policy is invented.
-
-`ARCHITECTURE.md` is the generated decision report. For every resolved identity it records:
-
-- why the capability is present;
-- contract version;
-- kind and maturity;
-- whether an actual reusable package binding is generated;
-- when a selected capability has no reusable runtime package and therefore remains an explicit product/composition concern.
-
-This is important for profiles that contain planned/preview/reference vocabulary: the generator does **not** manufacture `FoundationKit.Files`, `FoundationKit.Search`, `FoundationKit.Organization`, or any other package merely because the capability identity exists in the catalog.
-
-## Determinism contract
-
-For the same manifest, generator contract, reference mode, and FoundationKit baseline, Composer produces the same file names and content. Interactive mode first produces a normal validated `ComposerManifest`; once that manifest reaches the generator, the same determinism contract applies.
-
-- generated file ordering is stable;
-- solution project GUIDs are deterministic;
-- normalized manifests and marker metadata are stable;
-- no timestamp, machine name, random GUID, or local absolute path is written into generated content;
-- line endings and UTF-8 output are normalized.
-
-The dedicated `FoundationKit Composer Generation` workflow proves this by generating a golden project, hashing every generated file, force-regenerating it, comparing hashes, then restoring/building/testing the generated solution.
-
-The ownership marker also stores SHA-256 for every generated file except the marker itself. `--force` validates both the exact owned file list and those hashes before deleting/recreating anything. This means a user-added file **or an edit to a generated file** blocks destructive regeneration rather than being silently overwritten.
-
-## Manifest v1
-
-The JSON shape remains documented by:
-
-`catalog/foundationkit.project.schema.json`
-
-Existing v1 manifests remain valid. `capabilityContracts` is optional.
-
-Example:
+Schema v1 remains supported unchanged for project/profile/capability/provider composition:
 
 ```json
 {
@@ -180,84 +38,175 @@ Example:
 }
 ```
 
-### Capability contract compatibility
+A v1 manifest does not accept `modules`. Existing v1 manifests require no migration merely to continue using FoundationKit and continue through Composer generator contract 1.
 
-Capability contract versions remain independent from NuGet package versions and capability maturity.
+## Manifest schema v2
 
-The v1 rule is intentionally exact and deterministic:
-
-- every catalog capability/provider/tooling identity publishes a positive integer contract version;
-- a manifest may require an exact version;
-- requirements may target explicitly selected identities or resolved transitive dependencies;
-- unknown or unresolved requirements are rejected;
-- a requested version that does not exactly match the available version fails closed;
-- omitting `capabilityContracts` preserves previous manifest behavior.
-
-This model does **not** implement SemVer ranges, package upgrade/downgrade, runtime negotiation, provider handshakes, or automatic migrations.
-
-### Strictness
-
-The parser rejects:
-
-- unsupported schema versions;
-- unknown JSON properties;
-- missing or unsafe project names;
-- duplicate capability IDs within a list;
-- the same capability in include and exclude lists;
-- unknown capabilities/providers;
-- provider IDs placed in capability include/exclude lists;
-- non-provider IDs placed in `providers`;
-- tooling IDs selected as runtime capabilities;
-- invalid capability-contract versions;
-- unknown or unresolved capability-contract requirements;
-- incompatible capability-contract versions;
-- exclusions that break required dependency closure;
-- dependency cycles.
-
-The interactive layer additionally rejects unknown profile/capability/provider answers and retries the prompt without writing files. Generation adds destination and output safety checks on top of parser strictness.
-
-## Maturity behavior
-
-`validate` and both `new` modes distinguish **structural validity**, **contract compatibility**, and **capability maturity**.
-
-Planned, ReferenceOnly, and Preview capabilities are warnings by default. `--require-stable` converts those warnings into a failing readiness gate; for `new`, the failure occurs before any file is written. Interactive mode shows the resolved preview before that failure and does not ask for confirmation when the stable-only gate has already failed. Contract incompatibility always fails regardless of maturity mode.
-
-A default generation therefore means "a deterministic scaffold for this resolved composition", not "every selected capability is fully implemented or production-ready". The generated architecture report makes missing runtime bindings explicit.
-
-## Package mode versus project mode
-
-Package mode is the portable declaration mode. It emits the known FoundationKit package IDs at the current FoundationKit package baseline. Restoring such a generated project requires a NuGet source that actually contains those FoundationKit packages.
-
-Project mode (`--foundation-root`) is the verified repository-local mode. It references the source projects directly and is used by CI to prove that the generated solution builds and tests against the exact repository head.
-
-Neither mode downloads arbitrary packages, executes provider hooks, or infers a package name from user-controlled manifest or questionnaire text.
-
-## Security and destructive-operation boundaries
-
-Composer:
-
-- never executes code from the manifest or interactive answers;
-- does not support script/template hooks in v1;
-- uses catalog-owned package/project mappings only;
-- does not print raw manifest contents during validation/explanation;
-- bounds capability contract versions to positive integers from 1 through 9999;
-- requires explicit interactive confirmation before generation;
-- allows interactive cancellation before filesystem writes;
-- refuses filesystem-root generation;
-- refuses to overwrite non-empty destinations by default;
-- `--force` requires a valid Composer marker, the exact recorded file set, and matching SHA-256 for every generated file; user-added or edited files block deletion;
-- generated content contains no secrets;
-- project-reference mode verifies the supplied FoundationKit source-tree marker before generation.
-
-## Still future work
-
-The deterministic engine and first interactive CLI questionnaire now exist. The following remain separate tooling work:
+Schema v2 adds the bounded project model:
 
 ```text
-visual Workbench composer
-richer provider-specific wiring templates
-generated deployment topology
-business-domain templates
+Project → Modules → Resources → Behaviors → Overrides → API
+                    ↓
+              canonical capability graph
 ```
 
-Any visual composer must consume this same deterministic generation engine instead of introducing a parallel capability model.
+Example:
+
+```bash
+dotnet run --project tools/FoundationKit.Composer -- \
+  validate docs/examples/foundationkit.project.v2.json
+
+dotnet run --project tools/FoundationKit.Composer -- \
+  new docs/examples/foundationkit.project.v2.json \
+  --output ./generated/ComposerProjectModel
+```
+
+The full schema, field boundaries, compatibility rules, security model, and generated artifacts are documented in `COMPOSER-PROJECT-MODEL-V2.md`. The machine-readable schema is `catalog/foundationkit.project.schema.json`.
+
+### Why `behaviors` is not the global capability list
+
+Top-level Foundation capability IDs describe canonical platform/runtime/provider/tooling composition. Resource `behaviors` describe module intent such as `crud`, `authorization`, and `concurrency`.
+
+Where an existing Core capability corresponds to a behavior, Composer feeds it into the same canonical capability resolver. This means resource authorization still resolves through the established Authorization → Identity → Security graph. Composer does not maintain a parallel dependency model.
+
+Schema v2 currently requires `crud` for every resource because the proven executable Module Engine is CRUD-based. It does not accept unsupported non-CRUD resource semantics merely to make the manifest look broader than the runtime.
+
+### Safe project-model inputs
+
+Schema v2 uses bounded, closed inputs:
+
+- ID type: `guid`, `string`, `long`, or `int`;
+- module/resource/manager names: safe C# identifiers, not arbitrary source;
+- routes: bounded ASCII route segments;
+- behaviors: closed FoundationKit vocabulary;
+- API idempotency: `disabled`, `optional`, `required`;
+- API concurrency: `application-policy`, `require-if-match`;
+- filter/sort counts: bounded integers.
+
+Duplicate module/resource names and duplicate effective API routes fail closed. Resource-required capabilities cannot be globally excluded.
+
+## Validation and explanation
+
+`validate` performs strict JSON parsing, profile/capability/provider validation, canonical dependency resolution, capability-contract compatibility, and project-model validation. With v2 it also reports module/resource counts.
+
+`explain` prints the dependency-first resolved composition and v2 resource intent. A resource-driven reason appears explicitly, for example:
+
+```text
+authorization <- resource:Customers.Customer:authorization
+identity      <- required-by:authorization
+security      <- required-by:identity
+```
+
+Maturity remains independent from structural validity and contract compatibility. `--require-stable` refuses generation when the resolved composition contains non-Stable capabilities.
+
+## Deterministic generation
+
+### Schema v1
+
+The v1 generator creates the existing bounded structural scaffold:
+
+```text
+<Product>.sln
+Directory.Build.props
+Directory.Packages.props
+foundationkit.project.json
+.foundationkit-generated.json
+README.md
+ARCHITECTURE.md
+src/<Product>.Domain
+src/<Product>.Application
+src/<Product>.Infrastructure
+src/<Product>.Api       when web-api resolves
+src/<Product>.Client    when blazor resolves
+tests/<Product>.Tests
+```
+
+### Schema v2
+
+The v2 generator reuses that proven structural scaffold and adds inspectable project-model artifacts:
+
+```text
+PROJECT-MODEL.md
+src/<Product>.Application/GeneratedModules/<Module>/<Resource>Definition.g.cs
+```
+
+The normalized `foundationkit.project.json` retains the full schema-v2 project model, and `.foundationkit-generated.json` records `generatorContractVersion: "2"` plus SHA-256 ownership for the complete generated file set.
+
+The resource descriptors contain configuration intent only. They do not synthesize domain fields, database schemas, role semantics, external integration code, or project business rules.
+
+## `--foundation-root`
+
+Package mode emits known FoundationKit package references. Repository-local project mode is enabled with:
+
+```bash
+--foundation-root .
+```
+
+The supplied root must contain the known FoundationKit source-tree marker. Project mode is used by CI to prove generated output against the exact repository head rather than an external package feed.
+
+## `--force` safety
+
+`--force` is not a general overwrite switch. Composer only regenerates a directory that has a valid FoundationKit ownership marker and whose exact generated file set and recorded SHA-256 hashes are unchanged.
+
+A user-added file or any edit to a generated file blocks destructive regeneration.
+
+Schema v1 and v2 use the same ownership safety model. v1 retains generator contract 1; v2 stamps generator contract 2.
+
+## Interactive mode
+
+The current interactive CLI questionnaire still produces schema v1. It asks for a project name, canonical profile, optional additional runtime capabilities/providers, shows the resolved dependency/maturity preview, and requires confirmation before writing files.
+
+It does not yet collect Modules/Resources. The future visual Workbench/Studio composer should author schema v2, serialize the same manifest, and call the same deterministic analyzer/generator rather than creating another project model.
+
+## Contract-version compatibility
+
+Capability contract versions remain independent from NuGet package versions, Composer schema versions, and capability maturity.
+
+Manifest `capabilityContracts` requirements are exact positive integers. Unknown, unresolved, or incompatible requirements fail closed. Omitting the field preserves previous manifest behavior.
+
+Composer manifest versioning is separate:
+
+```text
+schema v1 → original composition model
+schema v2 → additive module/resource project model
+```
+
+A future breaking change to accepted v2 semantics requires a new manifest schema version; FoundationKit must not silently reinterpret an existing v2 document.
+
+## Security boundary
+
+Composer never executes manifest content. It does not support arbitrary source/script/template hooks, does not infer package names from user text, does not write secrets, refuses unsafe output locations, and keeps package/project bindings owned by FoundationKit's canonical mapping.
+
+Schema v2 manager overrides are safe identifiers only. Generated descriptors are inspectable configuration artifacts, not opaque runtime magic.
+
+## CI evidence
+
+The dedicated `FoundationKit Composer Generation` workflow proves both generations on one exact head:
+
+```text
+v1 generate
+→ hash
+→ force-regenerate
+→ byte-identical files
+→ restore
+→ build
+→ test
+
+v2 validate
+→ generate
+→ hash
+→ force-regenerate
+→ byte-identical files
+→ verify project-model artifacts
+→ restore
+→ build
+→ test
+```
+
+This is the compatibility gate that allows FoundationKit to evolve Composer without breaking existing v1 users.
+
+## Current boundary before frontend
+
+Phase 11 gives FoundationKit a real deterministic Project → Modules → Resources model, but it does not yet claim that a schema-v2 resource automatically becomes a complete SQL-backed CRUD/API/OpenAPI/Postman application.
+
+That executable generated-resource proof is the next pre-frontend phase and must be validated independently before the platform moves into the frontend/UI system.

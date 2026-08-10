@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "name": "ComposerProjectModel",
+  "profile": "minimal",
+  "includeCapabilities": [
+    "auditing",
+    "authorization",
+    "caching"
+  ],
+  "excludeCapabilities": [],
+  "providers": [],
+  "capabilityContracts": {
+    "auditing": 1,
+    "authorization": 1,
+    "caching": 1
+  },
+  "modules": [
+    {
+      "name": "Customers",
+      "resources": [
+        {
+          "name": "Customer",
+          "route": "customers",
+          "idType": "guid",
+          "behaviors": [
+            "crud",
+            "auditing",
+            "authorization",
+            "concurrency",
+            "caching"
+          ],
+          "overrides": {
+            "manager": "CustomerManager"
+          },
+          "api": {
+            "routePrefix": "api",
+            "idempotency": "required",
+            "concurrency": "require-if-match",
+            "maximumFilters": 4,
+            "maximumSorts": 2,
+            "rateLimitPolicyName": "customer-write"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "resources": [
+        {
+          "name": "Agent",
+          "route": "agents",
+          "idType": "long",
+          "behaviors": [
+            "crud",
+            "auditing",
+            "authorization"
+          ],
+          "overrides": {
+            "manager": "AgentManager"
+          },
+          "api": {
+            "routePrefix": "api",
+            "idempotency": "optional",
+            "concurrency": "application-policy",
+            "maximumFilters": 6,
+            "maximumSorts": 3,
+            "rateLimitPolicyName": null
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://foundationkit.local/schemas/foundationkit.project.schema.json",
-  "title": "FoundationKit Project Manifest v1",
+  "title": "FoundationKit Project Manifest",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,7 +14,8 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": 1
+      "type": "integer",
+      "enum": [1, 2]
     },
     "name": {
       "type": "string",
@@ -53,8 +54,46 @@
         "minimum": 1,
         "maximum": 9999
       }
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          }
+        },
+        "required": ["schemaVersion"]
+      },
+      "then": {
+        "not": {
+          "required": ["modules"]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schemaVersion": {
+            "const": 2
+          }
+        },
+        "required": ["schemaVersion"]
+      },
+      "then": {
+        "required": ["modules"]
+      }
+    }
+  ],
   "$defs": {
     "capabilityIds": {
       "type": "array",
@@ -63,6 +102,144 @@
         "type": "string",
         "minLength": 1,
         "pattern": "^[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "safeIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+      "not": {
+        "enum": [
+          "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class",
+          "const", "continue", "decimal", "default", "delegate", "do", "double", "else", "enum", "event",
+          "explicit", "extern", "false", "finally", "fixed", "float", "for", "foreach", "goto", "if",
+          "implicit", "in", "int", "interface", "internal", "is", "lock", "long", "namespace", "new", "null",
+          "object", "operator", "out", "override", "params", "private", "protected", "public", "readonly", "ref",
+          "return", "sbyte", "sealed", "short", "sizeof", "stackalloc", "static", "string", "struct", "switch",
+          "this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using",
+          "virtual", "void", "volatile", "while"
+        ]
+      }
+    },
+    "resourceRoute": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
+    },
+    "routePrefix": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 48,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "resources"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/safeIdentifier"
+        },
+        "resources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "route", "idType", "behaviors"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/safeIdentifier"
+        },
+        "route": {
+          "$ref": "#/$defs/resourceRoute"
+        },
+        "idType": {
+          "type": "string",
+          "enum": ["guid", "string", "long", "int"]
+        },
+        "behaviors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": {
+            "const": "crud"
+          },
+          "items": {
+            "type": "string",
+            "enum": [
+              "crud",
+              "auditing",
+              "authorization",
+              "concurrency",
+              "workflow",
+              "caching",
+              "security",
+              "identity",
+              "approvals",
+              "notifications",
+              "settings",
+              "feature-management",
+              "localization"
+            ]
+          }
+        },
+        "overrides": {
+          "$ref": "#/$defs/overrides"
+        },
+        "api": {
+          "$ref": "#/$defs/api"
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "manager": {
+          "$ref": "#/$defs/safeIdentifier"
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routePrefix": {
+          "$ref": "#/$defs/routePrefix"
+        },
+        "idempotency": {
+          "type": "string",
+          "enum": ["disabled", "optional", "required"]
+        },
+        "concurrency": {
+          "type": "string",
+          "enum": ["application-policy", "require-if-match"]
+        },
+        "maximumFilters": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "maximumSorts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "rateLimitPolicyName": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        }
       }
     }
   }

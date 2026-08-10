@@ -2,7 +2,7 @@
 
 ## Purpose
 
-FoundationKit is a composable .NET 10 system-building foundation. The active repository consists of 17 reusable packages, Composer tooling, catalog generation, tests, and one executable Workbench reference.
+FoundationKit is a composable .NET 10 system-building foundation. The active repository consists of 17 reusable packages, Composer tooling, catalog/schema generation, tests, and one executable Workbench reference.
 
 ## Base layers
 
@@ -94,11 +94,42 @@ FoundationKit does **not** infer from durable HTTP replay that it has implemente
 
 The canonical capability graph, dependency resolver, profiles, contract versions, maturity evidence, project isolation contract, and module capability rules live in Application. Generated catalog JSON is checked for drift. Composer consumes the same capability truth for validation, explanation, compatibility, deterministic generation, and interactive generation.
 
-The next Composer model expands from project/profile/capability selection toward `Project → Modules → Resources → Capabilities → Providers → Overrides → API` without creating a second parallel dependency graph.
+Composer now has two compatible manifest generations:
+
+```text
+schema v1
+Project → Profile → Capabilities → Providers
+
+schema v2
+Project
+  → Modules
+    → Resources
+      → Behaviors
+      → Overrides
+      → API
+  → Profile / Capabilities / Providers
+```
+
+Schema-v2 resource behaviors do not create a second dependency graph. Behaviors that correspond to reusable Core capabilities are mapped back into the canonical capability resolver. For example, a resource declaring Authorization still resolves through Authorization → Identity → Security using the same Core catalog.
+
+The current schema-v2 executable-intent boundary requires `crud` on every resource because the proven Module Engine is CRUD-based. This is intentionally narrower than accepting manifest vocabulary that Core cannot execute.
+
+Composer generator compatibility is explicit:
+
+```text
+schema v1 → generator contract 1 → existing deterministic scaffold
+schema v2 → generator contract 2 → same structural scaffold + normalized project model + project report + inspectable resource descriptors
+```
+
+The v1 generator is not silently redefined. CI independently proves v1 and v2 force reproducibility, restore, build, and tests on the same repository head. Future breaking manifest semantics require a new schema version rather than reinterpreting v2.
+
+The normalized manifest and `PROJECT-MODEL.md` are project-model evidence; generated resource descriptors contain configuration intent only. Database fields, product business rules, authorization semantics, external integration code, and secrets remain explicit consumer concerns until a later executable generation phase proves those bindings.
 
 ## Workbench
 
 Workbench proves database → domain/application → API → client/reference behavior against a real SQL Server path. It proves module composition, API Engine behavior, OpenAPI/Postman contract derivation, and durable idempotency replay through consumer-owned migrations. It is an executable reference, not a universal production deployment.
+
+A future visual Workbench/Studio composer must author the same Composer schema-v2 manifest and call the same deterministic analyzer/generator. It must not introduce a parallel capability or project model.
 
 ## Production boundary
 
