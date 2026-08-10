@@ -3,16 +3,6 @@ using FoundationKit.Domain.Primitives;
 
 namespace FoundationKit.Application.Modules;
 
-public static class FoundationModuleCapabilities
-{
-    public const string Crud = "crud";
-    public const string Auditing = "auditing";
-    public const string Authorization = "authorization";
-    public const string Concurrency = "concurrency";
-    public const string Workflow = "workflow";
-    public const string Caching = "caching";
-}
-
 public interface IFoundationModuleDefinition
 {
     string Name { get; }
@@ -23,7 +13,7 @@ public interface IFoundationModuleDefinition
 
     Type IdType { get; }
 
-    IReadOnlySet<string> Capabilities { get; }
+    FoundationModuleCapability Capabilities { get; }
 }
 
 public sealed record CrudModuleOptions(
@@ -71,19 +61,17 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
     where TEntity : Entity<TId>
     where TId : notnull
 {
-    private readonly HashSet<string> _capabilities;
-
     internal FoundationModuleDefinition(
         string name,
         string route,
-        IEnumerable<string> capabilities,
+        FoundationModuleCapability capabilities,
         CrudModuleOptions? crud,
         string? authorizationPolicyPrefix,
         Type? managerType)
     {
         Name = name;
         Route = route;
-        _capabilities = new HashSet<string>(capabilities, StringComparer.OrdinalIgnoreCase);
+        Capabilities = capabilities;
         Crud = crud;
         AuthorizationPolicyPrefix = authorizationPolicyPrefix;
         ManagerType = managerType;
@@ -97,7 +85,7 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
 
     public Type IdType => typeof(TId);
 
-    public IReadOnlySet<string> Capabilities => _capabilities;
+    public FoundationModuleCapability Capabilities { get; }
 
     public CrudModuleOptions? Crud { get; }
 
@@ -105,14 +93,16 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
 
     public Type? ManagerType { get; }
 
-    public bool HasCapability(string capability) => _capabilities.Contains(capability);
+    public bool HasCapability(FoundationModuleCapability capability) =>
+        capability != FoundationModuleCapability.None &&
+        (Capabilities & capability) == capability;
 }
 
 public sealed class FoundationModuleBuilder<TEntity, TId>
     where TEntity : Entity<TId>
     where TId : notnull
 {
-    private readonly HashSet<string> _capabilities = new(StringComparer.OrdinalIgnoreCase);
+    private FoundationModuleCapability _capabilities = FoundationModuleCapability.None;
     private string _name = typeof(TEntity).Name;
     private string _route = typeof(TEntity).Name.ToLowerInvariant();
     private CrudModuleOptions? _crud;
@@ -131,13 +121,13 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
         var builder = new CrudModuleOptionsBuilder();
         configure?.Invoke(builder);
         _crud = builder.Build();
-        _capabilities.Add(FoundationModuleCapabilities.Crud);
+        _capabilities |= FoundationModuleCapability.Crud;
         return this;
     }
 
     public FoundationModuleBuilder<TEntity, TId> Auditing()
     {
-        _capabilities.Add(FoundationModuleCapabilities.Auditing);
+        _capabilities |= FoundationModuleCapability.Auditing;
         return this;
     }
 
@@ -146,25 +136,25 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
         _authorizationPolicyPrefix = policyPrefix is null
             ? null
             : ValidateName(policyPrefix, nameof(policyPrefix));
-        _capabilities.Add(FoundationModuleCapabilities.Authorization);
+        _capabilities |= FoundationModuleCapability.Authorization;
         return this;
     }
 
     public FoundationModuleBuilder<TEntity, TId> Concurrency()
     {
-        _capabilities.Add(FoundationModuleCapabilities.Concurrency);
+        _capabilities |= FoundationModuleCapability.Concurrency;
         return this;
     }
 
     public FoundationModuleBuilder<TEntity, TId> Workflow()
     {
-        _capabilities.Add(FoundationModuleCapabilities.Workflow);
+        _capabilities |= FoundationModuleCapability.Workflow;
         return this;
     }
 
     public FoundationModuleBuilder<TEntity, TId> Caching()
     {
-        _capabilities.Add(FoundationModuleCapabilities.Caching);
+        _capabilities |= FoundationModuleCapability.Caching;
         return this;
     }
 
