@@ -31,6 +31,9 @@ param(
     [ValidateSet("Auto", "Native", "Docker")]
     [string]$Mode = "Auto",
 
+    [ValidateSet("Microsoft", "Cloudflare")]
+    [string]$TunnelProvider = "Microsoft",
+
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
 
@@ -189,15 +192,13 @@ function Invoke-AtharAction {
 function Invoke-MadarAction {
     param(
         [Parameter(Mandatory)]
-        [ValidateSet("start", "stop", "status", "logs")]
+        [ValidateSet("start", "stop", "status", "logs", "open", "credentials", "share-microsoft", "share-cloudflare")]
         [string]$MadarAction
     )
 
-    if ($MadarAction -eq "start" -and $Mode -eq "Native") {
-        throw "Madar currently supports the unified manager through its Docker operational path only. Use -Mode Auto or -Mode Docker."
-    }
-
-    Invoke-ChildPowerShell -ScriptPath $MadarManager -Arguments @($MadarAction)
+    Invoke-ChildPowerShell `
+        -ScriptPath $MadarManager `
+        -Arguments @($MadarAction, "-Mode", $Mode)
 }
 
 function Invoke-AtharExpose {
@@ -768,7 +769,8 @@ function Invoke-Verify {
     if (Test-Command "node") {
         foreach ($script in @(
             (Join-Path $RepositoryRoot "site/app.js"),
-            (Join-Path $RepositoryRoot "site/athar-demo/app.js"))) {
+            (Join-Path $RepositoryRoot "site/athar-demo/app.js"),
+            (Join-Path $RepositoryRoot "site/madar-demo/app.js"))) {
             Invoke-CheckedCommand `
                 -FilePath "node" `
                 -Arguments @("--check", $script) `
@@ -843,7 +845,7 @@ function Invoke-Doctor {
     Write-Section "FoundationKit doctor"
 
     $required = @("git", "dotnet", "powershell")
-    $optional = @("docker", "cloudflared", "python", "node", "sqlcmd")
+    $optional = @("docker", "cloudflared", "devtunnel", "python", "node", "sqlcmd")
     $failed = $false
     $portOwners = @{}
 
@@ -890,7 +892,7 @@ function Invoke-Doctor {
     if ($env:OS -eq "Windows_NT") {
         $sqlServices = @(Get-Service -Name 'MSSQLSERVER', 'MSSQL$*' -ErrorAction SilentlyContinue | Sort-Object Name)
         if ($sqlServices.Count -eq 0) {
-            Write-Host "[INFO] No local SQL Server service was detected; Docker mode can still be used." -ForegroundColor DarkYellow
+            Write-Host "[INFO] No local SQL Server service was detected; Madar Native requires local SQL Server, while Docker mode remains available." -ForegroundColor DarkYellow
         }
         else {
             foreach ($service in $sqlServices) {
@@ -927,11 +929,12 @@ function Invoke-Doctor {
     }
 
     $atharPidFile = Join-Path $LocalDirectory "athar-native.pid"
+    $madarPidFile = Join-Path $LocalDirectory "madar-native.pid"
     foreach ($health in @(
         @{ Name = "Athar"; Url = "http://127.0.0.1:8090/health/ready"; Port = 8090; PidFile = $atharPidFile },
         @{ Name = "Workbench Native"; Url = "http://127.0.0.1:5057/api/health"; Port = 5057; PidFile = $WorkbenchPidFile },
         @{ Name = "Workbench Docker"; Url = "http://127.0.0.1:8080/api/health"; Port = 8080; PidFile = $null },
-        @{ Name = "Madar"; Url = "http://127.0.0.1:8100/health/ready"; Port = 8100; PidFile = $null })) {
+        @{ Name = "Madar"; Url = "http://127.0.0.1:8100/health/ready"; Port = 8100; PidFile = $madarPidFile })) {
         $isHealthy = Test-LocalHealthEndpoint -Url $health.Url
         if ($isHealthy) {
             Write-Host "[RUNNING] $($health.Name): $($health.Url)" -ForegroundColor Green
@@ -1019,15 +1022,15 @@ Usage:
   powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 <action> [options]
 
 Product lifecycle actions:
-  start              Start Athar, Workbench, Madar, or the supported All set
+  start              Start Athar, Workbench, Madar, or All
   stop               Stop while preserving data
   restart            Stop and start again
   status             Show process, containers, and health
   open               Open the selected application
   logs               Tail local or Docker logs
   lan                Show URLs for devices on the same network
-  expose             Create a temporary public HTTPS URL for Athar
-  credentials        Show the local Athar administrator account
+  expose             Create a temporary public HTTPS URL for Athar or Madar UAT
+  credentials        Show local Athar or Madar Development accounts
   backup             Back up the Athar database
   reset              Remove supported runtime data; requires -Force
 
@@ -1043,24 +1046,26 @@ Repository actions:
 Options:
   -Target Athar|Workbench|Madar|All|Repository
   -Mode Auto|Native|Docker
+  -TunnelProvider Microsoft|Cloudflare   (Madar expose only)
   -Configuration Debug|Release
   -Force
 
 Examples:
-  .\foundationkit.ps1 doctor
-  .\foundationkit.ps1 start -Target Madar -Mode Docker
-  .\foundationkit.ps1 status -Target Madar
-  .\foundationkit.ps1 logs -Target Madar
-  .\foundationkit.ps1 start -Target All -Mode Auto
-  .\foundationkit.ps1 start -Target All -Mode Native
-  .\foundationkit.ps1 status -Target All
-  .\foundationkit.ps1 stop -Target All
-  .\foundationkit.ps1 verify
-  .\foundationkit.ps1 pack
-  .\foundationkit.ps1 production-check
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 doctor
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Native
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target Madar
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 credentials -Target Madar
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Microsoft
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 expose -Target Madar -TunnelProvider Cloudflare
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target All -Mode Auto
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 status -Target All
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 stop -Target All
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 verify
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 pack
 
-Auto mode uses Docker when Docker Desktop is ready; otherwise Athar and Workbench can use local .NET and SQL Server.
-Madar currently uses its Docker operational path. When -Target All -Mode Native is selected, Madar is skipped so the existing Athar/Workbench native flow remains compatible.
+Madar Native is the primary Windows human/UAT path and uses local SQL Server on http://localhost:8100.
+Madar Docker remains available for container/integration/regression use. Auto prefers Madar Native on Windows when .NET 10 is available.
+Microsoft Dev Tunnels and Cloudflare Quick Tunnels are temporary UAT sharing paths, not Production hosting.
 See docs/LOCAL-RUN-WINDOWS-AR.md and docs/MADAR-OPERATIONS-AR.md for the canonical local-run paths.
 "@ | Write-Host
 }
@@ -1079,16 +1084,7 @@ function Invoke-StartTarget {
         "All" {
             Invoke-AtharAction "Start"
             Start-Workbench
-
-            if ($Mode -eq "Native") {
-                Write-Host "Madar is skipped for -Target All -Mode Native because its current operational path is Docker-only." -ForegroundColor Yellow
-            }
-            elseif (Test-DockerReady) {
-                Invoke-MadarAction "start"
-            }
-            else {
-                Write-Host "Madar was not started because Docker is unavailable. Athar and Workbench remain started through their supported path." -ForegroundColor Yellow
-            }
+            Invoke-MadarAction "start"
         }
         default {
             throw "Start requires -Target Athar, Workbench, Madar, or All."
@@ -1108,12 +1104,7 @@ function Invoke-StopTarget {
             Invoke-MadarAction "stop"
         }
         "All" {
-            if (Test-DockerReady) {
-                Invoke-MadarAction "stop"
-            }
-            else {
-                Write-Host "Docker is unavailable; Madar Docker resources were not changed." -ForegroundColor Yellow
-            }
+            Invoke-MadarAction "stop"
             Stop-Workbench
             Invoke-AtharAction "Stop"
         }
@@ -1157,12 +1148,12 @@ function Invoke-OpenTarget {
             Open-Workbench
         }
         "Madar" {
-            Open-Madar
+            Invoke-MadarAction "open"
         }
         "All" {
             Invoke-AtharAction "Open"
             Open-Workbench
-            Open-Madar
+            Invoke-MadarAction "open"
         }
         default {
             throw "Open requires -Target Athar, Workbench, Madar, or All."
@@ -1184,13 +1175,8 @@ function Invoke-LogsTarget {
         "All" {
             Show-AtharLogs
             Show-WorkbenchLogs
-            if (Test-DockerReady) {
-                Write-Section "Madar logs"
-                Invoke-MadarAction "logs"
-            }
-            else {
-                Write-Host "Docker is unavailable; Madar container logs cannot be read." -ForegroundColor Yellow
-            }
+            Write-Section "Madar logs"
+            Invoke-MadarAction "logs"
         }
         default {
             throw "Logs requires -Target Athar, Workbench, Madar, or All."
@@ -1237,7 +1223,7 @@ function Invoke-ResetTarget {
             Reset-Workbench
         }
         "Madar" {
-            throw "Madar reset is intentionally not exposed by the unified manager yet. Use the documented Madar operational path and remove its Docker volume explicitly only when data destruction is intended."
+            throw "Madar reset is intentionally not exposed by the unified manager. The local SQL database is preserved unless an explicit product data-destruction procedure is used."
         }
         "All" {
             Reset-Workbench
@@ -1282,16 +1268,35 @@ switch ($Action.ToLowerInvariant()) {
         Invoke-LanTarget
     }
     "expose" {
-        if ($Target -notin @("Athar", "All")) {
-            throw "The public tunnel is configured for Athar only."
+        if ($Target -eq "Athar") {
+            Invoke-AtharExpose
         }
-        Invoke-AtharExpose
+        elseif ($Target -eq "Madar") {
+            if ($TunnelProvider -eq "Microsoft") {
+                Invoke-MadarAction "share-microsoft"
+            }
+            else {
+                Invoke-MadarAction "share-cloudflare"
+            }
+        }
+        else {
+            throw "Expose requires one explicit target: Athar or Madar."
+        }
     }
     "credentials" {
-        if ($Target -notin @("Athar", "All")) {
-            throw "Credentials are available for Athar only."
+        if ($Target -eq "Athar") {
+            Show-AtharCredentials
         }
-        Show-AtharCredentials
+        elseif ($Target -eq "Madar") {
+            Invoke-MadarAction "credentials"
+        }
+        elseif ($Target -eq "All") {
+            Show-AtharCredentials
+            Invoke-MadarAction "credentials"
+        }
+        else {
+            throw "Credentials require -Target Athar, Madar, or All."
+        }
     }
     "backup" {
         if ($Target -notin @("Athar", "All")) {
