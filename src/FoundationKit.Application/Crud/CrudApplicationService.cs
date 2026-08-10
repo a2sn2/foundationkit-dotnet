@@ -21,6 +21,7 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
     private readonly ICrudAuthorizationPolicy<TEntity, TId> _authorization;
     private readonly ICrudConcurrencyPolicy<TEntity, TUpdate> _concurrency;
     private readonly ICrudManager<TEntity, TId, TCreate, TUpdate> _manager;
+    private readonly ICrudQueryPolicy<TEntity, TId> _queryPolicy;
     private readonly ICrudOperationObserver<TEntity, TId>[] _observers;
     private readonly FoundationModuleDefinition<TEntity, TId> _module;
     private readonly IFoundationProjectContext _projectContext;
@@ -37,6 +38,35 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         IEnumerable<ICrudOperationObserver<TEntity, TId>> observers,
         FoundationModuleDefinition<TEntity, TId> module,
         IFoundationProjectContext projectContext)
+        : this(
+            repository,
+            unitOfWork,
+            mapper,
+            createValidator,
+            updateValidator,
+            authorization,
+            concurrency,
+            manager,
+            observers,
+            module,
+            projectContext,
+            new DefaultCrudQueryPolicy<TEntity, TId>())
+    {
+    }
+
+    public CrudApplicationService(
+        IRepository<TEntity, TId> repository,
+        IUnitOfWork unitOfWork,
+        ICrudMapper<TEntity, TId, TCreate, TUpdate, TRead> mapper,
+        IValidator<TCreate> createValidator,
+        IValidator<TUpdate> updateValidator,
+        ICrudAuthorizationPolicy<TEntity, TId> authorization,
+        ICrudConcurrencyPolicy<TEntity, TUpdate> concurrency,
+        ICrudManager<TEntity, TId, TCreate, TUpdate> manager,
+        IEnumerable<ICrudOperationObserver<TEntity, TId>> observers,
+        FoundationModuleDefinition<TEntity, TId> module,
+        IFoundationProjectContext projectContext,
+        ICrudQueryPolicy<TEntity, TId> queryPolicy)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -46,6 +76,7 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
         _concurrency = concurrency ?? throw new ArgumentNullException(nameof(concurrency));
         _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+        _queryPolicy = queryPolicy ?? throw new ArgumentNullException(nameof(queryPolicy));
         _observers = (observers ?? throw new ArgumentNullException(nameof(observers))).ToArray();
         _module = module ?? throw new ArgumentNullException(nameof(module));
         _projectContext = projectContext ?? throw new ArgumentNullException(nameof(projectContext));
@@ -102,8 +133,16 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
             : Result<TRead>.Success(_mapper.ToReadModel(entity));
     }
 
-    public async Task<Result<PagedResult<TRead>>> ListAsync(
+    public Task<Result<PagedResult<TRead>>> ListAsync(
         PageRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return ListAsync(CrudListRequest.FromPage(request), cancellationToken);
+    }
+
+    public async Task<Result<PagedResult<TRead>>> ListAsync(
+        CrudListRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -116,21 +155,35 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         if (authorization.IsFailure)
             return Result<PagedResult<TRead>>.Failure(authorization.Error);
 
-        var pageSize = Math.Min(request.PageSize, _module.Crud.MaximumPageSize);
-        var boundedRequest = new PageRequest(request.Page, pageSize);
-        var total = await _repository.CountAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        var queryPlan = _queryPolicy.Build(request);
+        if (queryPlan.IsFailure)
+            return Result<PagedResult<TRead>>.Failure(queryPlan.Error);
+
+        var pageSize = Math.Min(request.Page.PageSize, _module.Crud.MaximumPageSize);
+        var boundedPage = new PageRequest(request.Page.Page, pageSize);
+        var plan = queryPlan.Value;
+        var total = await _repository.CountAsync(
+            new CrudQuerySpecification<TEntity, TId>(plan),
+            cancellationToken).ConfigureAwait(false);
         var entities = await _repository.ListAsync(
-            new CrudPageSpecification<TEntity, TId>(boundedRequest),
+            new CrudQuerySpecification<TEntity, TId>(plan, boundedPage),
             cancellationToken).ConfigureAwait(false);
         var items = entities.Select(_mapper.ToReadModel).ToArray();
 
         return Result<PagedResult<TRead>>.Success(
-            new PagedResult<TRead>(items, boundedRequest.Page, boundedRequest.PageSize, total));
+            new PagedResult<TRead>(items, boundedPage.Page, boundedPage.PageSize, total));
     }
+
+    public Task<Result<TRead>> UpdateAsync(
+        TId id,
+        TUpdate request,
+        CancellationToken cancellationToken = default) =>
+        UpdateAsync(id, request, null, cancellationToken);
 
     public async Task<Result<TRead>> UpdateAsync(
         TId id,
         TUpdate request,
+        CrudConcurrencyPrecondition? precondition,
         CancellationToken cancellationToken = default)
     {
         if (!_module.Crud!.UpdateEnabled)
@@ -150,7 +203,8 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         if (authorization.IsFailure)
             return Result<TRead>.Failure(authorization.Error);
 
-        var concurrency = _concurrency.Validate(entity, request);
+        var normalizedPrecondition = precondition?.Normalize();
+        var concurrency = _concurrency.Validate(entity, request, normalizedPrecondition);
         if (concurrency.IsFailure)
             return Result<TRead>.Failure(concurrency.Error);
 
@@ -252,14 +306,31 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         "Foundation.Crud.NotFound",
         $"Module '{_module.Name}' does not contain resource '{id}'.");
 
-    private sealed class CrudPageSpecification<TPageEntity, TPageId> : Specification<TPageEntity>
+    private sealed class CrudQuerySpecification<TPageEntity, TPageId> : Specification<TPageEntity>
         where TPageEntity : Entity<TPageId>
         where TPageId : notnull
     {
-        public CrudPageSpecification(PageRequest request)
+        public CrudQuerySpecification(
+            CrudQueryPlan<TPageEntity> plan,
+            PageRequest? page = null)
+            : base(plan.Criteria)
         {
-            ApplyOrderBy(entity => entity.Id);
-            ApplyPaging(request.Skip, request.PageSize);
+            if (plan.OrderBy is null)
+            {
+                ApplyOrderBy(entity => entity.Id);
+            }
+            else if (plan.SortDirection == CrudSortDirection.Descending)
+            {
+                ApplyOrderByDescending(plan.OrderBy);
+            }
+            else
+            {
+                ApplyOrderBy(plan.OrderBy);
+            }
+
+            if (page is not null)
+                ApplyPaging(page.Skip, page.PageSize);
+
             UseNoTracking();
         }
     }

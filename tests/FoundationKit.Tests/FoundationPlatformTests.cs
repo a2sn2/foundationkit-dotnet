@@ -40,14 +40,36 @@ public sealed class FoundationPlatformTests
         var module = new FoundationModuleBuilder<TestEntity, Guid>()
             .Named("Customers", "customers")
             .Crud(options => options.DeleteEnabled = false)
+            .Api(api =>
+            {
+                api.RoutePrefix = "platform/v1";
+                api.Idempotency = FoundationApiIdempotencyMode.Required;
+                api.Concurrency = FoundationApiConcurrencyMode.RequireIfMatch;
+                api.MaximumFilters = 2;
+                api.MaximumSorts = 1;
+            })
             .Auditing()
             .Authorization("customers")
             .Concurrency()
             .Build();
         var registry = new FoundationModuleRegistry([module]);
+
         Assert.Equal("customers", registry.Find("customers")!.Route);
+        Assert.Equal("platform/v1", module.Api.RoutePrefix);
+        Assert.Equal(FoundationApiIdempotencyMode.Required, module.Api.Idempotency);
         Assert.False(module.Crud!.DeleteEnabled);
         Assert.True(module.HasCapability(FoundationModuleCapability.Auditing));
+    }
+
+    [Fact]
+    public void Api_module_options_reject_unbounded_query_configuration()
+    {
+        var builder = new FoundationModuleBuilder<TestEntity, Guid>()
+            .Named("Customers", "customers")
+            .Crud();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Api(api => api.MaximumFilters = 26));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.Api(api => api.MaximumSorts = 11));
     }
 
     [Fact]
@@ -100,6 +122,7 @@ public sealed class FoundationPlatformTests
         public string Name { get; set; } = name;
         public int Version { get; set; } = 1;
     }
+
     private sealed record CreateRequest(string Name);
     private sealed record UpdateRequest(string Name, int ExpectedVersion);
     private sealed record ReadModel(Guid Id, string Name, int Version);
@@ -110,23 +133,29 @@ public sealed class FoundationPlatformTests
         public void ApplyUpdate(TestEntity entity, UpdateRequest request) { entity.Name = request.Name; entity.Version++; }
         public ReadModel ToReadModel(TestEntity entity) => new(entity.Id, entity.Name, entity.Version);
     }
+
     private sealed class VersionPolicy : ICrudConcurrencyPolicy<TestEntity, UpdateRequest>
     {
         public Result Validate(TestEntity entity, UpdateRequest request) => entity.Version == request.ExpectedVersion
-            ? Result.Success() : Result.Failure(Error.Conflict("Test.VersionConflict", "Version mismatch."));
+            ? Result.Success()
+            : Result.Failure(Error.Conflict("Test.VersionConflict", "Version mismatch."));
     }
+
     private sealed class RecordingManager : ICrudManager<TestEntity, Guid, CreateRequest, UpdateRequest>;
+
     private sealed class RecordingObserver : ICrudOperationObserver<TestEntity, Guid>
     {
         public List<CrudOperation> Operations { get; } = [];
         public ValueTask OnSucceededAsync(CrudOperationEvent<TestEntity, Guid> operation, CancellationToken cancellationToken = default)
         { Operations.Add(operation.Operation); return ValueTask.CompletedTask; }
     }
+
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveCount { get; private set; }
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) { SaveCount++; return Task.FromResult(1); }
     }
+
     private sealed class FakeRepository : IRepository<TestEntity, Guid>
     {
         public List<TestEntity> Items { get; } = [];
@@ -138,11 +167,13 @@ public sealed class FoundationPlatformTests
         public Task AddRangeAsync(IEnumerable<TestEntity> entities, CancellationToken cancellationToken = default) { Items.AddRange(entities); return Task.CompletedTask; }
         public void Remove(TestEntity entity) => Items.Remove(entity);
         public void RemoveRange(IEnumerable<TestEntity> entities) { foreach (var entity in entities.ToArray()) Items.Remove(entity); }
+
         private IEnumerable<TestEntity> Apply(ISpecification<TestEntity> specification)
         {
             IEnumerable<TestEntity> query = Items;
             if (specification.Criteria is not null) query = query.Where(specification.Criteria.Compile());
             if (specification.OrderBy is not null) query = query.OrderBy(specification.OrderBy.Compile());
+            if (specification.OrderByDescending is not null) query = query.OrderByDescending(specification.OrderByDescending.Compile());
             if (specification.Skip.HasValue) query = query.Skip(specification.Skip.Value);
             if (specification.Take.HasValue) query = query.Take(specification.Take.Value);
             return query;

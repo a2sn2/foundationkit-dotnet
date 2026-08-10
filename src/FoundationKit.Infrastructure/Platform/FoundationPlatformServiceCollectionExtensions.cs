@@ -55,6 +55,7 @@ public static class FoundationPlatformServiceCollectionExtensions
         services.AddScoped<ICrudMapper<TEntity, TId, TCreate, TUpdate, TRead>, TMapper>();
         services.TryAddScoped<IValidator<TCreate>, DataAnnotationsValidator<TCreate>>();
         services.TryAddScoped<IValidator<TUpdate>, DataAnnotationsValidator<TUpdate>>();
+        services.TryAddScoped<ICrudQueryPolicy<TEntity, TId>, DefaultCrudQueryPolicy<TEntity, TId>>();
 
         if (definition.HasCapability(FoundationModuleCapability.Authorization))
         {

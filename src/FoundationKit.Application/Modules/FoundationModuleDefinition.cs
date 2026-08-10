@@ -14,6 +14,8 @@ public interface IFoundationModuleDefinition
     Type IdType { get; }
 
     FoundationModuleCapability Capabilities { get; }
+
+    FoundationApiModuleOptions Api => FoundationApiModuleOptions.Default;
 }
 
 public sealed record CrudModuleOptions(
@@ -66,6 +68,7 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
         string route,
         FoundationModuleCapability capabilities,
         CrudModuleOptions? crud,
+        FoundationApiModuleOptions api,
         string? authorizationPolicyPrefix,
         Type? managerType)
     {
@@ -73,6 +76,7 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
         Route = route;
         Capabilities = capabilities;
         Crud = crud;
+        Api = api;
         AuthorizationPolicyPrefix = authorizationPolicyPrefix;
         ManagerType = managerType;
     }
@@ -88,6 +92,8 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
     public FoundationModuleCapability Capabilities { get; }
 
     public CrudModuleOptions? Crud { get; }
+
+    public FoundationApiModuleOptions Api { get; }
 
     public string? AuthorizationPolicyPrefix { get; }
 
@@ -106,6 +112,7 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
     private string _name = typeof(TEntity).Name;
     private string _route = typeof(TEntity).Name.ToLowerInvariant();
     private CrudModuleOptions? _crud;
+    private FoundationApiModuleOptions _api = FoundationApiModuleOptions.Default;
     private string? _authorizationPolicyPrefix;
     private Type? _managerType;
 
@@ -122,6 +129,14 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
         configure?.Invoke(builder);
         _crud = builder.Build();
         _capabilities |= FoundationModuleCapability.Crud;
+        return this;
+    }
+
+    public FoundationModuleBuilder<TEntity, TId> Api(Action<FoundationApiModuleOptionsBuilder>? configure = null)
+    {
+        var builder = new FoundationApiModuleOptionsBuilder();
+        configure?.Invoke(builder);
+        _api = builder.Build();
         return this;
     }
 
@@ -175,6 +190,7 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
             _route,
             _capabilities,
             _crud,
+            _api,
             _authorizationPolicyPrefix,
             _managerType);
     }
@@ -226,10 +242,10 @@ public sealed class FoundationModuleRegistry : IFoundationModuleRegistry
             throw new InvalidOperationException($"Duplicate Foundation module name '{duplicateName.Key}'.");
 
         var duplicateRoute = materialized
-            .GroupBy(module => module.Route, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(module => $"{module.Api.RoutePrefix}/{module.Route}", StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(group => group.Count() > 1);
         if (duplicateRoute is not null)
-            throw new InvalidOperationException($"Duplicate Foundation module route '{duplicateRoute.Key}'.");
+            throw new InvalidOperationException($"Duplicate Foundation module API route '{duplicateRoute.Key}'.");
 
         _modules = materialized.ToDictionary(module => module.Name, StringComparer.OrdinalIgnoreCase);
         Modules = Array.AsReadOnly(materialized);

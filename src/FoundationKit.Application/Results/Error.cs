@@ -33,4 +33,10 @@ public sealed record Error(string Code, string Description, ErrorType Type)
 
     public static Error Timeout(string code, string description) =>
         new(code, description, ErrorType.Timeout);
+
+    public static Error PreconditionRequired(string code, string description) =>
+        new(code, description, ErrorType.PreconditionRequired);
+
+    public static Error PreconditionFailed(string code, string description) =>
+        new(code, description, ErrorType.PreconditionFailed);
 }

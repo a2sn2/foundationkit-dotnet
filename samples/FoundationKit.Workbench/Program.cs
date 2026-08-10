@@ -1,6 +1,7 @@
 using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Crud;
 using FoundationKit.Application.Events;
+using FoundationKit.Application.Modules;
 using FoundationKit.Application.Persistence;
 using FoundationKit.Auditing;
 using FoundationKit.Caching;
@@ -12,6 +13,7 @@ using FoundationKit.Infrastructure.Platform;
 using FoundationKit.Localization;
 using FoundationKit.Settings;
 using FoundationKit.WebApi;
+using FoundationKit.WebApi.Api;
 using FoundationKit.WebApi.Crud;
 using FoundationKit.Workbench;
 using FoundationKit.Workbench.Application;
@@ -57,7 +59,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "FoundationKit Workbench API",
         Version = "v1",
-        Description = "Executable Core architecture reference including the generic CRUD engine vertical slice."
+        Description = "Executable Core architecture reference including the FoundationKit API Engine and generic CRUD vertical slice."
     });
 });
 
@@ -88,6 +90,8 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 
 builder.Services.AddScoped<ICrudAuthorizationPolicy<CoreCrudRecord, Guid>, CoreCrudAuthorizationPolicy>();
 builder.Services.AddScoped<ICrudConcurrencyPolicy<CoreCrudRecord, CoreCrudUpdateRequest>, CoreCrudConcurrencyPolicy>();
+builder.Services.AddScoped<ICrudQueryPolicy<CoreCrudRecord, Guid>, CoreCrudQueryPolicy>();
+builder.Services.AddSingleton<IFoundationApiEntityTagProvider<CoreCrudResponse>, CoreCrudEntityTagProvider>();
 builder.Services.AddFoundationEfCrudModule<
     CoreCrudRecord,
     Guid,
@@ -98,6 +102,13 @@ builder.Services.AddFoundationEfCrudModule<
     WorkbenchDbContext>(module => module
         .Named("CoreCrud", "core-crud")
         .Crud()
+        .Api(api =>
+        {
+            api.Idempotency = FoundationApiIdempotencyMode.Required;
+            api.Concurrency = FoundationApiConcurrencyMode.RequireIfMatch;
+            api.MaximumFilters = 1;
+            api.MaximumSorts = 1;
+        })
         .Auditing()
         .Authorization()
         .Concurrency()
@@ -134,7 +145,7 @@ await DatabaseBootstrapper.MigrateAsync(app.Services, app.Logger, app.Lifetime.A
 app.MapSystemEndpoints();
 app.MapUserPortalEndpoints();
 app.MapAdminPortalEndpoints();
-var coreCrudModule = app.Services.GetRequiredService<FoundationKit.Application.Modules.FoundationModuleDefinition<CoreCrudRecord, Guid>>();
+var coreCrudModule = app.Services.GetRequiredService<FoundationModuleDefinition<CoreCrudRecord, Guid>>();
 app.MapFoundationCrud<CoreCrudRecord, Guid, CoreCrudCreateRequest, CoreCrudUpdateRequest, CoreCrudResponse>(coreCrudModule);
 
 app.MapFallbackToFile("index.html");

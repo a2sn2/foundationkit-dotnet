@@ -13,8 +13,13 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] Workbench executable SQL reference.
 - [x] Project identity/isolation contract and canonical resource namespace.
 - [x] Module/Service Engine v1 and generic CRUD vertical capability.
-- [x] CRUD mapper/validator/manager/authorization/concurrency/audit extension seams.
-- [x] Generic CRUD HTTP endpoint mapping and Workbench SQL proof.
+- [x] CRUD mapper/validator/manager/authorization/concurrency/query/audit extension seams.
+- [x] API Engine module configuration and generic CRUD route composition.
+- [x] bounded pagination/filter/sort transport syntax with explicit module-owned query policies.
+- [x] centralized validation/error/Problem Details contract plus typed 412/428 precondition failures.
+- [x] ETag/If-Match concurrency contract kept separate from update DTOs.
+- [x] API operation metadata for authorization, rate-limit policy, idempotency intent, and concurrency intent.
+- [x] runtime OpenAPI metadata for CRUD schemas, queries, headers, responses, and Workbench SQL proof.
 
 ## Next backend/platform families
 
@@ -27,8 +32,7 @@ These remain evidence-driven and are not automatically packages:
 - [ ] jobs, durable messaging, outbox/inbox;
 - [ ] webhooks and realtime;
 - [ ] distributed caching provider;
-- [ ] reusable idempotency contract;
-- [ ] richer concurrency/precondition contract where evidence warrants it;
+- [ ] durable/replay-safe idempotency implementation behind the Phase 7 HTTP contract;
 - [ ] external HTTP resilience conventions;
 - [ ] search, reporting, import/export;
 - [ ] privacy/PII, retention/anonymization;
@@ -37,8 +41,10 @@ These remain evidence-driven and are not automatically packages:
 
 ## Tooling and full-stack experience
 
-- [ ] Composer manifest model for modules/resources and their per-module capabilities.
-- [ ] generated OpenAPI/Postman contract evidence from one source of truth.
+- [ ] derive deterministic Postman and later typed-client evidence from the runtime/OpenAPI contract source of truth.
+- [ ] Composer manifest model for Project → Modules → Resources → Capabilities → Providers → Overrides → API.
+- [ ] generated-project proof for Database + CRUD + Validation + Authorization + Audit + API + OpenAPI + Postman.
+- [ ] concurrent project-isolation and compatible legacy-consumer proof.
 - [ ] visual Workbench composer using the same deterministic engine.
 - [ ] first-party frontend template/design system after backend phases are stable.
 
