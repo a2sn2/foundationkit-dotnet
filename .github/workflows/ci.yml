@@ -36,12 +36,14 @@ jobs:
       - name: Verify repository boundaries
         run: bash scripts/verify-repository.sh
 
-      - name: Validate JSON and static assets
+      - name: Validate JSON, generated-contract tooling, and static assets
         run: |
           python3 -m json.tool catalog/foundationkit.catalog.json >/dev/null
           python3 -m json.tool catalog/foundationkit.capabilities.json >/dev/null
           python3 -m json.tool catalog/foundationkit.maturity-evidence.json >/dev/null
           python3 -m json.tool postman/FoundationKit.Workbench.postman_collection.json >/dev/null
+          python3 -m py_compile scripts/generate-postman-from-openapi.py
+          grep -Fq 'Generated deterministically from the runtime OpenAPI contract' postman/FoundationKit.Workbench.postman_collection.json
           python3 scripts/verify-pages.py
           node --check site/app.js
 
@@ -110,7 +112,7 @@ jobs:
           if-no-files-found: error
 
   sqlserver-integration-smoke:
-    name: Workbench SQL Server full-stack and API Engine
+    name: Workbench SQL Server full-stack, API Engine, and contract SSOT
     runs-on: ubuntu-latest
     needs: build-test-pack
     steps:
@@ -224,12 +226,42 @@ jobs:
           print("FoundationKit API Engine OpenAPI contract structure verified.")
           PY
 
+      - name: Generate and verify Postman contract from OpenAPI
+        run: |
+          mkdir -p artifacts/postman
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/openapi/workbench-swagger.json \
+            artifacts/postman/FoundationKit.Workbench.generated.json
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/openapi/workbench-swagger.json \
+            artifacts/postman/FoundationKit.Workbench.second.json
+          cmp \
+            artifacts/postman/FoundationKit.Workbench.generated.json \
+            artifacts/postman/FoundationKit.Workbench.second.json
+          cmp \
+            postman/FoundationKit.Workbench.postman_collection.json \
+            artifacts/postman/FoundationKit.Workbench.generated.json
+          python3 scripts/generate-postman-from-openapi.py \
+            artifacts/openapi/workbench-swagger.json \
+            postman/FoundationKit.Workbench.postman_collection.json \
+            --check
+          python3 -m json.tool artifacts/postman/FoundationKit.Workbench.generated.json >/dev/null
+          echo "OpenAPI -> Postman deterministic contract source-of-truth verified."
+
       - name: Upload OpenAPI contract evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: workbench-openapi-contract
           path: artifacts/openapi/workbench-swagger.json
+          if-no-files-found: ignore
+
+      - name: Upload generated Postman contract evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workbench-postman-contract
+          path: artifacts/postman/FoundationKit.Workbench.generated.json
           if-no-files-found: ignore
 
       - name: Run SQL integration smoke

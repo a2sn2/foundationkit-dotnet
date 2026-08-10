@@ -1,138 +1,411 @@
 {
   "info": {
-    "_postman_id": "4f6c2d31-93ec-4d6e-b247-2f6ecb359b11",
+    "_postman_id": "62a9ca6a-7df7-5974-b346-20967eece860",
     "name": "FoundationKit Workbench API",
-    "description": "Executable Core reference requests. Phase 7 keeps this collection synchronized manually; Phase 8 replaces manual contract ownership with deterministic OpenAPI-derived generation.",
+    "description": "Generated deterministically from the runtime OpenAPI contract. Do not edit this collection manually; regenerate it from OpenAPI.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5057" },
-    { "key": "userRequestId", "value": "" },
-    { "key": "coreCrudId", "value": "" },
-    { "key": "coreCrudEtag", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5057"
+    }
   ],
   "item": [
     {
-      "name": "Shared Platform",
-      "item": [
-        { "name": "Runtime", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/runtime" } },
-        { "name": "Health", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/health" } },
-        { "name": "Capability Catalog", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/catalog" } },
-        { "name": "OpenAPI", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/swagger/v1/swagger.json" } }
-      ]
-    },
-    {
-      "name": "Core API Engine CRUD",
+      "name": "Admin full stack",
       "item": [
         {
-          "name": "Create",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Created', () => pm.response.to.have.status(201));",
-            "const body = pm.response.json();",
-            "pm.collectionVariables.set('coreCrudId', body.id);",
-            "pm.collectionVariables.set('coreCrudEtag', pm.response.headers.get('ETag'));",
-            "pm.test('Initial version', () => pm.expect(body.version).to.eql(1));"
-          ] } }],
+          "name": "GetAdminRequestQueue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "value",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetAdminRequestQueue`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "ReviewUserRequest",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "postman-create-core-record" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Core Record\"\n}" },
-            "url": "{{baseUrl}}/api/core-crud"
-          }
-        },
-        {
-          "name": "List",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/core-crud?page=1&pageSize=20" }
-        },
-        {
-          "name": "Filtered List",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/core-crud?page=1&pageSize=20&filter=name%7Ccontains%7CPostman&sort=version%7Cdesc" }
-        },
-        {
-          "name": "Get",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.collectionVariables.set('coreCrudEtag', pm.response.headers.get('ETag'));"
-          ] } }],
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}" }
-        },
-        {
-          "name": "Update With If-Match",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Updated', () => pm.response.to.have.status(200));",
-            "pm.test('Version advanced', () => pm.expect(pm.response.json().version).to.eql(2));",
-            "pm.collectionVariables.set('coreCrudEtag', pm.response.headers.get('ETag'));"
-          ] } }],
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "postman-update-core-record" },
-              { "key": "If-Match", "value": "{{coreCrudEtag}}" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Core Record Updated\"\n}" },
-            "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}"
-          }
-        },
-        {
-          "name": "Stale If-Match Returns 412",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Precondition failed', () => pm.response.to.have.status(412));"
-          ] } }],
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "postman-stale-core-record" },
-              { "key": "If-Match", "value": "\"1\"" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Stale Update\"\n}" },
-            "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}"
-          }
-        },
-        {
-          "name": "Delete",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Deleted', () => pm.response.to.have.status(204));"
-          ] } }],
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Idempotency-Key", "value": "postman-delete-core-record" }],
-            "url": "{{baseUrl}}/api/core-crud/{{coreCrudId}}"
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/requests/{{id}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "requests",
+                "{{id}}",
+                "review"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000001"
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `ReviewUserRequest`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"notes\": \"value\",\n  \"reviewedBy\": \"value\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]
     },
     {
-      "name": "Connected User/Admin Reference",
+      "name": "CoreCrud",
       "item": [
         {
-          "name": "Create User Request",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Created', () => pm.response.to.have.status(201));",
-            "const body = pm.response.json();",
-            "pm.collectionVariables.set('userRequestId', body.id);"
-          ] } }],
+          "name": "CoreCrud.List",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"projectName\": \"Reference System\",\n  \"projectType\": \"Internal platform\",\n  \"audience\": \"Engineering team\",\n  \"goal\": \"Verify the executable architecture reference against SQL Server.\",\n  \"selectedCapabilityIds\": [\"commands-queries\", \"ef-repository\"],\n  \"priorities\": \"Correctness and maintainability\",\n  \"notes\": \"Public-safe Workbench example\"\n}" },
-            "url": "{{baseUrl}}/api/user/requests"
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/core-crud",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "core-crud"
+              ],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "field|eq|value",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "field|asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CoreCrud.List`. Do not edit this request manually."
           }
         },
-        { "name": "Submitted Queue", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/requests?status=submitted" } },
         {
-          "name": "Approve",
+          "name": "CoreCrud.Create",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"decision\": \"approve\",\n  \"reviewedBy\": \"Reference Admin\",\n  \"notes\": \"Validated from Workbench Postman collection\"\n}" },
-            "url": "{{baseUrl}}/api/admin/requests/{{userRequestId}}/review"
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "contract-example-key"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/core-crud",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "core-crud"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CoreCrud.Create`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"value\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         },
-        { "name": "Get User Status", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/user/requests/{{userRequestId}}" } }
+        {
+          "name": "CoreCrud.Get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/core-crud/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "core-crud",
+                "{{id}}"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000001"
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CoreCrud.Get`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "CoreCrud.Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "contract-example-key"
+              },
+              {
+                "key": "If-Match",
+                "value": "\"1\""
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/core-crud/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "core-crud",
+                "{{id}}"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000001"
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CoreCrud.Update`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"value\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "CoreCrud.Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "contract-example-key"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/core-crud/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "core-crud",
+                "{{id}}"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000001"
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CoreCrud.Delete`. Do not edit this request manually."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shared platform",
+      "item": [
+        {
+          "name": "GetFoundationKitCatalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "catalog"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetFoundationKitCatalog`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "GetWorkbenchHealth",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetWorkbenchHealth`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "GetWorkbenchPlatformReference",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/platform-reference",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "platform-reference"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetWorkbenchPlatformReference`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "GetWorkbenchRuntime",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runtime",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runtime"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetWorkbenchRuntime`. Do not edit this request manually."
+          }
+        }
+      ]
+    },
+    {
+      "name": "User full stack",
+      "item": [
+        {
+          "name": "CreateUserRequest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "requests"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `CreateUserRequest`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audience\": \"value\",\n  \"goal\": \"value\",\n  \"notes\": \"value\",\n  \"priorities\": \"value\",\n  \"projectName\": \"value\",\n  \"projectType\": \"value\",\n  \"selectedCapabilityIds\": [\n    \"value\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GetUserRequest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/requests/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "requests",
+                "{{id}}"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000001"
+                }
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetUserRequest`. Do not edit this request manually."
+          }
+        }
       ]
     }
   ]
