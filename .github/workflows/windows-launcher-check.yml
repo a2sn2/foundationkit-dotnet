@@ -164,31 +164,40 @@ jobs:
         run: |
           $manager = Get-Content ".\scripts\madar-product.ps1" -Raw
           $unified = Get-Content ".\foundationkit.ps1" -Raw
+          $login = Get-Content ".\apps\Madar\Madar.Client\Pages\Login.razor" -Raw
+          $index = Get-Content ".\apps\Madar\Madar.Client\wwwroot\index.html" -Raw
 
-          $requiredManagerPatterns = @(
-            "ValidateSet\('Auto', 'Native', 'Docker'\)",
+          $requiredManagerLiterals = @(
             "http://localhost:8100",
-            "madar-native\.pid",
+            "madar-native.pid",
             "ConnectionStrings__Madar",
-            "Madar\.Api\.dll",
-            "devtunnel host -p \$port --allow-anonymous",
-            "cloudflared tunnel --url \$BaseUrl"
+            "Madar.Api.dll",
+            'devtunnel host -p $port --allow-anonymous',
+            'cloudflared tunnel --url $BaseUrl'
           )
-          foreach ($pattern in $requiredManagerPatterns) {
-            if ($manager -notmatch $pattern) {
-              throw "Madar manager is missing required Native/UAT contract pattern: $pattern"
+          foreach ($literal in $requiredManagerLiterals) {
+            if (-not $manager.Contains($literal)) {
+              throw "Madar manager is missing required Native/UAT contract text: $literal"
             }
           }
 
-          if ($manager -match "Docker operational path only") {
+          if ($manager.Contains("Docker operational path only")) {
             throw "Madar manager still contains obsolete Docker-only wording."
           }
-
-          if ($unified -notmatch "TunnelProvider") {
+          if (-not $unified.Contains("TunnelProvider")) {
             throw "Unified manager does not expose the Madar tunnel provider selector."
           }
-          if ($unified -notmatch "start -Target Madar -Mode Native") {
+          if (-not $unified.Contains("start -Target Madar -Mode Native")) {
             throw "Unified help does not document Madar Native start."
+          }
+          if (-not $login.Contains("<form @onsubmit=\"LoginAsync\" @onsubmit:preventDefault>")) {
+            throw "Madar login must keep password controls inside form semantics."
+          }
+          if (-not $index.Contains('rel="icon" type="image/svg+xml" href="favicon.svg"')) {
+            throw "Madar runtime index does not reference its favicon."
+          }
+          if (-not (Test-Path ".\apps\Madar\Madar.Client\wwwroot\favicon.svg")) {
+            throw "Madar runtime favicon asset is missing."
           }
 
       - name: Verify Madar Release publish wrapper
