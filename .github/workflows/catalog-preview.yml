@@ -1,0 +1,27 @@
+name: Temporary Catalog Snapshot
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore tools/FoundationKit.CatalogGenerator/FoundationKit.CatalogGenerator.csproj
+      - run: dotnet run --project tools/FoundationKit.CatalogGenerator --configuration Release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: generated-catalog-snapshot
+          path: |
+            catalog/foundationkit.capabilities.json
+            catalog/foundationkit.maturity-evidence.json
+            docs/FEATURES.md
+          if-no-files-found: error
