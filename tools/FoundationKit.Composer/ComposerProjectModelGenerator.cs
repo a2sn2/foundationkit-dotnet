@@ -177,6 +177,8 @@ public static class ComposerProjectModelGenerator
         var concurrencyLiteral = JsonSerializer.Serialize(ConcurrencyName(resource.Api.Concurrency));
 
         return $$"""
+            #nullable enable
+
             namespace {{projectPrefix}}.Application.GeneratedModules.{{module.Name}};
 
             /// <summary>
