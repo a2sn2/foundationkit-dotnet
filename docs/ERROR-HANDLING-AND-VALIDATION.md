@@ -1,6 +1,6 @@
 # Error handling and validation baseline
 
-FoundationKit uses one consistent failure model across application services and ASP.NET Core hosts. Expected business outcomes should not become exceptions, while unexpected failures must still produce safe, traceable Problem Details.
+FoundationKit uses one consistent failure model across application services and ASP.NET Core hosts. Expected business outcomes should not become exceptions, while unexpected request-time failures must still produce safe, traceable Problem Details.
 
 ## Failure layers
 
@@ -16,15 +16,21 @@ FoundationKit uses one consistent failure model across application services and 
    - Validation, not-found, conflict, authentication/authorization, business-rule, throttling, service-unavailable, and timeout categories map consistently to HTTP status codes.
    - CRUD manager, authorization, concurrency, and observer hooks stay explicit and composable.
 
-3. **Exceptions**
+3. **Request-time exceptions**
    - `FoundationExceptionHandler` is registered by `AddFoundationWebApi` and activated by `UseFoundationRequestPipeline`.
    - Known framework/platform exceptions are mapped through `IFoundationExceptionMapper`.
    - Consumers can register additional `IFoundationExceptionMapper` implementations for provider- or product-specific exception types without replacing FoundationKit's global handler.
    - Unknown exceptions return HTTP 500 with code `Foundation.Unhandled`.
    - Exception messages and exception types are not returned by default. `IncludeExceptionDetails` is opt-in and should only be enabled in controlled development environments.
+   - The original exception is logged server-side with the request correlation identifier.
 
 4. **Empty HTTP error responses**
    - The FoundationKit request pipeline also normalizes otherwise-empty 4xx/5xx statuses, including 401, 403, 404, 405, 408, 413, 415, 429, 502, 503, and 504, into the same Problem Details shape.
+
+5. **Startup and configuration failures**
+   - Failures that occur before the ASP.NET Core request pipeline is running cannot be converted into an HTTP Problem Details response.
+   - Missing required configuration, failed startup migrations, invalid DI/module registration, and other boot-time invariants intentionally fail fast so an unhealthy process is not advertised as ready.
+   - Hosts should capture those failures through their normal process/container/service logs and health/restart policy. FoundationKit does not swallow startup exceptions.
 
 ## Problem Details contract
 
@@ -36,7 +42,7 @@ Error responses use RFC-style Problem Details and include stable FoundationKit m
 - `projectId`: current Foundation project identity when a project context is registered.
 - `exceptionType`: emitted only when exception details are explicitly enabled.
 
-The server log always keeps the original exception. The client receives safe public detail plus the correlation identifier required for support and diagnostics.
+The server log keeps the original exception. The client receives safe public detail plus the correlation identifier required for support and diagnostics.
 
 ## Error category to HTTP mapping
 
@@ -55,7 +61,7 @@ The server log always keeps the original exception. The client receives safe pub
 
 ## Enum convention
 
-Closed FoundationKit sets are represented as enums instead of string literals where that improves correctness. Core CRUD operations use `CrudOperation`, and built-in module capabilities use the `[Flags]` enum `FoundationModuleCapability`. Public error codes remain strings because they are extensible wire-contract identifiers rather than a closed set.
+Closed FoundationKit sets are represented as enums instead of string literals where that improves correctness. Core CRUD operations use `CrudOperation`, built-in module capabilities use the `[Flags]` enum `FoundationModuleCapability`, and application failure categories use `ErrorType`. Public error codes remain strings because they are extensible wire-contract identifiers rather than a closed set.
 
 ## Testing convention
 
