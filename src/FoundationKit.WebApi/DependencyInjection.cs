@@ -1,14 +1,27 @@
+using FoundationKit.WebApi.Errors;
 using FoundationKit.WebApi.Middleware;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace FoundationKit.WebApi;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddFoundationWebApi(this IServiceCollection services)
+    public static IServiceCollection AddFoundationWebApi(
+        this IServiceCollection services,
+        Action<FoundationErrorHandlingOptions>? configureErrorHandling = null)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        services.AddOptions<FoundationErrorHandlingOptions>();
+        if (configureErrorHandling is not null)
+            services.Configure(configureErrorHandling);
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IFoundationExceptionMapper, DefaultFoundationExceptionMapper>());
+        services.AddExceptionHandler<FoundationExceptionHandler>();
 
         services.AddProblemDetails(options =>
         {
@@ -28,6 +41,31 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(app);
 
         app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseExceptionHandler();
+        app.UseStatusCodePages(async statusCodeContext =>
+        {
+            var httpContext = statusCodeContext.HttpContext;
+            var error = FoundationHttpProblemDetails.FromStatusCode(httpContext.Response.StatusCode);
+            var details = FoundationHttpProblemDetails.Create(
+                httpContext,
+                error,
+                httpContext.Response.StatusCode);
+            var problemDetailsService =
+                httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+
+            var written = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                ProblemDetails = details
+            }).ConfigureAwait(false);
+
+            if (!written)
+            {
+                await httpContext.Response.WriteAsJsonAsync(
+                    details,
+                    cancellationToken: httpContext.RequestAborted).ConfigureAwait(false);
+            }
+        });
         app.UseMiddleware<SecurityHeadersMiddleware>();
         return app;
     }
