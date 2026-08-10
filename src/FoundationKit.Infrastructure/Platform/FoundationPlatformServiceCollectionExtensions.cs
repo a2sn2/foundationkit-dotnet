@@ -53,10 +53,10 @@ public static class FoundationPlatformServiceCollectionExtensions
         services.AddScoped<IRepository<TEntity, TId>, EfRepository<TEntity, TId, TDbContext>>();
         services.TryAddScoped<IUnitOfWork, ConcurrencyAwareEfUnitOfWork<TDbContext>>();
         services.AddScoped<ICrudMapper<TEntity, TId, TCreate, TUpdate, TRead>, TMapper>();
-        services.TryAddScoped<IValidator<TCreate>, NoOpCrudValidator<TCreate>>();
-        services.TryAddScoped<IValidator<TUpdate>, NoOpCrudValidator<TUpdate>>();
+        services.TryAddScoped<IValidator<TCreate>, DataAnnotationsValidator<TCreate>>();
+        services.TryAddScoped<IValidator<TUpdate>, DataAnnotationsValidator<TUpdate>>();
 
-        if (definition.HasCapability(FoundationModuleCapabilities.Authorization))
+        if (definition.HasCapability(FoundationModuleCapability.Authorization))
         {
             services.TryAddScoped<ICrudAuthorizationPolicy<TEntity, TId>, DenyAllCrudAuthorizationPolicy<TEntity, TId>>();
         }
