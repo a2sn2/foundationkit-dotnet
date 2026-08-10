@@ -7,7 +7,7 @@
       "kind": "kernel",
       "maturity": "stable",
       "category": "Foundation",
-      "description": "Domain/application primitives that every FoundationKit composition starts from.",
+      "description": "Domain and application primitives used by every FoundationKit composition.",
       "dependencies": []
     },
     {
@@ -27,7 +27,7 @@
       "kind": "optional",
       "maturity": "stable",
       "category": "Experience",
-      "description": "HTTP result mapping, correlation and reusable API conventions.",
+      "description": "HTTP result mapping, Problem Details, correlation, request-pipeline helpers, and reusable endpoint conventions.",
       "dependencies": [
         "kernel"
       ]
@@ -38,7 +38,7 @@
       "kind": "optional",
       "maturity": "stable",
       "category": "Experience",
-      "description": "Reusable API client, state and MVVM building blocks for Blazor consumers.",
+      "description": "Reusable typed API, error, async-state, and ViewModel primitives for Blazor consumers.",
       "dependencies": [
         "kernel"
       ]
@@ -49,7 +49,7 @@
       "kind": "optional",
       "maturity": "preview",
       "category": "Operations",
-      "description": "Logs, traces, metrics, correlation and health abstractions.",
+      "description": "Logging, correlation, health, trace, and metric conventions with provider wiring kept explicit.",
       "dependencies": [
         "kernel"
       ]
@@ -60,7 +60,7 @@
       "kind": "optional",
       "maturity": "preview",
       "category": "Security",
-      "description": "Secure defaults and hooks for rate limiting, CSRF, step-up authentication and security events.",
+      "description": "Reusable reverse-proxy, rate-partition, MFA-assurance, and security conventions.",
       "dependencies": [
         "web-api"
       ]
@@ -71,7 +71,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Identity",
-      "description": "Authentication lifecycle, sessions, MFA, confirmation and recovery contracts.",
+      "description": "Provider-neutral account policy, notification, security-event, and step-up requirement contracts.",
       "dependencies": [
         "security"
       ]
@@ -82,7 +82,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Identity",
-      "description": "Role, permission, policy, ownership and scoped authorization model.",
+      "description": "Role, permission, policy, ownership, and scoped authorization primitives.",
       "dependencies": [
         "identity"
       ]
@@ -93,7 +93,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Governance",
-      "description": "Business and security audit trails with actor, target and correlation context.",
+      "description": "Bounded provider-neutral audit events, context, recording, and sink contracts.",
       "dependencies": [
         "kernel"
       ]
@@ -104,7 +104,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Platform",
-      "description": "Provider-neutral hierarchical setting resolution across caller-defined scopes with deterministic fallback.",
+      "description": "Provider-neutral hierarchical setting resolution with deterministic scope/source precedence.",
       "dependencies": [
         "kernel"
       ]
@@ -115,7 +115,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Platform",
-      "description": "Deterministic settings-backed feature enablement with fail-closed invalid configuration; advanced rollout targeting remains future work.",
+      "description": "Deterministic settings-backed Boolean feature decisions with explicit defaults and fail-closed invalid configuration.",
       "dependencies": [
         "settings"
       ]
@@ -126,7 +126,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Experience",
-      "description": "Bounded culture metadata, RTL/LTR directionality, deterministic supported-culture fallback, and provider-neutral time-zone identity.",
+      "description": "Bounded culture metadata, RTL/LTR directionality, deterministic fallback, and opaque time-zone identity.",
       "dependencies": [
         "kernel"
       ]
@@ -137,7 +137,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Business",
-      "description": "Organizations, branches, departments, teams, positions and reporting hierarchy.",
+      "description": "Organizations, branches, departments, teams, positions, and reporting hierarchy.",
       "dependencies": [
         "kernel"
       ]
@@ -148,7 +148,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Platform",
-      "description": "Tenant context and isolation patterns without forcing a storage topology.",
+      "description": "Tenant context and isolation contracts without forcing a storage topology.",
       "dependencies": [
         "authorization"
       ]
@@ -159,7 +159,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Process",
-      "description": "Stateful business workflows, transitions, escalation and history.",
+      "description": "Deterministic state/trigger transition definitions and resolution with bounded audit intent.",
       "dependencies": [
         "auditing"
       ]
@@ -170,7 +170,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Process",
-      "description": "Single approve/reject decisions, maker-checker enforcement, authorization gates, workflow resolution, and audit intent; advanced sequencing and quorum models remain product/future work.",
+      "description": "Approve/reject decisions, permission gate, maker-checker policy, workflow resolution, and audit intent.",
       "dependencies": [
         "workflow",
         "authorization",
@@ -183,7 +183,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Process",
-      "description": "Assignable work items, priorities, due dates and lifecycle tracking.",
+      "description": "Assignable work items, priorities, due dates, and lifecycle tracking.",
       "dependencies": [
         "kernel"
       ]
@@ -194,7 +194,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Communication",
-      "description": "Bounded channel-neutral notification message and delivery contracts with provider adapters owned by consumers.",
+      "description": "Bounded channel-neutral notification message, sender, and delivery-result contracts.",
       "dependencies": [
         "kernel"
       ]
@@ -205,7 +205,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Content",
-      "description": "Provider-neutral file storage, metadata, integrity and access contracts.",
+      "description": "Provider-neutral file storage, metadata, integrity, and access contracts.",
       "dependencies": [
         "authorization"
       ]
@@ -216,7 +216,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Content",
-      "description": "Document metadata, classification, versioning and entity linkage.",
+      "description": "Document metadata, classification, versioning, and entity linkage.",
       "dependencies": [
         "files",
         "auditing"
@@ -228,7 +228,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Operations",
-      "description": "Immediate, delayed, scheduled and recurring background work contracts.",
+      "description": "Immediate, delayed, scheduled, and recurring work contracts.",
       "dependencies": [
         "kernel"
       ]
@@ -239,7 +239,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Integration",
-      "description": "Integration events, outbox/inbox boundaries, retries and dead-letter concepts.",
+      "description": "Integration events, outbox/inbox boundaries, retry, and dead-letter concepts.",
       "dependencies": [
         "kernel"
       ]
@@ -250,7 +250,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Integration",
-      "description": "Inbound/outbound webhooks, signatures, replay protection and delivery history.",
+      "description": "Inbound/outbound webhook signing, replay, retry, and delivery-history contracts.",
       "dependencies": [
         "messaging",
         "security"
@@ -262,7 +262,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Communication",
-      "description": "Realtime event delivery abstractions for SignalR/WebSocket-style providers.",
+      "description": "Provider-neutral realtime event delivery contracts.",
       "dependencies": [
         "authorization"
       ]
@@ -273,7 +273,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Data",
-      "description": "Bounded provider-neutral byte-cache contracts with explicit TTL, hit/miss, invalidation, and an in-memory reference provider; distributed-provider semantics remain separate.",
+      "description": "Bounded byte-cache contracts with explicit TTL, hit/miss/remove semantics and an in-memory reference provider.",
       "dependencies": [
         "kernel"
       ]
@@ -284,7 +284,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Data",
-      "description": "Provider-neutral search contracts for relational, full-text and external search engines.",
+      "description": "Provider-neutral search contracts for relational, full-text, and external engines.",
       "dependencies": [
         "authorization"
       ]
@@ -295,7 +295,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Business",
-      "description": "Report definitions, filtering, grouping and export boundaries.",
+      "description": "Report definitions, filtering, grouping, and export boundaries.",
       "dependencies": [
         "authorization"
       ]
@@ -304,9 +304,9 @@
       "id": "idempotency",
       "displayName": "Idempotency",
       "kind": "optional",
-      "maturity": "referenceOnly",
+      "maturity": "planned",
       "category": "Reliability",
-      "description": "Duplicate-write prevention for retried HTTP and integration operations.",
+      "description": "Reusable duplicate-write reservation, completion, and replay contracts.",
       "dependencies": [
         "web-api"
       ]
@@ -317,7 +317,7 @@
       "kind": "optional",
       "maturity": "referenceOnly",
       "category": "Reliability",
-      "description": "Optimistic concurrency and conflict-detection conventions.",
+      "description": "Provider-neutral optimistic-concurrency policy and conflict conventions with EF translation proof.",
       "dependencies": [
         "kernel"
       ]
@@ -339,7 +339,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Business",
-      "description": "Business-friendly sequences with prefixes, periods and organizational scope.",
+      "description": "Business-friendly sequences with prefixes, periods, and explicit scope.",
       "dependencies": [
         "kernel"
       ]
@@ -350,7 +350,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Governance",
-      "description": "PII classification, masking, redaction, consent and anonymization hooks.",
+      "description": "PII classification, masking, redaction, consent, and anonymization hooks.",
       "dependencies": [
         "auditing",
         "security"
@@ -362,7 +362,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Governance",
-      "description": "Retention, archive, deletion and anonymization scheduling contracts.",
+      "description": "Retention, archive, deletion, and anonymization scheduling contracts.",
       "dependencies": [
         "jobs",
         "auditing"
@@ -374,7 +374,7 @@
       "kind": "optional",
       "maturity": "planned",
       "category": "Intelligence",
-      "description": "Provider-neutral chat, embeddings, retrieval and agent abstractions.",
+      "description": "Provider-neutral chat, embeddings, retrieval, tool/agent, and AI-control boundaries.",
       "dependencies": [
         "observability"
       ]
@@ -385,7 +385,7 @@
       "kind": "provider",
       "maturity": "referenceOnly",
       "category": "Provider",
-      "description": "SQL Server adapter family owned outside the provider-agnostic kernel.",
+      "description": "SQL Server reference integration owned outside the provider-neutral kernel.",
       "dependencies": [
         "kernel"
       ]
@@ -407,7 +407,7 @@
       "kind": "provider",
       "maturity": "referenceOnly",
       "category": "Provider",
-      "description": "SMTP delivery adapter for notification and account-security messages.",
+      "description": "Narrow SMTP transport adapter over the Notifications contract.",
       "dependencies": [
         "notifications"
       ]
@@ -418,7 +418,7 @@
       "kind": "tooling",
       "maturity": "referenceOnly",
       "category": "Tooling",
-      "description": "Current Composer reference tooling for strict manifest validation, capability/profile discovery, and dependency explanation; interactive project generation remains future work.",
+      "description": "Composer tooling for strict manifest validation, capability/profile discovery, dependency explanation, contract compatibility, deterministic project generation, and the interactive questionnaire; the visual Workbench composer remains future work.",
       "dependencies": [
         "kernel"
       ]
@@ -429,7 +429,7 @@
       "kind": "tooling",
       "maturity": "referenceOnly",
       "category": "Tooling",
-      "description": "Interactive repository consumer and future visual project composer.",
+      "description": "Executable Core architecture and SQL reference consumer; a visual project composer remains a future UX layer.",
       "dependencies": [
         "kernel"
       ]
@@ -608,7 +608,7 @@
     {
       "id": "standard",
       "displayName": "Standard",
-      "description": "General business-system baseline with identity, security, audit and common user-facing capabilities.",
+      "description": "General business-system baseline with identity, security, audit, settings, notifications, files vocabulary, and localization.",
       "capabilityIds": [
         "kernel",
         "validation",
@@ -627,7 +627,7 @@
     {
       "id": "enterprise",
       "displayName": "Enterprise",
-      "description": "Standard baseline plus organizational process, approvals, automation, messaging and reporting.",
+      "description": "Standard baseline plus organization/process/automation/messaging/reporting vocabulary.",
       "capabilityIds": [
         "kernel",
         "validation",
@@ -656,7 +656,7 @@
     {
       "id": "fintech",
       "displayName": "Fintech",
-      "description": "Enterprise baseline plus money, privacy, numbering and retention-oriented controls.",
+      "description": "Enterprise baseline plus finance/privacy/numbering/retention vocabulary.",
       "capabilityIds": [
         "kernel",
         "validation",
@@ -689,7 +689,7 @@
     {
       "id": "saas",
       "displayName": "SaaS",
-      "description": "Standard baseline with tenant isolation, feature flags, async work, integrations, caching and search.",
+      "description": "Standard baseline plus tenancy, feature management, async integration, caching, and search vocabulary.",
       "capabilityIds": [
         "kernel",
         "validation",
@@ -714,7 +714,7 @@
     {
       "id": "internal-business",
       "displayName": "Internal Business",
-      "description": "Internal line-of-business systems with organization, workflow, approvals, tasks, reporting and numbering.",
+      "description": "Internal systems with organization, workflow, approvals, tasks, reporting, and numbering vocabulary.",
       "capabilityIds": [
         "kernel",
         "validation",
@@ -739,7 +739,7 @@
     {
       "id": "public-portal",
       "displayName": "Public Portal",
-      "description": "Externally facing portal baseline with identity, files, notifications, search and localization.",
+      "description": "External portal baseline with identity, files, notifications, search, and localization vocabulary.",
       "capabilityIds": [
         "kernel",
         "validation",

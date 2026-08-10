@@ -1,101 +1,30 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <base href="./">
-  <title>FoundationKit Atlas — خريطة المستودع</title>
-  <meta name="description" content="بوابة عربية تفاعلية تشرح FoundationKit وWorkbench ومنصة أثَر ومنتج مدار ومسارات التشغيل.">
-  <meta name="theme-color" content="#07111f">
-  <meta property="og:title" content="FoundationKit Atlas">
-  <meta property="og:description" content="خريطة عربية للكور والأمثلة ومنصة أثَر ومنتج مدار الفعلي.">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <title>FoundationKit Core</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
 </head>
 <body>
-  <div class="ambient ambient-a" aria-hidden="true"></div>
-  <div class="ambient ambient-b" aria-hidden="true"></div>
-
-  <div class="portal-shell">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#/overview-home" aria-label="FoundationKit Atlas">
-        <span class="brand-mark">FK</span>
-        <span>
-          <strong>FoundationKit</strong>
-          <small>ATLAS / المستودع كاملًا</small>
-        </span>
-      </a>
-
-      <div class="sidebar-note">
-        <span class="pulse-dot" aria-hidden="true"></span>
-        <div>
-          <strong>بوابة توثيق ثابتة</strong>
-          <small>المعاينات هنا لا تحفظ بيانات.</small>
-        </div>
-      </div>
-
-      <nav class="group-nav" id="groupNav" aria-label="أقسام المستودع"></nav>
-
-      <div class="sidebar-footer">
-        <a href="https://github.com/a2sn2/foundationkit-dotnet" target="_blank" rel="noreferrer">
-          فتح السورس على GitHub
-          <span aria-hidden="true">↗</span>
-        </a>
-        <small>Built for clear architecture, not hidden magic.</small>
-      </div>
-    </aside>
-
-    <main class="main-stage">
-      <header class="topbar">
-        <button class="icon-button menu-button" id="menuButton" type="button" aria-label="فتح القائمة" aria-expanded="false">☰</button>
-
-        <label class="search-box" for="searchInput">
-          <span aria-hidden="true">⌕</span>
-          <input id="searchInput" type="search" autocomplete="off" placeholder="ابحث عن صفحة، طبقة، API أو فائدة…">
-          <kbd>Ctrl K</kbd>
-        </label>
-
-        <div class="top-actions">
-          <button class="icon-button" id="themeButton" type="button" aria-label="تبديل المظهر">◐</button>
-          <a class="top-link" href="madar-demo/">تجربة مدار</a>
-          <a class="top-link" href="athar-demo/">تجربة أثَر</a>
-          <a class="top-link" href="https://github.com/a2sn2/foundationkit-dotnet/actions" target="_blank" rel="noreferrer">CI / Actions</a>
-        </div>
-      </header>
-
-      <section class="content-stage" id="appRoot" aria-live="polite">
-        <div class="loading-state">
-          <div class="loading-orbit"><span>FK</span></div>
-          <strong>جاري بناء خريطة المستودع…</strong>
-          <small>قراءة الصفحات والمسارات والفوائد</small>
-        </div>
-      </section>
-
-      <footer class="portal-footer">
-        <span>FoundationKit Atlas</span>
-        <span>Static documentation portal · Local runtime owns API + SQL Server</span>
-      </footer>
-    </main>
-  </div>
-
-  <div class="search-overlay" id="searchOverlay" hidden>
-    <button class="overlay-backdrop" id="overlayBackdrop" type="button" aria-label="إغلاق البحث"></button>
-    <section class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
-      <div class="search-dialog-head">
-        <div>
-          <small>COMMAND PALETTE</small>
-          <h2 id="searchTitle">اذهب مباشرة إلى أي جزء</h2>
-        </div>
-        <button class="icon-button" id="closeSearch" type="button" aria-label="إغلاق">×</button>
-      </div>
-      <input id="paletteInput" type="search" autocomplete="off" placeholder="مثال: مدار، مبادرات، Domain، Swagger، تشغيل…">
-      <div class="palette-results" id="paletteResults"></div>
+  <main>
+    <p>FoundationKit</p>
+    <h1>Core vNext</h1>
+    <p>A composable .NET system-building foundation with project isolation, compatibility contracts, deterministic composition, and executable SQL reference proof.</p>
+    <section>
+      <h2>Module / CRUD Engine</h2>
+      <p>Configuration-first reusable CRUD orchestration with explicit mapper, validator, authorization, manager, concurrency and audit extension seams.</p>
     </section>
-  </div>
-
-  <noscript>
-    <div class="noscript">تحتاج هذه البوابة إلى JavaScript لعرض خريطة الصفحات التفاعلية.</div>
-  </noscript>
+    <section>
+      <h2>Project Isolation</h2>
+      <p>Host-local DI and module state plus immutable project-scoped shared-resource namespacing.</p>
+    </section>
+    <section>
+      <h2>Workbench</h2>
+      <p>The executable reference proves Core behavior against SQL Server and OpenAPI.</p>
+    </section>
+    <pre id="manifest">Loading Core manifest…</pre>
+  </main>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -1,28 +1,13 @@
-# Ownership routing for FoundationKit.
-# This file does not by itself satisfy independent review. Protected-branch
-# rules and at least one approved independent reviewer are still required.
+# Ownership routing for FoundationKit Core.
+# CODEOWNERS is routing metadata, not independent-review evidence.
 
 * @a2sn2
 
-# Repository governance and supply chain
 /.github/ @a2sn2
-/Directory.Build.props @a2sn2
-/Directory.Packages.props @a2sn2
-/global.json @a2sn2
+/src/ @a2sn2
+/tools/ @a2sn2
+/samples/FoundationKit.Workbench/ @a2sn2
 /scripts/ @a2sn2
 /deploy/ @a2sn2
-
-# Reusable security-sensitive infrastructure
-/src/FoundationKit.WebApi/ @a2sn2
-/src/FoundationKit.Infrastructure/ @a2sn2
-
-# Athar identity, authorization, persistence, and migrations
-/examples/Athar/Athar.Api/ @a2sn2
-/examples/Athar/Athar.Application/ @a2sn2
-/examples/Athar/Athar.Domain/ @a2sn2
-/examples/Athar/Athar.Infrastructure/ @a2sn2
-/examples/Athar/Athar.Infrastructure/Migrations/ @a2sn2
-
-# Security/governance evidence
 /docs/security/ @a2sn2
 /SECURITY.md @a2sn2

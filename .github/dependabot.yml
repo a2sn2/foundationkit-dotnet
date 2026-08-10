@@ -1,46 +1,21 @@
 version: 2
 updates:
-  - package-ecosystem: "nuget"
+  - package-ecosystem: nuget
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
-
-  - package-ecosystem: "github-actions"
+    groups:
+      dotnet-maintenance:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      test-tooling:
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+  - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
-
-  - package-ecosystem: "docker"
-    directory: "/examples/Athar/Athar.Api"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "security"
-
-  - package-ecosystem: "docker"
-    directory: "/samples/FoundationKit.Workbench"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "security"
-
-  - package-ecosystem: "docker"
-    directory: "/apps/Madar/Madar.Api"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "security"

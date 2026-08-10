@@ -8,6 +8,7 @@ public sealed class WorkbenchDbContext(DbContextOptions<WorkbenchDbContext> opti
 {
     public DbSet<BuildBrief> BuildBriefs => Set<BuildBrief>();
     public DbSet<AdminReview> AdminReviews => Set<AdminReview>();
+    public DbSet<CoreCrudRecord> CoreCrudRecords => Set<CoreCrudRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

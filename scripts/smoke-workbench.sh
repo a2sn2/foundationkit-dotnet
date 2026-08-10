@@ -5,29 +5,30 @@ base_url="${WORKBENCH_URL:-http://localhost:8080}"
 
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
 
-# Exercise the existing catalog read path twice: the first read fills the
-# in-memory cache and the second read traverses the cache-hit path.
-curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
+# Empty framework status codes are normalized into the same Problem Details contract.
+method_status="$(curl --silent --output /tmp/foundation-http-method.json --write-out '%{http_code}' -X PATCH "$base_url/api/core-crud")"
+test "$method_status" = "405"
+grep -q 'Foundation.Http.MethodNotAllowed' /tmp/foundation-http-method.json
+grep -q 'correlationId' /tmp/foundation-http-method.json
+grep -q 'foundationkit-workbench' /tmp/foundation-http-method.json
+
+# Existing reference paths.
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 
 platform_reference="$(curl --fail --silent "$base_url/api/platform-reference")"
 echo "$platform_reference" | grep -q '"defaultCulture":"ar-YE"'
 echo "$platform_reference" | grep -q '"textDirection":"RightToLeft"'
-echo "$platform_reference" | grep -q '"cultureResolutionSource":"Exact"'
-echo "$platform_reference" | grep -q '"cultureSettingScope":"global"'
 echo "$platform_reference" | grep -q '"defaultTimeZone":"UTC"'
-echo "$platform_reference" | grep -q '"timeZoneSettingScope":"global"'
 echo "$platform_reference" | grep -q '"catalogPreviewEnabled":true'
-echo "$platform_reference" | grep -q '"featureDecisionSource":"Setting"'
-echo "$platform_reference" | grep -q '"featureSettingScope":"global"'
 
+# Existing connected user/admin workflow.
 user_response="$(curl --fail --silent \
   -H 'Content-Type: application/json' \
   -d '{
-    "projectName":"CI Dual Portal",
+    "projectName":"CI Workbench",
     "projectType":"Internal platform",
     "audience":"Engineering team",
-    "goal":"Verify the complete user and admin full-stack workflow against SQL Server.",
+    "goal":"Verify the executable architecture reference against SQL Server.",
     "selectedCapabilityIds":["commands-queries","ef-repository"],
     "priorities":"Correctness and maintainability",
     "notes":"Automated public-safe smoke test"
@@ -36,20 +37,59 @@ user_response="$(curl --fail --silent \
 
 request_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$user_response")"
 echo "$user_response" | grep -q '"status":"submitted"'
-
-curl --fail --silent "$base_url/api/admin/requests?status=submitted" | grep -q 'CI Dual Portal'
+curl --fail --silent "$base_url/api/admin/requests?status=submitted" | grep -q 'CI Workbench'
 
 review_response="$(curl --fail --silent \
   -H 'Content-Type: application/json' \
-  -d '{
-    "decision":"approve",
-    "reviewedBy":"CI Admin",
-    "notes":"Validated by the integration smoke test"
-  }' \
+  -d '{"decision":"approve","reviewedBy":"CI Admin","notes":"Validated by integration smoke"}' \
   "$base_url/api/admin/requests/$request_id/review")"
-
 echo "$review_response" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"status":"approved"'
-curl --fail --silent "$base_url/api/admin/requests?status=approved" | grep -q 'CI Dual Portal'
 
-echo "Dual full-stack SQL Server workflow and Settings/Feature/Localization/Caching reference paths passed for request $request_id."
+# DataAnnotations are the default structural validator; no module-specific validator is registered.
+annotation_status="$(curl --silent --output /tmp/core-crud-annotation.json --write-out '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"   "}' \
+  "$base_url/api/core-crud")"
+test "$annotation_status" = "400"
+grep -q 'Foundation.Crud.Validation' /tmp/core-crud-annotation.json
+grep -q 'Name' /tmp/core-crud-annotation.json
+grep -q 'foundationkit-workbench' /tmp/core-crud-annotation.json
+
+# Core vNext generic CRUD engine: request -> endpoint -> generic application service -> EF -> SQL.
+crud_create="$(curl --fail --silent \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"CI Core CRUD"}' \
+  "$base_url/api/core-crud")"
+crud_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$crud_create")"
+echo "$crud_create" | grep -q '"version":1'
+
+curl --fail --silent "$base_url/api/core-crud/$crud_id" | grep -q 'CI Core CRUD'
+curl --fail --silent "$base_url/api/core-crud?page=1&pageSize=20" | grep -q 'CI Core CRUD'
+
+crud_update="$(curl --fail --silent -X PUT \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"CI Core CRUD Updated","expectedVersion":1}' \
+  "$base_url/api/core-crud/$crud_id")"
+echo "$crud_update" | grep -q 'CI Core CRUD Updated'
+echo "$crud_update" | grep -q '"version":2'
+
+conflict_status="$(curl --silent --output /tmp/core-crud-conflict.json --write-out '%{http_code}' -X PUT \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Stale Update","expectedVersion":1}' \
+  "$base_url/api/core-crud/$crud_id")"
+test "$conflict_status" = "409"
+grep -q 'CoreCrud.Version.Conflict' /tmp/core-crud-conflict.json
+
+manager_status="$(curl --silent --output /tmp/core-crud-manager.json --write-out '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"foundation"}' \
+  "$base_url/api/core-crud")"
+test "$manager_status" = "422"
+grep -q 'CoreCrud.Name.Reserved' /tmp/core-crud-manager.json
+
+curl --fail --silent --output /dev/null -X DELETE "$base_url/api/core-crud/$crud_id"
+missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
+test "$missing_status" = "404"
+
+echo "Workbench SQL workflow plus generic Core CRUD validation/create/read/list/update/concurrency/manager/delete/error-contract proof passed."

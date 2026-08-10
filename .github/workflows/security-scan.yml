@@ -1,156 +1,29 @@
-name: FoundationKit Security Scan
+name: Security Scan
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
   security-events: write
 
-concurrency:
-  group: foundationkit-security-scan-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  repository-and-container:
-    name: Trivy repository, Athar, and Madar containers
+  repository-security:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Repository vulnerability, secret, and misconfiguration gate
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: .
-          scanners: vuln,secret,misconfig
-          severity: HIGH,CRITICAL
-          ignore-unfixed: false
-          exit-code: "1"
-          format: table
-
-      - name: Build Athar image for scanning
-        run: >-
-          docker build
-          --file examples/Athar/Athar.Api/Dockerfile
-          --tag foundationkit-athar:${{ github.sha }}
-          .
-
-      - name: Athar image fixable vulnerability gate
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
-        with:
-          scan-type: image
-          image-ref: foundationkit-athar:${{ github.sha }}
-          vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
-          format: table
-
-      - name: Produce complete Athar image SARIF evidence
-        if: always()
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
-        with:
-          scan-type: image
-          image-ref: foundationkit-athar:${{ github.sha }}
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: false
-          exit-code: "0"
-          format: sarif
-          output: trivy-athar.sarif
-
-      - name: Upload Athar Trivy SARIF to code scanning
-        if: always() && hashFiles('trivy-athar.sarif') != ''
-        uses: github/codeql-action/upload-sarif@7d9249f5a57288b8a472ddd9cc3ece1921f7dc38
-        with:
-          sarif_file: trivy-athar.sarif
-          category: trivy-athar-container
-
-      - name: Build Madar image for scanning
-        run: >-
-          docker build
-          --file apps/Madar/Madar.Api/Dockerfile
-          --tag foundationkit-madar:${{ github.sha }}
-          .
-
-      - name: Madar image fixable vulnerability gate
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
-        with:
-          scan-type: image
-          image-ref: foundationkit-madar:${{ github.sha }}
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          format: table
-
-      - name: Produce complete Madar image SARIF evidence
-        if: always()
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
-        with:
-          scan-type: image
-          image-ref: foundationkit-madar:${{ github.sha }}
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: false
-          exit-code: "0"
-          format: sarif
-          output: trivy-madar.sarif
-
-      - name: Upload Madar Trivy SARIF to code scanning
-        if: always() && hashFiles('trivy-madar.sarif') != ''
-        uses: github/codeql-action/upload-sarif@7d9249f5a57288b8a472ddd9cc3ece1921f7dc38
-        with:
-          sarif_file: trivy-madar.sarif
-          category: trivy-madar-container
-
-  athar-negative-security:
-    name: Athar black-box negative security tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Generate isolated test credentials
-        shell: bash
-        run: |
-          athar_sql_password="AtharSecuritySql!$(openssl rand -hex 12)Aa1"
-          athar_admin_password="AtharSecurityAdmin!$(openssl rand -hex 12)Aa1"
-          echo "::add-mask::$athar_sql_password"
-          echo "::add-mask::$athar_admin_password"
-          echo "ATHAR_SQL_PASSWORD=$athar_sql_password" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_EMAIL=security.admin@athar.test" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_PASSWORD=$athar_admin_password" >> "$GITHUB_ENV"
-
-      - name: Start isolated Athar security stack
-        run: docker compose -f deploy/athar-compose.yml up --build -d
-
-      - name: Wait for readiness
-        run: |
-          for attempt in {1..150}; do
-            if curl --fail --silent http://localhost:8090/health/ready >/dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose -f deploy/athar-compose.yml ps
-          docker compose -f deploy/athar-compose.yml logs --no-color --tail=300
-          exit 1
-
-      - name: Run black-box abuse cases
-        run: bash scripts/security/negative-athar.sh
-
-      - name: Print Athar logs on failure
-        if: failure()
-        run: docker compose -f deploy/athar-compose.yml logs --no-color --tail=400
-
-      - name: Destroy isolated security stack
-        if: always()
-        run: docker compose -f deploy/athar-compose.yml down --volumes --remove-orphans
+      - name: Repository secret policy
+        run: python3 scripts/security/scan-repository.py

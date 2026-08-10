@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>Madar.Contracts</RootNamespace>
-    <AssemblyName>Madar.Contracts</AssemblyName>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
-</Project>
