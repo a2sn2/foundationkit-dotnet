@@ -15,6 +15,8 @@ public interface IFoundationModuleDefinition
 
     FoundationModuleCapability Capabilities { get; }
 
+    FoundationModuleCapability DeclaredCapabilities => Capabilities;
+
     FoundationApiModuleOptions Api => FoundationApiModuleOptions.Default;
 }
 
@@ -74,7 +76,9 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
     {
         Name = name;
         Route = route;
-        Capabilities = capabilities;
+        FoundationModuleCapabilityRules.ValidateKnown(capabilities);
+        DeclaredCapabilities = capabilities;
+        Capabilities = FoundationModuleCapabilityRules.Expand(capabilities);
         Crud = crud;
         Api = api;
         AuthorizationPolicyPrefix = authorizationPolicyPrefix;
@@ -88,6 +92,8 @@ public sealed class FoundationModuleDefinition<TEntity, TId> : IFoundationModule
     public Type EntityType => typeof(TEntity);
 
     public Type IdType => typeof(TId);
+
+    public FoundationModuleCapability DeclaredCapabilities { get; }
 
     public FoundationModuleCapability Capabilities { get; }
 
@@ -140,38 +146,35 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
         return this;
     }
 
-    public FoundationModuleBuilder<TEntity, TId> Auditing()
-    {
-        _capabilities |= FoundationModuleCapability.Auditing;
-        return this;
-    }
+    public FoundationModuleBuilder<TEntity, TId> Auditing() => Add(FoundationModuleCapability.Auditing);
 
     public FoundationModuleBuilder<TEntity, TId> Authorization(string? policyPrefix = null)
     {
         _authorizationPolicyPrefix = policyPrefix is null
             ? null
             : ValidateName(policyPrefix, nameof(policyPrefix));
-        _capabilities |= FoundationModuleCapability.Authorization;
-        return this;
+        return Add(FoundationModuleCapability.Authorization);
     }
 
-    public FoundationModuleBuilder<TEntity, TId> Concurrency()
-    {
-        _capabilities |= FoundationModuleCapability.Concurrency;
-        return this;
-    }
+    public FoundationModuleBuilder<TEntity, TId> Concurrency() => Add(FoundationModuleCapability.Concurrency);
 
-    public FoundationModuleBuilder<TEntity, TId> Workflow()
-    {
-        _capabilities |= FoundationModuleCapability.Workflow;
-        return this;
-    }
+    public FoundationModuleBuilder<TEntity, TId> Workflow() => Add(FoundationModuleCapability.Workflow);
 
-    public FoundationModuleBuilder<TEntity, TId> Caching()
-    {
-        _capabilities |= FoundationModuleCapability.Caching;
-        return this;
-    }
+    public FoundationModuleBuilder<TEntity, TId> Caching() => Add(FoundationModuleCapability.Caching);
+
+    public FoundationModuleBuilder<TEntity, TId> Security() => Add(FoundationModuleCapability.Security);
+
+    public FoundationModuleBuilder<TEntity, TId> Identity() => Add(FoundationModuleCapability.Identity);
+
+    public FoundationModuleBuilder<TEntity, TId> Approvals() => Add(FoundationModuleCapability.Approvals);
+
+    public FoundationModuleBuilder<TEntity, TId> Notifications() => Add(FoundationModuleCapability.Notifications);
+
+    public FoundationModuleBuilder<TEntity, TId> Settings() => Add(FoundationModuleCapability.Settings);
+
+    public FoundationModuleBuilder<TEntity, TId> FeatureManagement() => Add(FoundationModuleCapability.FeatureManagement);
+
+    public FoundationModuleBuilder<TEntity, TId> Localization() => Add(FoundationModuleCapability.Localization);
 
     public FoundationModuleBuilder<TEntity, TId> UseManager<TManager>()
         where TManager : class
@@ -193,6 +196,13 @@ public sealed class FoundationModuleBuilder<TEntity, TId>
             _api,
             _authorizationPolicyPrefix,
             _managerType);
+    }
+
+    private FoundationModuleBuilder<TEntity, TId> Add(FoundationModuleCapability capability)
+    {
+        FoundationModuleCapabilityRules.ValidateKnown(capability);
+        _capabilities |= capability;
+        return this;
     }
 
     private static string ValidateName(string value, string parameterName)
