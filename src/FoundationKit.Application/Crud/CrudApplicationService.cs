@@ -21,7 +21,7 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
     private readonly ICrudAuthorizationPolicy<TEntity, TId> _authorization;
     private readonly ICrudConcurrencyPolicy<TEntity, TUpdate> _concurrency;
     private readonly ICrudManager<TEntity, TId, TCreate, TUpdate> _manager;
-    private readonly IReadOnlyList<ICrudOperationObserver<TEntity, TId>> _observers;
+    private readonly ICrudOperationObserver<TEntity, TId>[] _observers;
     private readonly FoundationModuleDefinition<TEntity, TId> _module;
     private readonly IFoundationProjectContext _projectContext;
 
@@ -215,7 +215,7 @@ public sealed class CrudApplicationService<TEntity, TId, TCreate, TUpdate, TRead
         TEntity entity,
         CancellationToken cancellationToken)
     {
-        if (_observers.Count == 0)
+        if (_observers.Length == 0)
             return;
 
         var notification = new CrudOperationEvent<TEntity, TId>(
