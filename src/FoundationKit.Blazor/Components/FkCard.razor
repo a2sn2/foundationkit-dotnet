@@ -1,0 +1,41 @@
+@namespace FoundationKit.Blazor.Components
+
+<div class="@CssClass"
+     tabindex="@(Interactive ? 0 : null)"
+     role="@(Interactive ? "group" : null)"
+     @attributes="AdditionalAttributes">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public FoundationCardVariant Variant { get; set; }
+
+    [Parameter]
+    public bool Interactive { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var variant = Variant switch
+            {
+                FoundationCardVariant.Muted => "fk-card--muted",
+                FoundationCardVariant.Elevated => "fk-card--elevated",
+                _ => string.Empty
+            };
+            var interactive = Interactive ? "fk-card--interactive" : string.Empty;
+            return string.Join(' ', new[] { "fk-card", variant, interactive, Class }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+    }
+}
