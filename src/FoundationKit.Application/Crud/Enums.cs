@@ -27,3 +27,10 @@ public enum CrudSortDirection
     Ascending = 0,
     Descending = 1
 }
+
+public enum CrudStringFilterMode
+{
+    None = 0,
+    Exact = 1,
+    Prefix = 2
+}
