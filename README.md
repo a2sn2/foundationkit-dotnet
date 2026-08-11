@@ -13,7 +13,7 @@ FoundationKit ships exactly **17 NuGet packages + 17 symbol packages**:
 
 Package existence, capability maturity, repository evidence, and Production approval are separate concepts. A new capability does not automatically justify package #18.
 
-## Core vNext v1 contract path
+## Core vNext contract path
 
 Core vNext is configuration-first without abandoning Clean Architecture:
 
@@ -124,9 +124,11 @@ The proven backend chain covers:
 
 Browser state is presentation only. Server authorization, query policy and relational composition remain authoritative. `scripts/generate-blazor-app-from-openapi.py` provides an opt-in product-neutral starting shell, not universal product UX.
 
-## Core vNext v1 completion boundary
+## Core vNext roadmap boundary
 
-The repository implementation/tooling roadmap is complete when the final exact-head Phase 16 gates are coherent on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio visual composition, deterministic generated frontend, docs, security and the 17-package baseline.
+The approved implementation roadmap ends at **Phase 12**. Typed-client, SQL read-engine/view hardening, frontend foundation/Core Studio, visual composition and generated frontend scaffolding are recorded as **Phase 12 closure tracks**, not additional phases.
+
+The final Phase 12 closure baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, generated frontend scaffolding, documentation, security and the 17-package baseline.
 
 This is **repository completion**, not Production approval. Protected-main enforcement, independent approval and real operational go-live controls remain environment/process governance under issue #35.
 
