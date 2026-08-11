@@ -1,0 +1,48 @@
+name: Run Phase 14 contract patch once
+
+on:
+  pull_request:
+  push:
+    branches:
+      - core-vnext/read-engine-phase-14
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: core-vnext/read-engine-phase-14
+          fetch-depth: 0
+
+      - name: Execute embedded one-shot patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          workflow = Path('.github/workflows/patch-phase14-query-contract-once.yml').read_text(encoding='utf-8')
+          start_marker = "          python3 - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          script = workflow[start:end]
+          lines = script.splitlines()
+          normalized = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+          exec(compile(normalized, '<phase14-patch>', 'exec'), {})
+          Path('.github/workflows/run-phase14-patch-once.yml').unlink()
+          PY
+
+          python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-b.json >/dev/null
+          git diff --check
+
+          git config user.name "foundationkit-ci"
+          git config user.email "foundationkit-ci@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: declare generated query and index fields"
+          git push origin HEAD:core-vnext/read-engine-phase-14
