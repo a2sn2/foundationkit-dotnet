@@ -41,7 +41,8 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added **Phase 12 closure — tooling**: visual schema-v2 composition in Core Studio with a bounded `/api/composer/validate` transport that delegates authoritative validation directly to `ComposerManifestParser` and `CompositionAnalyzer` rather than introducing a browser-side manifest engine.
 - Added deterministic OpenAPI → Blazor WebAssembly application scaffolding that validates safe identifiers, references exact-head `FoundationKit.Blazor`, and delegates all transport generation to the existing deterministic C# client generator.
 - Added `FoundationKit Frontend Generation Proof` for repeat-generation SHA identity, `--check` drift detection, unsafe identifier rejection, restore/build/publish evidence and canonical typed-client wiring.
-- Closed the approved Phase 12 repository/tooling path from schema-v2 composition through SQL/read models, runtime OpenAPI, typed transport and generated frontend while retaining Production-governance separation under issue #35.
+- Closed the approved **Core vNext roadmap at Phase 12** with the typed/read/frontend/tooling closure tracks above; no Phase 13–16 roadmap was introduced.
+- Retained Production-governance separation under issue #35.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0
