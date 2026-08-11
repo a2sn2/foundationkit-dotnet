@@ -35,6 +35,26 @@ public sealed record ModuleApiContract(
     int MaximumSorts,
     string? RateLimitPolicyName);
 
+public sealed record ComposerValidationRequest(string ManifestJson);
+
+public sealed record ComposerCapabilityEvidence(
+    string Id,
+    string Maturity,
+    IReadOnlyList<string> Reasons);
+
+public sealed record ComposerValidationResponse(
+    bool Valid,
+    int? SchemaVersion,
+    string? ProjectName,
+    string? Profile,
+    int ModuleCount,
+    int ResourceCount,
+    int ReadModelCount,
+    bool StableOnly,
+    IReadOnlyList<ComposerCapabilityEvidence> Capabilities,
+    IReadOnlyList<string> Warnings,
+    string? Error);
+
 public sealed class CatalogResponse
 {
     public int SchemaVersion { get; set; }
