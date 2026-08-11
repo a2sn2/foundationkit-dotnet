@@ -115,6 +115,7 @@ def build_files(app_name: str, namespace_name: str, client_class: str, project_r
 </Project>
 """,
         Path("Program.cs"): f"""
+using {namespace_name};
 using {namespace_name}.Api;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
