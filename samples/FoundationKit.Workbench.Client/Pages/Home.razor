@@ -1,25 +1,26 @@
 @page "/"
 @inject WorkbenchApiClient Api
 
-<PageTitle>FoundationKit — Dual Full Stack</PageTitle>
+<PageTitle>FoundationKit Core Studio</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
     <section class="hero-grid">
         <div>
-            <div class="eyebrow">FOUNDATIONKIT REFERENCE ARCHITECTURE</div>
-            <MudText Typo="Typo.h2" Class="hero-title">كور واحد واضح، وتجربتان Full‑Stack مكتملتان.</MudText>
+            <div class="eyebrow">FOUNDATIONKIT CORE STUDIO</div>
+            <MudText Typo="Typo.h2" Class="hero-title">من الـManifest إلى SQL وOpenAPI والـTyped Client — بعقد واحد يمكن إثباته.</MudText>
             <MudText Typo="Typo.h6" Class="hero-copy">
-                المستودع يعرض مسار المستخدم ومسار الإدارة من قاعدة البيانات حتى Blazor وUI/UX، ثم يوضح نقطة الربط بينهما في دورة طلب قابلة للتجربة.
+                هذه الواجهة لم تعد عرضًا لمنتج تجريبي. هي نافذة مرجعية على الكور نفسه: القدرات، تركيب الموديولات،
+                عقود الـAPI، محرك القراءة SQL‑first، والـRead Models المبنية على Views.
             </MudText>
             <MudStack Row="true" Spacing="2" Class="mt-6 flex-wrap">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="user" StartIcon="@Icons.Material.Filled.Person">
-                    افتح بوابة المستخدم
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="studio" StartIcon="@Icons.Material.Filled.AccountTree">
+                    افتح Core Studio
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="admin" StartIcon="@Icons.Material.Filled.AdminPanelSettings">
-                    افتح لوحة الإدارة
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="evidence" StartIcon="@Icons.Material.Filled.FactCheck">
+                    أدلة التنفيذ
                 </MudButton>
                 <MudButton Variant="Variant.Text" Href="swagger" Target="_blank" StartIcon="@Icons.Material.Filled.Api">
-                    Swagger
+                    Runtime OpenAPI
                 </MudButton>
             </MudStack>
         </div>
@@ -28,132 +29,166 @@
             <div class="orbit orbit-one"></div>
             <div class="orbit orbit-two"></div>
             <div class="core-node">FK</div>
-            <span class="satellite satellite-api">API</span>
-            <span class="satellite satellite-ui">UI</span>
+            <span class="satellite satellite-api">OPENAPI</span>
+            <span class="satellite satellite-ui">CLIENT</span>
             <span class="satellite satellite-db">SQL</span>
         </div>
     </section>
 
-    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-4 flex-wrap">
-        <MudChip T="string" Color="@RuntimeColor" Variant="Variant.Outlined">@RuntimeLabel</MudChip>
-        <MudText Class="muted-text">@RuntimeDescription</MudText>
-    </MudStack>
+    @if (_loading)
+    {
+        <div class="loading-panel" role="status" aria-live="polite">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText>جاري قراءة حالة الكور والكتالوج والموديولات...</MudText>
+        </div>
+    }
+    else
+    {
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-4 flex-wrap">
+            <MudChip T="string" Color="@RuntimeColor" Variant="Variant.Outlined">@RuntimeLabel</MudChip>
+            <MudChip T="string" Color="@HealthColor" Variant="Variant.Outlined">@HealthLabel</MudChip>
+            <MudText Class="muted-text">@RuntimeDescription</MudText>
+        </MudStack>
 
-    <section class="section-block">
-        <div class="section-heading">
-            <div>
-                <div class="eyebrow">TWO VERTICAL SLICES</div>
-                <MudText Typo="Typo.h3">القسمان الرسميان داخل الكور المرجعي</MudText>
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">CURRENT CORE BASELINE</div>
+                    <MudText Typo="Typo.h3">صورة واحدة للحالة التي يثبتها المستودع</MudText>
+                </div>
+                <MudText Class="muted-text">الواجهة تعرض أدلة الكور؛ لا تمنح صلاحيات ولا تستبدل تحقق السيرفر.</MudText>
             </div>
-            <MudText Class="muted-text">كل قسم يملك واجهته وعقوده وEndpoints ومنطقه ومسار البيانات.</MudText>
-        </div>
 
-        <MudGrid>
-            <MudItem xs="12" lg="6">
-                <MudPaper Class="portal-card user-portal-card" Elevation="0">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" Color="Color.Primary" />
-                    <MudText Typo="Typo.h4" Class="mt-3">User Full Stack</MudText>
-                    <MudText Class="muted-text mt-2">تجربة المستخدم لإنشاء الطلب ومتابعة حالته بعد معالجة الإدارة.</MudText>
-                    <div class="stack-chain">
-                        <span>SQL Server</span><b>→</b><span>EF Core</span><b>→</b><span>Domain</span><b>→</b><span>Use Case</span><b>→</b><span>Request Contract</span><b>→</b><span>API</span><b>→</b><span>Blazor UI/UX</span>
-                    </div>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="user" FullWidth="true" Class="mt-5">
-                        استكشف مسار المستخدم
-                    </MudButton>
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" lg="6">
-                <MudPaper Class="portal-card admin-portal-card" Elevation="0">
-                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Large" Color="Color.Secondary" />
-                    <MudText Typo="Typo.h4" Class="mt-3">Admin Full Stack</MudText>
-                    <MudText Class="muted-text mt-2">تجربة الإدارة لقراءة قائمة العمل ومراجعة الطلب واعتماده أو رفضه.</MudText>
-                    <div class="stack-chain">
-                        <span>SQL Server</span><b>→</b><span>EF Query</span><b>→</b><span>Review Domain</span><b>→</b><span>Use Case</span><b>→</b><span>Admin Contract</span><b>→</b><span>API</span><b>→</b><span>Admin UI/UX</span>
-                    </div>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="admin" FullWidth="true" Class="mt-5">
-                        استكشف مسار الإدارة
-                    </MudButton>
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
-    </section>
-
-    <section class="section-block integration-shell">
-        <div class="section-heading">
-            <div>
-                <div class="eyebrow">INTEGRATION BOUNDARY</div>
-                <MudText Typo="Typo.h3">أين يرتبط القسمان؟</MudText>
-            </div>
-        </div>
-
-        <div class="workflow-line">
-            <div class="workflow-step"><strong>1</strong><span>المستخدم يرسل الطلب</span><small>POST /api/user/requests</small></div>
-            <div class="workflow-arrow">←</div>
-            <div class="workflow-step active"><strong>2</strong><span>Shared Workflow</span><small>Status = submitted</small></div>
-            <div class="workflow-arrow">←</div>
-            <div class="workflow-step"><strong>3</strong><span>الإدارة تراجع الطلب</span><small>POST /api/admin/requests/{id}/review</small></div>
-            <div class="workflow-arrow">←</div>
-            <div class="workflow-step"><strong>4</strong><span>المستخدم يرى النتيجة</span><small>approved / rejected</small></div>
-        </div>
-
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-6">
-            الربط هنا يتم داخل معاملة واحدة: تُحفظ مراجعة الإدارة في <code>AdminReviews</code> وتتغير حالة طلب المستخدم في <code>BuildBriefs</code> معًا.
-        </MudAlert>
-    </section>
-
-    <section class="section-block">
-        <div class="section-heading">
-            <div>
-                <div class="eyebrow">REPOSITORY READING ORDER</div>
-                <MudText Typo="Typo.h3">كيف يفهم أي مطور المستودع؟</MudText>
-            </div>
-        </div>
-
-        <MudGrid>
-            @foreach (var item in ReadingOrder)
-            {
-                <MudItem xs="12" md="6" lg="3">
-                    <MudPaper Class="architecture-card" Elevation="0">
-                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">@item.Number</MudText>
-                        <MudText Typo="Typo.h6" Class="mt-2">@item.Title</MudText>
-                        <MudText Class="muted-text mt-2">@item.Description</MudText>
-                        <code class="repo-path">@item.Path</code>
+            <MudGrid>
+                <MudItem xs="12" sm="6" lg="3">
+                    <MudPaper Class="metric-card" Elevation="0">
+                        <MudText Typo="Typo.overline">REUSABLE PACKAGES</MudText>
+                        <MudText Typo="Typo.h2">@PackageCount</MudText>
+                        <MudText Class="muted-text">حزمة Core قابلة لإعادة الاستخدام، بدون إنشاء package #18 لمجرد الواجهة.</MudText>
                     </MudPaper>
                 </MudItem>
-            }
-        </MudGrid>
-    </section>
+                <MudItem xs="12" sm="6" lg="3">
+                    <MudPaper Class="metric-card" Elevation="0">
+                        <MudText Typo="Typo.overline">CAPABILITIES</MudText>
+                        <MudText Typo="Typo.h2">@CapabilityCount</MudText>
+                        <MudText Class="muted-text">قدرات منشورة في الكتالوج مع حالة ومداخل عامة قابلة للفحص.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="3">
+                    <MudPaper Class="metric-card" Elevation="0">
+                        <MudText Typo="Typo.overline">LIVE MODULES</MudText>
+                        <MudText Typo="Typo.h2">@ModuleCount</MudText>
+                        <MudText Class="muted-text">تركيب declared/effective من الـModule Engine الجاري فعليًا.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="3">
+                    <MudPaper Class="metric-card" Elevation="0">
+                        <MudText Typo="Typo.overline">CONTRACT CHAIN</MudText>
+                        <MudText Typo="Typo.h2">1</MudText>
+                        <MudText Class="muted-text">Backend → OpenAPI → Postman/Typed Client → UI، بدون مصدر حقيقة ثانٍ.</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">FULL CONTRACT FLOW</div>
+                    <MudText Typo="Typo.h3">المسار الذي يجب أن يظل قابلًا للتتبع</MudText>
+                </div>
+            </div>
+
+            <div class="contract-flow" aria-label="FoundationKit contract flow">
+                @foreach (var step in ContractFlow)
+                {
+                    <div class="contract-step">
+                        <span>@step.Number</span>
+                        <strong>@step.Title</strong>
+                        <small>@step.Description</small>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">PHASE GATES</div>
+                    <MudText Typo="Typo.h3">ما أصبح أساسًا قبل الواجهة</MudText>
+                </div>
+            </div>
+
+            <MudGrid>
+                @foreach (var phase in Phases)
+                {
+                    <MudItem xs="12" md="6" lg="3">
+                        <MudPaper Class="architecture-card" Elevation="0">
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">@phase.Id</MudChip>
+                            <MudText Typo="Typo.h6">@phase.Title</MudText>
+                            <MudText Class="muted-text">@phase.Description</MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </section>
+    }
 </MudContainer>
 
 @code {
     private RuntimeResponse? _runtime;
+    private HealthResponse? _health;
+    private CatalogResponse? _catalog;
+    private IReadOnlyList<ModuleCompositionResponse> _modules = Array.Empty<ModuleCompositionResponse>();
+    private bool _loading = true;
 
+    private int PackageCount => _catalog?.Packages.Count ?? 17;
+    private int CapabilityCount => _catalog?.Packages.SelectMany(package => package.Capabilities).Select(item => item.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
+    private int ModuleCount => _modules.Count;
     private Color RuntimeColor => _runtime?.Mode == "local" ? Color.Success : Color.Warning;
-    private string RuntimeLabel => _runtime?.Mode == "local" ? "LOCAL FULL STACK" : "STATIC DEMO";
+    private Color HealthColor => string.Equals(_health?.Status, "healthy", StringComparison.OrdinalIgnoreCase) ? Color.Success : Color.Warning;
+    private string RuntimeLabel => _runtime?.Mode == "local" ? "LIVE WORKBENCH" : "STATIC CATALOG MODE";
+    private string HealthLabel => string.Equals(_health?.Status, "healthy", StringComparison.OrdinalIgnoreCase) ? "SQL HEALTHY" : "SQL NOT VERIFIED";
     private string RuntimeDescription => _runtime?.Mode == "local"
-        ? "Blazor + API + SQL Server يعملون من نفس الـHost."
-        : "GitHub Pages يعرض المعمارية والواجهات فقط دون حفظ أو مراجعات فعلية.";
+        ? "Workbench API وSQL Server متاحان، ويمكن قراءة الأدلة الحية."
+        : "الواجهة تستطيع عرض الكتالوج الثابت، لكن الأدلة الحية تحتاج Workbench API.";
 
-    private static readonly IReadOnlyList<ReadingItem> ReadingOrder =
+    private static readonly IReadOnlyList<FlowStep> ContractFlow =
     [
-        new("01", "Reusable Core", "المكونات العامة المستقلة عن المنتج.", "src/FoundationKit.*"),
-        new("02", "User Stack", "العقود والمنطق والـAPI وصفحة المستخدم.", "Contracts/User + Application/User + /user"),
-        new("03", "Admin Stack", "قائمة العمل والمراجعة وعقود ولوحة الإدارة.", "Contracts/Admin + Application/Admin + /admin"),
-        new("04", "Integration", "الحالة المشتركة والحدث والمهاجرة التي تربط القسمين.", "Domain/WorkflowState + AdminReviews")
+        new("01", "Composer v2", "Project → Modules → Resources/Read Models"),
+        new("02", "Generated Backend", "Entities, policies, migrations, SQL views"),
+        new("03", "Runtime OpenAPI", "العقد المتسلسل canonical للـtransport"),
+        new("04", "Typed Client", "C# deterministic client مع metadata وETag"),
+        new("05", "Core UI", "Presentation فقط؛ authorization يبقى على السيرفر")
+    ];
+
+    private static readonly IReadOnlyList<PhaseCard> Phases =
+    [
+        new("P12", "Executable Composer", "A/B generated SQL + API + OpenAPI + Postman + isolation proof."),
+        new("P13", "Typed Client", "OpenAPI → deterministic C# client مع ETag/Location/Correlation metadata."),
+        new("P14", "Read Engine", "SQL-side filter/sort/page + indexed fields + view-backed multi-table/report reads."),
+        new("P15", "Frontend Foundation", "Reusable presentation state + Core Studio reference experience دون business logic في المتصفح.")
     ];
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await Api.GetRuntimeAsync();
-        _runtime = result.IsSuccess && result.Value is not null
-            ? result.Value
-            : new RuntimeResponse("demo", "none", "none", "ALHassan ALShami");
+        var runtime = await Api.GetRuntimeAsync();
+        _runtime = runtime.IsSuccess ? runtime.Value : null;
+
+        var health = await Api.GetHealthAsync();
+        _health = health.IsSuccess ? health.Value : null;
+
+        var catalog = await Api.GetCatalogAsync();
+        _catalog = catalog.IsSuccess ? catalog.Value : null;
+
+        var modules = await Api.GetModulesAsync();
+        _modules = modules.IsSuccess && modules.Value is not null
+            ? modules.Value
+            : Array.Empty<ModuleCompositionResponse>();
+
+        _loading = false;
     }
 
-    private sealed record ReadingItem(
-        string Number,
-        string Title,
-        string Description,
-        string Path);
+    private sealed record FlowStep(string Number, string Title, string Description);
+    private sealed record PhaseCard(string Id, string Title, string Description);
 }
