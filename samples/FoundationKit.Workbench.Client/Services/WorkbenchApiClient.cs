@@ -29,12 +29,26 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             cancellationToken);
     }
 
+    public Task<ApiResult<IReadOnlyList<ModuleCompositionResponse>>> GetModulesAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<ModuleCompositionResponse>>(
+            new HttpRequestMessage(HttpMethod.Get, "/api/modules"),
+            cancellationToken);
+
+    public Task<ApiResult<PlatformReferenceResponse>> GetPlatformReferenceAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<PlatformReferenceResponse>(
+            new HttpRequestMessage(HttpMethod.Get, "/api/platform-reference"),
+            cancellationToken);
+
     public Task<ApiResult<HealthResponse>> GetHealthAsync(
         CancellationToken cancellationToken = default) =>
         SendAsync<HealthResponse>(
             new HttpRequestMessage(HttpMethod.Get, ApiRoutes.Health),
             cancellationToken);
 
+    // The original user/admin workflow remains as backend Workbench evidence.
+    // Core Studio does not treat these sample routes as product-owned frontend contracts.
     public Task<ApiResult<UserRequestResponse>> CreateUserRequestAsync(
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
