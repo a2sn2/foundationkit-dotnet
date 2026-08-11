@@ -126,9 +126,18 @@ Browser state is presentation only. Server authorization, query policy and relat
 
 ## Core vNext roadmap boundary
 
-The approved implementation roadmap ends at **Phase 12**. Typed-client, SQL read-engine/view hardening, frontend foundation/Core Studio, visual composition and generated frontend scaffolding are recorded as **Phase 12 closure tracks**, not additional phases.
+The approved implementation roadmap ends at **Phase 12**. The final closure is recorded as four tracks inside Phase 12:
 
-The final Phase 12 closure baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, generated frontend scaffolding, documentation, security and the 17-package baseline.
+```text
+12.C1 Typed transport
+12.C2 SQL read engine + view-backed read models
+12.C3 Frontend foundation + Core Studio reference
+12.C4 Visual Composer + deterministic generated frontend shell
+```
+
+These are closure tracks, not Phase 13–16.
+
+The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, generated frontend scaffolding, documentation, security and the 17-package boundary.
 
 This is **repository completion**, not Production approval. Protected-main enforcement, independent approval and real operational go-live controls remain environment/process governance under issue #35.
 
