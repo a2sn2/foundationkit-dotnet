@@ -1,8 +1,10 @@
 # FoundationKit Capability Roadmap v1
 
+The approved Core vNext implementation roadmap ends at **Phase 12**. Work discovered after the Phase 12 backend gate is tracked as closure/hardening inside Phase 12 rather than as new roadmap phases.
+
 The roadmap describes direction, not a checklist that justifies empty packages. Evidence-driven capability families may remain intentionally unimplemented until a real product need establishes their semantics.
 
-## Delivered Core vNext v1 foundation
+## Delivered Core vNext foundation through Phase 12
 
 - [x] Domain/Application/Infrastructure/WebApi/Blazor base packages.
 - [x] Capability graph, dependency resolver, seven profiles, contract versions, maturity evidence.
@@ -27,17 +29,19 @@ The roadmap describes direction, not a checklist that justifies empty packages. 
 - [x] Composer schema v2 Project → Modules → Resources → Behaviors → Overrides → API model while preserving schema-v1 compatibility.
 - [x] bounded schema-v2 executable resources for product-owned Domain/contracts/validation/CRUD/authorization/audit/concurrency/idempotency/SQL/API/OpenAPI.
 - [x] concurrent generated Project A/B proof on one SQL Server database with project/resource/idempotency/migration isolation.
-- [x] deterministic runtime OpenAPI → C# typed-client generation with CLR/OpenAPI requiredness alignment and transport metadata preservation.
-- [x] explicit generated resource query/index policy with SQL Server WHERE/ORDER BY/paging and direct index metadata proof.
-- [x] provider-neutral read-model boundary plus generated SQL-view-backed multi-table/query/report models with keyless EF mapping and server-side querying.
-- [x] first-party reusable frontend presentation/query/display primitives in `FoundationKit.Blazor` without a new package or forced MudBlazor dependency.
-- [x] Core-focused Workbench/Studio reference UI for capability/module/contract evidence; browser state remains presentation-only.
-- [x] visual Core Studio Composer that submits schema-v2 JSON to the canonical `ComposerManifestParser` and `CompositionAnalyzer` rather than implementing a second manifest engine.
-- [x] deterministic OpenAPI-wired Blazor WebAssembly application scaffolding that delegates typed transport generation to the canonical C# client generator and references exact-head `FoundationKit.Blazor`.
+
+## Phase 12 closure tracks
+
+These are completion/hardening tracks of Phase 12, **not Phase 13–16**:
+
+- [x] **12.C1 — Typed transport closure:** deterministic runtime OpenAPI → C# typed-client generation with CLR/OpenAPI requiredness alignment, ETag/Location/CorrelationId metadata, and live SQL/API execution proof.
+- [x] **12.C2 — SQL read closure:** explicit generated query/index policy, SQL-side WHERE/ORDER BY/paging, provider-neutral read-model boundary, and SQL-view-backed multi-table/query/report models with keyless EF mapping.
+- [x] **12.C3 — Frontend foundation closure:** reusable presentation/query/display primitives in `FoundationKit.Blazor`, plus Core-focused Workbench/Studio architecture evidence without making the browser an authorization boundary.
+- [x] **12.C4 — Tooling closure:** visual Core Studio Composer validated by the canonical schema-v2 parser/analyzer and deterministic OpenAPI-wired Blazor WebAssembly shell generation that reuses the canonical C# typed-client generator.
 
 ## Evidence-driven future capability families
 
-These remain evidence-driven and are **not automatically packages** and are **not required for Core vNext v1 repository completion**:
+These are future product/provider-driven work and are **not required for the Phase 12/Core vNext baseline**:
 
 - [ ] advanced approvals, tasks/work items, SLA/business-hours, activity/comments;
 - [ ] notification templates/preferences/routing/retries/history;
@@ -47,30 +51,28 @@ These remain evidence-driven and are **not automatically packages** and are **no
 - [ ] webhooks and realtime;
 - [ ] distributed caching provider;
 - [ ] external HTTP resilience conventions;
-- [ ] search, reporting, import/export beyond the current bounded SQL-view read-model foundation;
+- [ ] search, reporting, import/export beyond the bounded SQL-view read-model foundation;
 - [ ] privacy/PII, retention/anonymization;
 - [ ] money/currency and numbering/sequences;
 - [ ] PostgreSQL/Redis/object-storage/messaging/OpenTelemetry provider adapters where justified.
 
 ## Tooling and full-stack experience
 
-- [x] derive deterministic Postman evidence from runtime OpenAPI.
-- [x] derive deterministic C# typed clients from the same runtime OpenAPI.
+- [x] deterministic Postman evidence from runtime OpenAPI.
+- [x] deterministic C# typed clients from the same runtime OpenAPI.
 - [x] Composer manifest model for Project → Modules → Resources → Behaviors → Providers → Overrides → API.
 - [x] generated-project proof for Database + CRUD + Validation + Authorization + Audit + API + OpenAPI + Postman.
 - [x] generated SQL query/index + SQL-view read-model/report proof.
 - [x] concurrent project-isolation and compatible legacy-consumer proof.
-- [x] first-party frontend state/design foundation plus Core Studio reference experience.
+- [x] first-party frontend state foundation plus Core Studio reference experience.
 - [x] visual Workbench/Core Studio composer using the same schema-v2 parser/analyzer.
 - [x] opt-in deterministic generated frontend application shell wired to the canonical typed transport contract.
-
-The v1 repository implementation/tooling roadmap is closed by Phase 16. Future work should start from a concrete product or provider requirement rather than reopening completed v1 phases.
 
 ## Definition of done
 
 A reusable capability requires explicit purpose/non-goals, dependency boundary, provider-neutral public contracts where applicable, bounded inputs, security/privacy review, success/failure tests, architecture tests, Workbench/runtime proof when behavior is executable, compatibility/migration documentation, generated catalog synchronization, CI/security gates, and a maturity assessment matching actual evidence.
 
-**Core vNext v1 repository completion** means the backend/read/typed-client contracts, first-party frontend foundation, canonical visual Composer, deterministic generated frontend shell, active documentation, dependency hygiene, and exact-head quality/security/package gates are coherent on `main`.
+**Core vNext / Phase 12 repository completion** means the backend/read/typed-client contracts, frontend foundation, canonical visual Composer, deterministic generated frontend shell, active documentation, dependency hygiene, and exact-head quality/security/package gates are coherent on `main`.
 
 This definition does **not** mean Production Approved. Protected-main enforcement, independent approval, organization-level security controls and real operational go-live requirements remain separate environment/process governance tracked by issue #35.
 
