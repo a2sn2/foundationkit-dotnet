@@ -10,18 +10,20 @@
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <div class="brand-mark">FK</div>
             <div>
-                <MudText Typo="Typo.h6">FoundationKit Dual Full Stack</MudText>
-                <MudText Typo="Typo.caption" Class="muted-text">Shared Core · User Portal · Admin Portal · Integration Workflow</MudText>
+                <MudText Typo="Typo.h6">FoundationKit Core Studio</MudText>
+                <MudText Typo="Typo.caption" Class="muted-text">Composer · Modules · SQL Read Models · OpenAPI · Typed Client</MudText>
             </div>
         </MudStack>
         <MudSpacer />
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="top-navigation">
-            <MudButton Href="/" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AccountTree">الخريطة</MudButton>
-            <MudButton Href="user" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Person">المستخدم</MudButton>
-            <MudButton Href="admin" Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.AdminPanelSettings">الإدارة</MudButton>
-            <MudButton Href="swagger" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Api">Swagger</MudButton>
-            <MudIconButton Href="https://github.com/a2sn2/foundationkit-dotnet" Target="_blank" Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" />
-        </MudStack>
+        <nav aria-label="Core Studio navigation">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="top-navigation">
+                <MudButton Href="/" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Dashboard">الرئيسية</MudButton>
+                <MudButton Href="studio" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Hub">Studio</MudButton>
+                <MudButton Href="evidence" Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FactCheck">Evidence</MudButton>
+                <MudButton Href="swagger" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Api">OpenAPI</MudButton>
+                <MudIconButton Href="https://github.com/a2sn2/foundationkit-dotnet" Target="_blank" Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" aria-label="FoundationKit GitHub repository" />
+            </MudStack>
+        </nav>
     </MudAppBar>
 
     <MudMainContent Class="workbench-main" dir="rtl">
