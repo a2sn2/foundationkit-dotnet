@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -10,6 +11,11 @@ public abstract class ApiClientBase(HttpClient httpClient)
 
     protected static JsonSerializerOptions JsonOptions { get; } =
         new(JsonSerializerDefaults.Web);
+
+    protected static string FormatQueryValue<T>(T value) =>
+        value is IFormattable formattable
+            ? formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty
+            : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
 
     protected async Task<ApiResult> SendAsync(
         HttpRequestMessage request,
