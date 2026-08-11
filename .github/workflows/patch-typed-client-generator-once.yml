@@ -1,0 +1,51 @@
+name: One-shot typed-client generator patch
+
+on:
+  push:
+    branches:
+      - core-vnext/typed-client-foundation-phase-13
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: core-vnext/typed-client-foundation-phase-13
+          fetch-depth: 0
+
+      - name: Patch generator source and remove one-shot workflow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          generator = Path('scripts/generate-csharp-client-from-openapi.py')
+          lines = generator.read_text(encoding='utf-8').splitlines()
+          target = '    if schema_type == "string" and fmt == "uuid":'
+          matches = [index for index, line in enumerate(lines[:-1])
+                     if line == target and 'Uri.EscapeDataString({name}.ToString' in lines[index + 1]]
+          if len(matches) != 1:
+              raise SystemExit(f'expected one GUID path formatter, found {len(matches)}')
+          index = matches[0]
+          lines[index + 1] = '        return f"Uri.EscapeDataString({name}.ToString())"'
+          generator.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          workflow = Path('.github/workflows/patch-typed-client-generator-once.yml')
+          workflow.unlink()
+          PY
+
+          python3 -m py_compile scripts/generate-csharp-client-from-openapi.py
+          git diff --check
+          git diff -- scripts/generate-csharp-client-from-openapi.py
+
+          git config user.name "foundationkit-ci"
+          git config user.email "foundationkit-ci@users.noreply.github.com"
+          git add scripts/generate-csharp-client-from-openapi.py .github/workflows/patch-typed-client-generator-once.yml
+          git commit -m "fix: generate valid guid path interpolation"
+          git push origin HEAD:core-vnext/typed-client-foundation-phase-13
