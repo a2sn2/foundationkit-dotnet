@@ -1,33 +1,59 @@
 @inherits LayoutComponentBase
 
-<MudThemeProvider IsDarkMode="true" />
+<MudThemeProvider />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="0" Class="workbench-appbar">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <div class="brand-mark">FK</div>
-            <div>
-                <MudText Typo="Typo.h6">FoundationKit Core Studio</MudText>
-                <MudText Typo="Typo.caption" Class="muted-text">Composer · Modules · SQL Read Models · OpenAPI · Typed Client</MudText>
-            </div>
-        </MudStack>
-        <MudSpacer />
-        <nav aria-label="Core Studio navigation">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="top-navigation">
-                <MudButton Href="/" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Dashboard">الرئيسية</MudButton>
-                <MudButton Href="studio" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Hub">Studio</MudButton>
-                <MudButton Href="compose" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AccountTree">Compose</MudButton>
-                <MudButton Href="evidence" Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FactCheck">Evidence</MudButton>
-                <MudButton Href="swagger" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Api">OpenAPI</MudButton>
-                <MudIconButton Href="https://github.com/a2sn2/foundationkit-dotnet" Target="_blank" Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" aria-label="FoundationKit GitHub repository" />
-            </MudStack>
-        </nav>
-    </MudAppBar>
-
-    <MudMainContent Class="workbench-main" dir="rtl">
+<FkAppShell Direction="rtl"
+            NavigationLabel="التنقل في Core Studio"
+            DarkModeLabel="التبديل إلى الوضع الداكن"
+            LightModeLabel="التبديل إلى الوضع الفاتح"
+            Class="workbench-shell">
+    <Brand>
+        <FkBrandMark Name="FoundationKit"
+                     Tagline="Core Studio · Soft Orbit"
+                     Href="/"
+                     AriaLabel="FoundationKit Core Studio" />
+    </Brand>
+    <Navigation>
+        <FkNavItem Href="/" Match="NavLinkMatch.All">
+            <Icon><MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" /></Icon>
+            <ChildContent>الرئيسية</ChildContent>
+        </FkNavItem>
+        <FkNavItem Href="studio">
+            <Icon><MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" /></Icon>
+            <ChildContent>Studio</ChildContent>
+        </FkNavItem>
+        <FkNavItem Href="compose">
+            <Icon><MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" /></Icon>
+            <ChildContent>Compose</ChildContent>
+        </FkNavItem>
+        <FkNavItem Href="design">
+            <Icon><MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" /></Icon>
+            <ChildContent>Design</ChildContent>
+        </FkNavItem>
+        <FkNavItem Href="evidence">
+            <Icon><MudIcon Icon="@Icons.Material.Filled.FactCheck" Size="Size.Small" /></Icon>
+            <ChildContent>Evidence</ChildContent>
+        </FkNavItem>
+    </Navigation>
+    <TopbarStart>
+        <button class="fk-command" type="button" title="Command Palette — foundation placeholder" aria-label="فتح البحث والأوامر">
+            <span>ابحث أو نفّذ أمرًا</span>
+            <kbd>Ctrl K</kbd>
+        </button>
+    </TopbarStart>
+    <TopbarActions>
+        <FkBadge Tone="FoundationBadgeTone.Aqua">Core v1</FkBadge>
+        <FkButton Variant="FoundationButtonVariant.Secondary"
+                  Size="FoundationButtonSize.Small"
+                  Href="swagger"
+                  Target="_blank">
+            OpenAPI
+        </FkButton>
+    </TopbarActions>
+    <ChildContent>
         @Body
-    </MudMainContent>
-</MudLayout>
+    </ChildContent>
+</FkAppShell>
