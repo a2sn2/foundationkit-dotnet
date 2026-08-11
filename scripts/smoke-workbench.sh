@@ -5,6 +5,24 @@ base_url="${WORKBENCH_URL:-http://localhost:8080}"
 
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
 
+# The hosted Workbench must expose the first-party Razor Class Library assets that its
+# Blazor shell imports. A successful build/publish alone is not enough proof: these URLs
+# must resolve from the running server with executable/stylesheet content types.
+curl --fail --silent --show-error \
+  -D /tmp/foundationkit-blazor-css.headers \
+  -o /tmp/foundationkit-blazor.css \
+  "$base_url/_content/FoundationKit.Blazor/foundationkit.css"
+grep -Eqi '^content-type: text/css([;[:space:]]|$)' /tmp/foundationkit-blazor-css.headers
+grep -q -- '--fk-color-primary:' /tmp/foundationkit-blazor.css
+
+curl --fail --silent --show-error \
+  -D /tmp/foundationkit-blazor-js.headers \
+  -o /tmp/foundationkit-blazor.js \
+  "$base_url/_content/FoundationKit.Blazor/foundationkit.js"
+grep -Eqi '^content-type: (text|application)/javascript([;[:space:]]|$)' /tmp/foundationkit-blazor-js.headers
+grep -q 'window.FoundationKitTheme' /tmp/foundationkit-blazor.js
+grep -q 'window.FoundationKitLocale' /tmp/foundationkit-blazor.js
+
 # Empty framework status codes are normalized into the same Problem Details contract.
 method_status="$(curl --silent --output /tmp/foundation-http-method.json --write-out '%{http_code}' -X PATCH "$base_url/api/core-crud")"
 test "$method_status" = "405"
@@ -235,4 +253,4 @@ test "$delete_replay_status" = "204"
 missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
 test "$missing_status" = "404"
 
-echo "Workbench SQL workflow plus durable replay-safe idempotency/module composition/API Engine proof passed."
+echo "Workbench SQL workflow plus hosted FoundationKit.Blazor assets, durable replay-safe idempotency/module composition/API Engine proof passed."
