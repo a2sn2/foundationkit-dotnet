@@ -3,19 +3,28 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F7F8FC" />
     <base href="/" />
     <title>FoundationKit Core Studio</title>
-    <meta name="description" content="FoundationKit Core Studio: inspect capability composition, SQL-first read contracts, runtime OpenAPI and typed-client evidence." />
+    <meta name="description" content="FoundationKit Core Studio: compose, inspect and verify the unified Core and generated-application contracts." />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link href="_content/FoundationKit.Blazor/foundationkit.css" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <link href="css/studio.css" rel="stylesheet" />
 </head>
-<body>
+<body class="fk-app">
     <div id="app">
-        <div class="boot-screen" role="status" aria-live="polite">
-            <div class="boot-core">FK</div>
-            <p>جاري تشغيل FoundationKit Core Studio...</p>
+        <div class="fk-loading" role="status" aria-live="polite">
+            <div class="fk-loading__visual" aria-hidden="true">
+                <span class="fk-orbit-path fk-orbit-path--one"></span>
+                <span class="fk-orbit-path fk-orbit-path--two"></span>
+                <span class="fk-orbit-node fk-loading__pulse"></span>
+                <span class="fk-orbit-node fk-orbit-node--aqua fk-loading__pulse"></span>
+                <span class="fk-orbit-node fk-orbit-node--warm fk-loading__pulse"></span>
+            </div>
+            <h2>جاري تشغيل Core Studio</h2>
+            <p>نجهّز Composer والعقود ونظام التصميم الموحد…</p>
         </div>
     </div>
 
@@ -25,6 +34,7 @@
         <a class="dismiss">×</a>
     </div>
 
+    <script src="_content/FoundationKit.Blazor/foundationkit.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
