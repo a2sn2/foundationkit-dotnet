@@ -141,8 +141,8 @@ await builder.Build().RunAsync();
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(MainLayout)">
-            <FkEmptyState Title="Page not found"
-                          Description="The requested route does not exist in this generated FoundationKit application." />
+            <FkEmptyState Title="Page not found · الصفحة غير موجودة"
+                          Description="The requested route does not exist in this generated FoundationKit application. · المسار المطلوب غير موجود في تطبيق FoundationKit المولد." />
         </LayoutView>
     </NotFound>
 </Router>
@@ -160,32 +160,45 @@ await builder.Build().RunAsync();
         Path("Layout/MainLayout.razor"): f"""
 @inherits LayoutComponentBase
 
-<FkAppShell Direction=\"ltr\">
+<FkAppShell Direction=\"auto\"
+            Language=\"@_language\"
+            LanguageChanged=\"SetLanguage\"
+            NavigationLabel=\"@T(\"Application navigation\", \"التنقل في التطبيق\")\"
+            DarkModeLabel=\"@T(\"Switch to dark mode\", \"التبديل إلى الوضع الداكن\")\"
+            LightModeLabel=\"@T(\"Switch to light mode\", \"التبديل إلى الوضع الفاتح\")\">
     <Brand>
-        <FkBrandMark Name=\"{app_name}\" Tagline=\"FoundationKit generated application\" Href=\"/\" />
+        <FkBrandMark Name=\"{app_name}\" Tagline=\"FoundationKit · Soft Orbit\" Href=\"/\" />
     </Brand>
     <Navigation>
         <FkNavItem Href=\"/\" Match=\"NavLinkMatch.All\">
             <Icon><span aria-hidden=\"true\">⌂</span></Icon>
-            <ChildContent>Overview</ChildContent>
+            <ChildContent>@T(\"Overview\", \"نظرة عامة\")</ChildContent>
         </FkNavItem>
         <FkNavItem Href=\"contract\">
             <Icon><span aria-hidden=\"true\">◇</span></Icon>
-            <ChildContent>Contract</ChildContent>
+            <ChildContent>@T(\"Contract\", \"العقد\")</ChildContent>
         </FkNavItem>
     </Navigation>
     <TopbarStart>
         <button class=\"fk-command\" type=\"button\" aria-label=\"Open command palette placeholder\">
-            <span>Search or command</span><kbd>Ctrl K</kbd>
+            <span>@T(\"Search or command\", \"ابحث أو نفّذ أمرًا\")</span><kbd>Ctrl K</kbd>
         </button>
     </TopbarStart>
     <TopbarActions>
-        <FkBadge Tone=\"FoundationBadgeTone.Aqua\">Typed API ready</FkBadge>
+        <FkBadge Tone=\"FoundationBadgeTone.Aqua\">@T(\"Typed API ready\", \"Typed API جاهز\")</FkBadge>
     </TopbarActions>
     <ChildContent>
-        @Body
+        <CascadingValue Value=\"@_language\" Name=\"FoundationLanguage\">
+            @Body
+        </CascadingValue>
     </ChildContent>
 </FkAppShell>
+
+@code {{
+    private string _language = \"en\";
+    private string T(string en, string ar) => _language == \"ar\" ? ar : en;
+    private void SetLanguage(string language) => _language = language == \"ar\" ? \"ar\" : \"en\";
+}}
 """,
         Path("Pages/Home.razor"): f"""
 @page "/"
@@ -194,8 +207,8 @@ await builder.Build().RunAsync();
 <PageTitle>{app_name}</PageTitle>
 
 <FkPageHeader Eyebrow=\"FOUNDATIONKIT GENERATED APP\"
-              Title=\"A gentle starting point with a real typed transport.\"
-              Description=\"This shell uses the same Soft Orbit tokens and first-party components as FoundationKit Core Studio. Product screens extend this baseline without duplicating the transport contract.\" />
+              Title=\"@T(\"A gentle starting point with a real typed transport.\", \"بداية خفيفة بعقد نقل Typed فعلي.\")\"
+              Description=\"@T(\"This shell uses the same Soft Orbit tokens and first-party components as FoundationKit Core Studio. Product screens extend this baseline without duplicating the transport contract.\", \"تستخدم هذه الواجهة نفس Soft Orbit tokens ومكونات الطرف الأول في FoundationKit Core Studio، وتبني شاشات المنتج فوقها دون تكرار عقد النقل.\")\" />
 
 <div class=\"fk-design-grid\">
     <div class=\"fk-col-8\">
@@ -204,15 +217,15 @@ await builder.Build().RunAsync();
                 <div class=\"fk-row fk-wrap\">
                     <FkBadge Tone=\"FoundationBadgeTone.Primary\">OpenAPI</FkBadge>
                     <FkBadge Tone=\"FoundationBadgeTone.Aqua\">Typed C#</FkBadge>
-                    <FkBadge Tone=\"FoundationBadgeTone.Success\">Shared UI baseline</FkBadge>
+                    <FkBadge Tone=\"FoundationBadgeTone.Success\">@T(\"Shared UI baseline\", \"أساس واجهة مشترك\")</FkBadge>
                 </div>
-                <h2>Transport is wired; product semantics stay yours.</h2>
+                <h2>@T(\"Transport is wired; product semantics stay yours.\", \"عقد النقل موصول؛ ودلالات المنتج تبقى ملك المشروع.\")</h2>
                 <p class=\"fk-muted\">
-                    The generated <code class=\"fk-mono\">{client_class}</code> comes from runtime OpenAPI.
-                    Backend authorization, query policy, and read-model composition remain authoritative.
+                    @T(\"The generated client comes from runtime OpenAPI. Backend authorization, query policy, and read-model composition remain authoritative.\", \"العميل المولد يأتي من Runtime OpenAPI، بينما تبقى صلاحيات السيرفر وسياسة الاستعلام وتركيب Read Models هي المرجع الحاكم.\")
+                    <code class=\"fk-mono\">{client_class}</code>
                 </p>
                 <div class=\"fk-row fk-wrap\">
-                    <FkButton Href=\"contract\">Inspect contract</FkButton>
+                    <FkButton Href=\"contract\">@T(\"Inspect contract\", \"راجع العقد\")</FkButton>
                     <FkButton Variant=\"FoundationButtonVariant.Secondary\" Href=\"https://github.com/a2sn2/foundationkit-dotnet\">FoundationKit</FkButton>
                 </div>
             </div>
@@ -236,6 +249,12 @@ await builder.Build().RunAsync();
         <span class=\"fk-orbit-stage__satellite fk-orbit-stage__satellite--three\">UI</span>
     </div>
 </section>
+
+@code {{
+    [CascadingParameter(Name = \"FoundationLanguage\")]
+    private string Language {{ get; set; }} = \"en\";
+    private string T(string en, string ar) => Language == \"ar\" ? ar : en;
+}}
 """,
         Path("Pages/Contract.razor"): f"""
 @page "/contract"
@@ -243,21 +262,27 @@ await builder.Build().RunAsync();
 <PageTitle>Contract — {app_name}</PageTitle>
 
 <FkPageHeader Eyebrow=\"TRANSPORT SSOT\"
-              Title=\"One serialized contract, no browser-side rewrite.\"
-              Description=\"Runtime OpenAPI produces the typed C# client used by this shell. Multi-table/report screens should consume backend read models rather than reproducing joins in the browser.\">
+              Title=\"@T(\"One serialized contract, no browser-side rewrite.\", \"عقد متسلسل واحد، بلا إعادة كتابة داخل المتصفح.\")\"
+              Description=\"@T(\"Runtime OpenAPI produces the typed C# client used by this shell. Multi-table/report screens should consume backend read models rather than reproducing joins in the browser.\", \"ينتج Runtime OpenAPI عميل C# typed الذي تستخدمه الواجهة. شاشات التقارير والبيانات متعددة الجداول تستهلك Read Models من الخلفية بدل إعادة تنفيذ joins في المتصفح.\")\">
     <Actions>
-        <FkButton Variant=\"FoundationButtonVariant.Secondary\" Href=\"/\">Back to overview</FkButton>
+        <FkButton Variant=\"FoundationButtonVariant.Secondary\" Href=\"/\">@T(\"Back to overview\", \"العودة للنظرة العامة\")</FkButton>
     </Actions>
 </FkPageHeader>
 
 <FkCard>
     <div class=\"contract-chain\">
-        <div><span>01</span><strong>Runtime OpenAPI</strong><small>serialized transport SSOT</small></div>
-        <div><span>02</span><strong>Typed C# client</strong><small>deterministic generation</small></div>
-        <div><span>03</span><strong>FoundationKit.Blazor</strong><small>shared presentation system</small></div>
-        <div><span>04</span><strong>Product UI</strong><small>consumer-owned semantics</small></div>
+        <div><span>01</span><strong>Runtime OpenAPI</strong><small>@T(\"serialized transport SSOT\", \"مصدر عقد النقل المتسلسل\")</small></div>
+        <div><span>02</span><strong>Typed C# client</strong><small>@T(\"deterministic generation\", \"توليد حتمي\")</small></div>
+        <div><span>03</span><strong>FoundationKit.Blazor</strong><small>@T(\"shared presentation system\", \"نظام عرض مشترك\")</small></div>
+        <div><span>04</span><strong>Product UI</strong><small>@T(\"consumer-owned semantics\", \"دلالات يملكها المنتج\")</small></div>
     </div>
 </FkCard>
+
+@code {{
+    [CascadingParameter(Name = \"FoundationLanguage\")]
+    private string Language {{ get; set; }} = \"en\";
+    private string T(string en, string ar) => Language == \"ar\" ? ar : en;
+}}
 """,
         Path("wwwroot/index.html"): f"""
 <!DOCTYPE html>
@@ -318,6 +343,8 @@ Contract chain:
 `runtime OpenAPI -> generate-csharp-client-from-openapi.py -> {client_class} -> FoundationKit.Blazor components/tokens -> generated product shell`
 
 The shell is intentionally product-neutral. It does not infer authorization, relational joins, secrets, or business workflows in the browser. Product screens should consume typed methods in `Api/{client_class}.g.cs`, while backend policies and read models remain authoritative.
+
+The generated shell is bilingual-first: FoundationKit.Blazor persists `en` / `ar`, switches LTR / RTL at the document boundary, and keeps product translations owned by the generated host instead of embedding business language in the reusable package.
 
 The visual baseline comes from `_content/FoundationKit.Blazor/foundationkit.css`; applications should override semantic tokens at their host boundary instead of forking component CSS.
 """,
