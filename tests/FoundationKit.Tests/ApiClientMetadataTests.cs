@@ -25,7 +25,7 @@ public sealed class ApiClientMetadataTests
         var response = await client.ReadWithMetadataAsync();
 
         Assert.True(response.Result.IsSuccess);
-        Assert.Equal("Alpha", response.Result.Value.Name);
+        Assert.Equal("Alpha", response.Result.Value!.Name);
         Assert.Equal(HttpStatusCode.Created, response.Result.StatusCode);
         Assert.Equal("\"7\"", response.Metadata.EntityTag);
         Assert.Equal(new Uri("https://example.test/api/items/1"), response.Metadata.Location);
@@ -59,6 +59,24 @@ public sealed class ApiClientMetadataTests
     }
 
     [Fact]
+    public async Task Non_generic_metadata_send_preserves_transport_metadata()
+    {
+        using var httpClient = new HttpClient(new StubHandler(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.NoContent);
+            response.Headers.TryAddWithoutValidation("X-Correlation-ID", "corr-delete");
+            return response;
+        }));
+        var client = new TestApiClient(httpClient);
+
+        var response = await client.DeleteWithMetadataAsync();
+
+        Assert.True(response.Result.IsSuccess);
+        Assert.Equal(HttpStatusCode.NoContent, response.Result.StatusCode);
+        Assert.Equal("corr-delete", response.Metadata.CorrelationId);
+    }
+
+    [Fact]
     public async Task Legacy_send_keeps_existing_result_only_contract()
     {
         using var httpClient = new HttpClient(new StubHandler(_ =>
@@ -75,7 +93,7 @@ public sealed class ApiClientMetadataTests
         var result = await client.ReadLegacyAsync();
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("Legacy", result.Value.Name);
+        Assert.Equal("Legacy", result.Value!.Name);
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
     }
 
@@ -97,6 +115,9 @@ public sealed class ApiClientMetadataTests
     {
         public Task<ApiResponse<Payload>> ReadWithMetadataAsync() =>
             SendWithMetadataAsync<Payload>(new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/items/1"));
+
+        public Task<ApiResponse> DeleteWithMetadataAsync() =>
+            SendWithMetadataAsync(new HttpRequestMessage(HttpMethod.Delete, "https://example.test/api/items/1"));
 
         public Task<ApiResult<Payload>> ReadLegacyAsync() =>
             SendAsync<Payload>(new HttpRequestMessage(HttpMethod.Get, "https://example.test/api/items/1"));
