@@ -22,20 +22,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/admin/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "requests"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "requests"],
               "query": [
-                {
-                  "key": "status",
-                  "value": "value",
-                  "disabled": true
-                }
+                {"key": "status", "value": "value", "disabled": true}
               ]
             },
             "description": "Generated from OpenAPI operation `GetAdminRequestQueue`. Do not edit this request manually."
@@ -45,40 +35,18 @@
           "name": "ReviewUserRequest",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "url": {
               "raw": "{{baseUrl}}/api/admin/requests/{{id}}/review",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "requests",
-                "{{id}}",
-                "review"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000001"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "requests", "{{id}}", "review"],
+              "variable": [{"key": "id", "value": "00000000-0000-0000-0000-000000000001"}]
             },
             "description": "Generated from OpenAPI operation `ReviewUserRequest`. Do not edit this request manually.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"decision\": \"approve\",\n  \"notes\": \"value\",\n  \"reviewedBy\": \"value\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": {"raw": {"language": "json"}}
             }
           }
         }
@@ -94,34 +62,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/core-crud",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "core-crud"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "core-crud"],
               "query": [
-                {
-                  "key": "filter",
-                  "value": "field|eq|value",
-                  "disabled": true
-                },
-                {
-                  "key": "page",
-                  "value": "1",
-                  "disabled": true
-                },
-                {
-                  "key": "pageSize",
-                  "value": "20",
-                  "disabled": true
-                },
-                {
-                  "key": "sort",
-                  "value": "field|asc",
-                  "disabled": true
-                }
+                {"key": "filter", "value": "field|eq|value", "disabled": true},
+                {"key": "page", "value": "1", "disabled": true},
+                {"key": "pageSize", "value": "20", "disabled": true},
+                {"key": "sort", "value": "field|asc", "disabled": true}
               ]
             },
             "description": "Generated from OpenAPI operation `CoreCrud.List`. Do not edit this request manually."
@@ -132,35 +79,12 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "contract-example-key"
-              }
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Idempotency-Key", "value": "contract-example-key"}
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/core-crud",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "core-crud"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/core-crud", "host": ["{{baseUrl}}"], "path": ["api", "core-crud"]},
             "description": "Generated from OpenAPI operation `CoreCrud.Create`. Do not edit this request manually.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"value\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"value\"\n}", "options": {"raw": {"language": "json"}}}
           }
         },
         {
@@ -170,20 +94,9 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/core-crud/{{id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "core-crud",
-                "{{id}}"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000001"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "core-crud", "{{id}}"],
+              "variable": [{"key": "id", "value": "00000000-0000-0000-0000-000000000001"}]
             },
             "description": "Generated from OpenAPI operation `CoreCrud.Get`. Do not edit this request manually."
           }
@@ -193,74 +106,30 @@
           "request": {
             "method": "PUT",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "contract-example-key"
-              },
-              {
-                "key": "If-Match",
-                "value": "\"1\""
-              }
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Idempotency-Key", "value": "contract-example-key"},
+              {"key": "If-Match", "value": "\"1\""}
             ],
             "url": {
               "raw": "{{baseUrl}}/api/core-crud/{{id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "core-crud",
-                "{{id}}"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000001"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "core-crud", "{{id}}"],
+              "variable": [{"key": "id", "value": "00000000-0000-0000-0000-000000000001"}]
             },
             "description": "Generated from OpenAPI operation `CoreCrud.Update`. Do not edit this request manually.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"value\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"value\"\n}", "options": {"raw": {"language": "json"}}}
           }
         },
         {
           "name": "CoreCrud.Delete",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Idempotency-Key",
-                "value": "contract-example-key"
-              }
-            ],
+            "header": [{"key": "Idempotency-Key", "value": "contract-example-key"}],
             "url": {
               "raw": "{{baseUrl}}/api/core-crud/{{id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "core-crud",
-                "{{id}}"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000001"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "core-crud", "{{id}}"],
+              "variable": [{"key": "id", "value": "00000000-0000-0000-0000-000000000001"}]
             },
             "description": "Generated from OpenAPI operation `CoreCrud.Delete`. Do not edit this request manually."
           }
@@ -271,35 +140,38 @@
       "name": "FoundationKit.Workbench.Api",
       "item": [
         {
+          "name": "GenerateFoundationKitComposerProject",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/composer/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "composer", "generate"]
+            },
+            "description": "Generated from OpenAPI operation `GenerateFoundationKitComposerProject`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"force\": true,\n  \"manifestJson\": \"value\"\n}",
+              "options": {"raw": {"language": "json"}}
+            }
+          }
+        },
+        {
           "name": "ValidateFoundationKitComposerManifest",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{"key": "Content-Type", "value": "application/json"}],
             "url": {
               "raw": "{{baseUrl}}/api/composer/validate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "composer",
-                "validate"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "composer", "validate"]
             },
             "description": "Generated from OpenAPI operation `ValidateFoundationKitComposerManifest`. Do not edit this request manually.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"manifestJson\": \"value\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": {"raw": {"language": "json"}}
             }
           }
         }
@@ -313,16 +185,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/catalog",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "catalog"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/catalog", "host": ["{{baseUrl}}"], "path": ["api", "catalog"]},
             "description": "Generated from OpenAPI operation `GetFoundationKitCatalog`. Do not edit this request manually."
           }
         },
@@ -331,16 +194,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api", "health"]},
             "description": "Generated from OpenAPI operation `GetWorkbenchHealth`. Do not edit this request manually."
           }
         },
@@ -349,16 +203,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/modules",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "modules"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/modules", "host": ["{{baseUrl}}"], "path": ["api", "modules"]},
             "description": "Generated from OpenAPI operation `GetFoundationKitModules`. Do not edit this request manually."
           }
         },
@@ -367,16 +212,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/platform-reference",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "platform-reference"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/platform-reference", "host": ["{{baseUrl}}"], "path": ["api", "platform-reference"]},
             "description": "Generated from OpenAPI operation `GetWorkbenchPlatformReference`. Do not edit this request manually."
           }
         },
@@ -385,16 +221,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/runtime",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "runtime"
-              ]
-            },
+            "url": {"raw": "{{baseUrl}}/api/runtime", "host": ["{{baseUrl}}"], "path": ["api", "runtime"]},
             "description": "Generated from OpenAPI operation `GetWorkbenchRuntime`. Do not edit this request manually."
           }
         }
@@ -407,32 +234,13 @@
           "name": "CreateUserRequest",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "requests"
-              ]
-            },
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{baseUrl}}/api/user/requests", "host": ["{{baseUrl}}"], "path": ["api", "user", "requests"]},
             "description": "Generated from OpenAPI operation `CreateUserRequest`. Do not edit this request manually.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"audience\": \"value\",\n  \"goal\": \"value\",\n  \"notes\": \"value\",\n  \"priorities\": \"value\",\n  \"projectName\": \"value\",\n  \"projectType\": \"value\",\n  \"selectedCapabilityIds\": [\n    \"value\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": {"raw": {"language": "json"}}
             }
           }
         },
@@ -443,21 +251,9 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/user/requests/{{id}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "requests",
-                "{{id}}"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000001"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "requests", "{{id}}"],
+              "variable": [{"key": "id", "value": "00000000-0000-0000-0000-000000000001"}]
             },
             "description": "Generated from OpenAPI operation `GetUserRequest`. Do not edit this request manually."
           }
