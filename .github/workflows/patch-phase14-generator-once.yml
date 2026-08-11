@@ -1,4 +1,4 @@
-name: Patch Phase 14 generator once v3
+name: Patch Phase 14 generator once v4
 
 on:
   pull_request:
@@ -82,8 +82,6 @@ jobs:
 
           replace_once(
               '''            registrations.AppendLine("    );");
-
-            if (Has(resource, ComposerResourceBehavior.Auditing))
 ''',
               '''            registrations.AppendLine("    );");
 
@@ -108,8 +106,6 @@ jobs:
                 }
                 registrations.AppendLine("    }));");
             }
-
-            if (Has(resource, ComposerResourceBehavior.Auditing))
 ''',
               'query policy registration')
 
