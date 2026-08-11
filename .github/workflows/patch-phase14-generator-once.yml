@@ -1,4 +1,4 @@
-name: Patch Phase 14 generator once
+name: Patch Phase 14 generator once v2
 
 on:
   pull_request:
