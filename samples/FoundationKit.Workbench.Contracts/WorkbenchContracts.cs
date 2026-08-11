@@ -19,6 +19,22 @@ public sealed record PlatformReferenceResponse(
 
 public sealed record HealthResponse(string Status, string Database);
 
+public sealed record ModuleCompositionResponse(
+    string Name,
+    string Route,
+    string ApiRoute,
+    IReadOnlyList<string> DeclaredCapabilities,
+    IReadOnlyList<string> EffectiveCapabilities,
+    ModuleApiContract Api);
+
+public sealed record ModuleApiContract(
+    string RoutePrefix,
+    string Idempotency,
+    string Concurrency,
+    int MaximumFilters,
+    int MaximumSorts,
+    string? RateLimitPolicyName);
+
 public sealed class CatalogResponse
 {
     public int SchemaVersion { get; set; }

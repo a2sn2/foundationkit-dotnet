@@ -29,6 +29,15 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added exact generated-project compatibility gates for schema v1, descriptor-only schema v2, and executable full-stack A/B, including deterministic force regeneration and generated-secret checks.
 - Added dedicated generated runtime evidence covering validation, authorization, audit, create/update/delete replay, fingerprint conflicts, ETag/If-Match behavior, auth-before-replay, operation-level OpenAPI security, deterministic Postman, and direct SQL isolation checks.
 - Advanced Idempotency maturity from Planned to ReferenceOnly based on implementation, quality, Workbench adoption, and generated A/B adoption evidence while explicitly withholding broader provider/compatibility claims.
+- Added Phase 13 deterministic runtime OpenAPI → C# typed-client generation with fail-closed shape support, CLR/OpenAPI required-property alignment, nullable-safe response models, required idempotency/If-Match transport, and ETag/Location/CorrelationId metadata preservation through `FoundationKit.Blazor`.
+- Added a live typed-client proof that generates from a running Composer product, reproduces the client byte-for-byte, builds it with analyzers/warnings-as-errors, and executes create/get/update/list/delete against SQL Server without exposing raw `HttpResponseMessage` handling to generated consumers.
+- Added Phase 14 explicit generated query/index intent (`none`/`exact`/`prefix`, sortable, indexed/unique), fail-closed field/operator validation, product-owned deterministic SQL Server indexes, and direct proof that EF executes `WHERE`/`ORDER BY`/paging in SQL rather than materialize-then-sort.
+- Added the Phase 14 provider-neutral read-only `IReadModelStore<TReadModel>` boundary, query service/policies and WebApi read-model list endpoint.
+- Added Composer-generated SQL-view-backed query/report read models with explicit columns, bounded validated LEFT JOINs, product-owned `CREATE VIEW`/`DROP VIEW` migration DDL, keyless `HasNoKey().ToView(...)` EF mappings, authorization, GET-only exposure and server-side filter/sort/count/page.
+- Added generated `CustomerDirectory` and `CustomerStatement` runtime evidence proving joined-field filtering, LEFT JOIN null preservation, report projection and typed-client inclusion while preserving the existing Customer write DTO contract.
+- Added Phase 15 reusable frontend presentation/query/display state in the existing `FoundationKit.Blazor` package without adding package #18 or a MudBlazor dependency to reusable Core.
+- Refocused the Workbench Blazor client into FoundationKit Core Studio for capability catalog, live module composition and contract-evidence inspection; removed the old product-style user/admin portal pages while retaining their backend workflow only as integration evidence.
+- Documented the browser boundary explicitly: UI state is presentation-only, backend authorization remains authoritative, and multi-table/report UI data comes from read models rather than browser-side relational logic.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0

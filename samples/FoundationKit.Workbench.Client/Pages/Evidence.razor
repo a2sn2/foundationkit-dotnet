@@ -1,0 +1,118 @@
+@page "/evidence"
+@inject WorkbenchApiClient Api
+
+<PageTitle>Core Evidence — FoundationKit</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-6 flex-wrap">
+        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">نظرة عامة</MudButton>
+        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">EXECUTION EVIDENCE</MudChip>
+        <MudSpacer />
+        <MudButton Href="swagger" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Api">OpenAPI</MudButton>
+    </MudStack>
+
+    <section class="portal-hero evidence-hero">
+        <div>
+            <div class="eyebrow">PROOF, NOT MARKETING</div>
+            <MudText Typo="Typo.h2">كل طبقة لها دليلها، ولا نخلط نجاح الـBuild مع Production approval.</MudText>
+            <MudText Typo="Typo.h6" Class="muted-text mt-3">
+                FoundationKit يثبت العقود والتنفيذ داخل المستودع. حماية main والمراجعة المستقلة وإجراءات التشغيل الفعلية تبقى متطلبات حوكمة منفصلة قبل أي Go‑Live حقيقي.
+            </MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Large" Color="Color.Secondary" />
+    </section>
+
+    <MudGrid Class="mt-8">
+        <MudItem xs="12" lg="4">
+            <MudPaper Class="studio-panel" Elevation="0">
+                <MudText Typo="Typo.h4">Live Runtime</MudText>
+                <div class="evidence-list mt-4">
+                    <div><span>API mode</span><strong>@(_runtime?.Mode ?? "not verified")</strong></div>
+                    <div><span>Persistence</span><strong>@(_runtime?.Persistence ?? "not verified")</strong></div>
+                    <div><span>Database health</span><strong>@(_health?.Status ?? "not verified")</strong></div>
+                    <div><span>Catalog packages</span><strong>@(_catalog?.Packages.Count.ToString() ?? "not loaded")</strong></div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="studio-panel" Elevation="0">
+                <MudText Typo="Typo.h4">Core Contract Proof Chain</MudText>
+                <MudText Class="muted-text mt-2">المراحل أدناه هي طبقات إثبات مستقلة؛ فشل إحداها لا يُخفى بنجاح الأخرى.</MudText>
+                <div class="evidence-timeline mt-5">
+                    @foreach (var gate in Gates)
+                    {
+                        <article>
+                            <span class="evidence-dot"></span>
+                            <div>
+                                <strong>@gate.Title</strong>
+                                <p>@gate.Description</p>
+                                <code>@gate.Evidence</code>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <section class="section-block">
+        <div class="section-heading">
+            <div>
+                <div class="eyebrow">BOUNDARIES</div>
+                <MudText Typo="Typo.h3">ما الذي لا تدّعيه هذه الواجهة؟</MudText>
+            </div>
+        </div>
+
+        <MudGrid>
+            @foreach (var boundary in Boundaries)
+            {
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudIcon Icon="@boundary.Icon" Color="Color.Warning" />
+                        <MudText Typo="Typo.h6">@boundary.Title</MudText>
+                        <MudText Class="muted-text">@boundary.Description</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </section>
+</MudContainer>
+
+@code {
+    private RuntimeResponse? _runtime;
+    private HealthResponse? _health;
+    private CatalogResponse? _catalog;
+
+    private static readonly IReadOnlyList<EvidenceGate> Gates =
+    [
+        new("Composer generation", "توليد deterministic مع force-regeneration وحماية ملكية الملفات.", "Composer Generation CI"),
+        new("SQL full stack", "API generated projects تعمل على SQL Server مع isolation وmigrations product-owned.", "Composer Full-Stack Proof"),
+        new("Read engine", "WHERE/ORDER BY/paging/indexes وSQL Views تُثبت على provider حقيقي.", "Read Engine Proof"),
+        new("Transport SSOT", "Runtime OpenAPI يُشتق منه Postman والـTyped Client deterministically.", "OpenAPI + Postman + Typed Client Proof"),
+        new("Security/quality", "Build/tests/security scans/CodeQL/Windows/package count تبقى بوابات مستقلة.", "FoundationKit CI + Security + CodeQL")
+    ];
+
+    private static readonly IReadOnlyList<BoundaryCard> Boundaries =
+    [
+        new(Icons.Material.Filled.AdminPanelSettings, "UI ليست Authorization Boundary", "إخفاء زر أو صفحة لا يمنح ولا يسحب صلاحية. القرار الأمني يبقى داخل الـAPI والسياسات الخلفية."),
+        new(Icons.Material.Filled.Storage, "UI لا تنفذ Joins", "الشاشات متعددة الجداول والتقارير تستهلك Read Models/Views بدل نسخ منطق الربط إلى المتصفح."),
+        new(Icons.Material.Filled.Security, "Green CI ≠ Production Approved", "نجاح المستودع دليل هندسي، لكنه لا يثبت protected main أو المراجعة البشرية المستقلة أو إجراءات التشغيل الفعلية."),
+        new(Icons.Material.Filled.VpnKeyOff, "لا أسرار في الواجهة", "Composer metadata والكتالوج والعقود يجب أن تبقى bounded وغير سرية؛ credentials والسياسات الحساسة لا تُولد داخل client assets.")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var runtime = await Api.GetRuntimeAsync();
+        _runtime = runtime.IsSuccess ? runtime.Value : null;
+
+        var health = await Api.GetHealthAsync();
+        _health = health.IsSuccess ? health.Value : null;
+
+        var catalog = await Api.GetCatalogAsync();
+        _catalog = catalog.IsSuccess ? catalog.Value : null;
+    }
+
+    private sealed record EvidenceGate(string Title, string Description, string Evidence);
+    private sealed record BoundaryCard(string Icon, string Title, string Description);
+}

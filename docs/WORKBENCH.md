@@ -1,20 +1,47 @@
-# FoundationKit Workbench
+# FoundationKit Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics.
+Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is now the **Core Studio reference experience**: a UI for inspecting the Core, not a product portal.
 
 ## What it proves
 
 - SQL Server provider selection owned by the host;
 - host-owned EF schema/migrations;
 - database/domain/application/API/client boundaries;
-- connected user/admin reference workflow;
 - Settings, Feature Management, Localization, and Caching runtime paths;
 - Core vNext Module/CRUD Engine through a real SQL table and generic endpoints;
 - API Engine pagination/filter/sort/header/error/OpenAPI behavior;
 - declared versus dependency-expanded effective module capability composition;
 - runtime OpenAPI as the canonical serialized transport contract;
-- deterministic Postman derivation from that OpenAPI contract;
-- opt-in relational durable idempotency through a Workbench-owned SQL migration and FoundationKit's existing Application/Infrastructure/WebApi packages.
+- deterministic Postman and C# typed-client derivation from runtime OpenAPI;
+- opt-in relational durable idempotency through a Workbench-owned SQL migration;
+- SQL-first generated resource filtering/sorting/paging and product-owned indexes;
+- read-only SQL-view-backed read models for multi-table/report projections in generated products;
+- a first-party frontend reference that presents Core state without moving authorization or relational join logic into the browser.
+
+The original connected user/admin workflow remains in the Workbench backend and integration smoke as historical vertical-slice evidence. It is deliberately **not** the active frontend framing after Phase 15.
+
+## Core Studio pages
+
+```text
+/           Core baseline, phase gates and contract flow
+/studio     live capability catalog + declared/effective module composition
+/evidence   runtime and engineering proof boundaries
+/swagger    runtime OpenAPI/Swagger UI
+```
+
+The Studio UI consumes bounded Workbench transport contracts. It never treats hidden buttons, routes, or client state as authorization. Server policies remain authoritative.
+
+## Reusable frontend boundary
+
+`FoundationKit.Blazor` remains the reusable Core frontend package. Phase 15 adds framework-agnostic presentation/query/display state contracts there without adding a new package or a MudBlazor dependency to reusable Core.
+
+MudBlazor remains a **Workbench sample dependency**. It is not silently promoted into the FoundationKit.Blazor package contract.
+
+The reusable presentation layer provides:
+
+- `PresentationState<T>` for idle/loading/ready/empty/error rendering;
+- bounded `PagedQueryState` for presentation query intent while the server still validates actual filter/sort policies;
+- `ResourceDisplayDescriptor` for safe display metadata without business-rule duplication.
 
 ## Core CRUD reference
 
@@ -30,49 +57,35 @@ PUT    /api/core-crud/{id}
 DELETE /api/core-crud/{id}
 ```
 
-The Workbench host supplies request/response contracts, mapper, semantic authorization policy, concurrency policy, query policy, manager override, SQL entity configuration/migration, ETag provider, and audit sink. Simple structural request validation uses the Core default `DataAnnotationsValidator<T>`. FoundationKit supplies the generic orchestration and endpoint plumbing.
+The Workbench host supplies request/response contracts, mapper, semantic authorization policy, concurrency policy, query policy, manager override, SQL entity configuration/migration, ETag provider, and audit sink. FoundationKit supplies generic orchestration and endpoint plumbing.
 
-The reference API requires `Idempotency-Key` on mutations and `If-Match` on update. Workbench registers `AddFoundationEfIdempotencyStore<WorkbenchDbContext>()`, includes `AddFoundationIdempotencyStore()` in its model, and owns the `FoundationIdempotencyEntries` migration. The update JSON body contains business update data only; its concurrency token remains the HTTP precondition rather than a duplicate request property.
-
-## Durable replay proof
-
-The SQL smoke proves the Phase 10 behavior against the real Workbench SQL Server database:
-
-- first create executes normally and returns ID/version/ETag;
-- exact create retry with the same key returns the same ID/version/ETag rather than inserting again;
-- reusing that key with a changed body returns `409 Foundation.Api.Idempotency.FingerprintConflict`;
-- first update with `If-Match: "1"` advances the resource to version 2;
-- exact update retry replays version 2 even though the original precondition is now stale, proving the application mutation did not run twice;
-- changing `If-Match` under the same update key is a fingerprint conflict because the precondition is part of the request fingerprint;
-- first delete returns 204 and the exact retry also returns the replayed 204 instead of executing again and becoming 404.
-
-The durable reference is intentionally fail-closed. It does not claim distributed exactly-once semantics; see `DURABLE-IDEMPOTENCY.md`.
+The reference API requires `Idempotency-Key` on mutations and `If-Match` on update. Workbench registers the EF-backed idempotency store and owns its migration. The concurrency token remains an HTTP precondition rather than a duplicate body property.
 
 ## Module composition discovery
 
-Workbench exposes architecture evidence at:
+Workbench exposes bounded architecture evidence at:
 
 ```text
 GET /api/modules
 ```
 
-The snapshot distinguishes `declaredCapabilities` from `effectiveCapabilities`. The latter is the deterministic dependency closure used by FoundationKit composition. For example, Authorization contributes Identity/Security dependency intent and Feature Management contributes Settings. This does not claim that an environment-specific identity store, transport, or production provider has been provisioned.
+The response distinguishes `declaredCapabilities` from `effectiveCapabilities`. Effective capabilities are the deterministic dependency closure used by FoundationKit composition. For example, Authorization contributes Identity/Security dependency intent and Feature Management contributes Settings. This does not claim that environment-specific identity, transport, or production providers have been provisioned.
 
 ## Contract source of truth
 
-Swagger/OpenAPI is produced from the running Workbench at:
+Runtime OpenAPI is produced at:
 
 ```text
 /swagger/v1/swagger.json
 ```
 
-The committed Postman collection is a generated artifact:
+The committed Postman collection is generated from that runtime document:
 
 ```text
 postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-Do not edit that collection manually. `scripts/generate-postman-from-openapi.py` derives it from the captured runtime OpenAPI document, and CI performs byte-for-byte deterministic/drift checks. See `CONTRACT-SOURCE-OF-TRUTH.md`.
+Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The Phase 13 C# typed-client generator uses the same runtime OpenAPI source and Phase 14 proves generated read-model list operations are included in that typed contract.
 
 ## Run
 
@@ -83,8 +96,11 @@ Do not edit that collection manually. `scripts/generate-postman-from-openapi.py`
 .\foundationkit.ps1 stop -Target Workbench
 ```
 
+Health: `/api/health`  
+Module composition: `/api/modules`  
+Core Studio: `/`  
 Swagger UI: `/swagger`
-Health: `/api/health`
-Module composition: `/api/modules`
 
-The SQL integration smoke exercises the user/admin reference, module composition discovery, generic CRUD, DataAnnotations, durable replay-safe idempotency, ETag/If-Match concurrency, module-owned filtering/sorting, manager overrides, Problem Details, runtime OpenAPI, and generated Postman contract synchronization.
+## Evidence boundary
+
+A green Workbench/CI run is repository engineering evidence. It does **not** by itself mean Production Approved. Protected-main enforcement, independent human approval and operational go-live controls remain governed separately by issue #35.
