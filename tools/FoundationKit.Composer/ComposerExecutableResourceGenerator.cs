@@ -252,6 +252,14 @@ internal static class ComposerExecutableResourceGenerator
             if (field.Required)
                 properties.Append(".IsRequired()");
             properties.AppendLine(";");
+  if (field.Indexed)
+  {
+      properties.Append("        builder.HasIndex(entity => entity.").Append(field.Name)
+          .Append(").HasDatabaseName(").Append(JsonSerializer.Serialize(IndexName(manifest, resource, field))).Append(')');
+      if (field.Unique)
+          properties.Append(".IsUnique()");
+      properties.AppendLine(";");
+  }
         }
         if (Has(resource, ComposerResourceBehavior.Concurrency))
             properties.AppendLine("        builder.Property(entity => entity.Version).IsConcurrencyToken();");
@@ -320,6 +328,8 @@ internal static class ComposerExecutableResourceGenerator
         foreach (var item in executable)
         {
             up.AppendLine(BuildResourceMigrationTable(manifest, item.Resource));
+  foreach (var field in item.Resource.Fields.Where(field => field.Indexed))
+      up.AppendLine(BuildResourceMigrationIndex(manifest, item.Resource, field));
             down.Insert(0, $"        migrationBuilder.DropTable(name: {JsonSerializer.Serialize(TableName(manifest, item.Resource))});\n");
         }
 
@@ -378,6 +388,17 @@ internal static class ComposerExecutableResourceGenerator
                         });
         """;
     }
+
+    private static string BuildResourceMigrationIndex(
+        ComposerManifest manifest,
+        ComposerResourceDefinition resource,
+        ComposerResourceField field) => $$"""
+          migrationBuilder.CreateIndex(
+              name: {{JsonSerializer.Serialize(IndexName(manifest, resource, field))}},
+              table: {{JsonSerializer.Serialize(TableName(manifest, resource))}},
+              column: {{JsonSerializer.Serialize(field.Name)}},
+              unique: {{(field.Unique ? "true" : "false")}});
+        """;
 
     private static string BuildIdempotencyMigrationTable(ComposerManifest manifest)
     {
@@ -649,6 +670,28 @@ internal static class ComposerExecutableResourceGenerator
             if (Has(resource, ComposerResourceBehavior.Concurrency))
                 registrations.AppendLine("    .Concurrency()");
             registrations.AppendLine("    );");
+
+  var queryFields = resource.Fields
+      .Where(field => field.FilterMode != ComposerResourceFieldFilterMode.None || field.Sortable)
+      .ToArray();
+  if (queryFields.Length > 0)
+  {
+      registrations.AppendLine(
+          $"builder.Services.AddScoped<ICrudQueryPolicy<{domain}, Guid>>(_ =>");
+      registrations.AppendLine(
+          $"    new ConfiguredCrudQueryPolicy<{domain}, Guid>(new CrudStringQueryField<{domain}>[]");
+      registrations.AppendLine("    {");
+      foreach (var field in queryFields)
+      {
+          registrations.Append("        new(")
+              .Append(JsonSerializer.Serialize(field.Name))
+              .Append(", entity => entity.").Append(field.Name)
+              .Append(", CrudStringFilterMode.").Append(QueryFilterModeEnum(field.FilterMode))
+              .Append(", Sortable: ").Append(field.Sortable ? "true" : "false")
+              .AppendLine("),");
+      }
+      registrations.AppendLine("    }));");
+  }
 
             if (Has(resource, ComposerResourceBehavior.Auditing))
             {
@@ -947,6 +990,14 @@ internal static class ComposerExecutableResourceGenerator
     private static bool Has(ComposerResourceDefinition resource, ComposerResourceBehavior behavior) =>
         resource.Behaviors.Contains(behavior);
 
+    private static string QueryFilterModeEnum(ComposerResourceFieldFilterMode value) => value switch
+    {
+        ComposerResourceFieldFilterMode.None => "None",
+        ComposerResourceFieldFilterMode.Exact => "Exact",
+        ComposerResourceFieldFilterMode.Prefix => "Prefix",
+        _ => throw new InvalidOperationException($"Unsupported query filter mode '{value}'.")
+    };
+
     private static string ApiIdempotencyEnum(ComposerApiIdempotencyMode value) => value switch
     {
         ComposerApiIdempotencyMode.Disabled => "Disabled",
@@ -994,6 +1045,17 @@ internal static class ComposerExecutableResourceGenerator
         if (suffix.Length > 56)
             suffix = $"{suffix[..47].TrimEnd('_')}_{ShortHash(resource.Route)}";
         return $"{SqlNamespace(manifest)}_{suffix}";
+    }
+
+    private static string IndexName(
+        ComposerManifest manifest,
+        ComposerResourceDefinition resource,
+        ComposerResourceField field)
+    {
+        var raw = $"IX_{TableName(manifest, resource)}_{SqlIdentifier(field.Name)}";
+        if (raw.Length <= 120)
+  return raw;
+        return $"{raw[..111].TrimEnd('_')}_{ShortHash(raw)}";
     }
 
     private static string IdempotencyTableName(ComposerManifest manifest) =>
