@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -191,11 +192,9 @@ internal static class ComposerReadModelGenerator
                 ON src.[{{readModel.Join.LeftField}}] = jn.[{{readModel.Join.RightField}}];
             """;
 
-        return $$"""
-                    migrationBuilder.Sql("""
-            {{sql.TrimEnd()}}
-                    """);
-            """;
+        return "        migrationBuilder.Sql(" +
+            JsonSerializer.Serialize(sql.TrimEnd()) +
+            ");";
     }
 
     private static string ExtendProgram(
@@ -226,13 +225,13 @@ internal static class ComposerReadModelGenerator
                 var row = $"{application}.{readModel.Name}Row";
                 var response = $"{application}.{readModel.Name}Response";
                 var mapper = $"{application}.{readModel.Name}Mapper";
-                registrations.AppendLine(
+                registrations.AppendLine(CultureInfo.InvariantCulture,
                     $"builder.Services.AddFoundationEfReadModel<{row}, GeneratedDbContext>();");
-                registrations.AppendLine(
+                registrations.AppendLine(CultureInfo.InvariantCulture,
                     $"builder.Services.AddScoped<IReadModelMapper<{row}, {response}>, {mapper}>();");
-                registrations.AppendLine(
+                registrations.AppendLine(CultureInfo.InvariantCulture,
                     $"builder.Services.AddScoped<IReadModelQueryPolicy<{row}>>(_ =>");
-                registrations.AppendLine(
+                registrations.AppendLine(CultureInfo.InvariantCulture,
                     $"    new ConfiguredReadModelQueryPolicy<{row}>(new CrudStringQueryField<{row}>[]");
                 registrations.AppendLine("    {");
                 foreach (var field in readModel.Fields.Where(field =>
@@ -246,23 +245,23 @@ internal static class ComposerReadModelGenerator
                         .AppendLine("),");
                 }
                 registrations.AppendLine("    }));");
-                registrations.AppendLine(
+                registrations.AppendLine(CultureInfo.InvariantCulture,
                     $"builder.Services.AddScoped<ReadModelQueryService<{row}, {response}>>();");
 
-                mappings.AppendLine(
+                mappings.AppendLine(CultureInfo.InvariantCulture,
                     $"app.MapFoundationReadModel<{row}, {response}>(");
-                mappings.AppendLine($"    {JsonSerializer.Serialize(readModel.Name)},");
-                mappings.AppendLine($"    {JsonSerializer.Serialize(readModel.Route)},");
+                mappings.AppendLine(CultureInfo.InvariantCulture, $"    {JsonSerializer.Serialize(readModel.Name)},");
+                mappings.AppendLine(CultureInfo.InvariantCulture, $"    {JsonSerializer.Serialize(readModel.Route)},");
                 mappings.AppendLine("    options =>");
                 mappings.AppendLine("    {");
-                mappings.AppendLine($"        options.RoutePrefix = {JsonSerializer.Serialize(readModel.Api.RoutePrefix)};");
+                mappings.AppendLine(CultureInfo.InvariantCulture, $"        options.RoutePrefix = {JsonSerializer.Serialize(readModel.Api.RoutePrefix)};");
                 mappings.AppendLine("        options.MaximumPageSize = 100;");
-                mappings.AppendLine($"        options.MaximumFilters = {readModel.Api.MaximumFilters};");
-                mappings.AppendLine($"        options.MaximumSorts = {readModel.Api.MaximumSorts};");
+                mappings.AppendLine(CultureInfo.InvariantCulture, $"        options.MaximumFilters = {readModel.Api.MaximumFilters};");
+                mappings.AppendLine(CultureInfo.InvariantCulture, $"        options.MaximumSorts = {readModel.Api.MaximumSorts};");
                 mappings.AppendLine("        options.AuthorizationPolicy = GeneratedAuthentication.AdminPolicy;");
                 if (readModel.Api.RateLimitPolicyName is not null)
                 {
-                    mappings.AppendLine(
+                    mappings.AppendLine(CultureInfo.InvariantCulture,
                         $"        options.RateLimitPolicyName = {JsonSerializer.Serialize(readModel.Api.RateLimitPolicyName)};");
                 }
                 mappings.AppendLine("    });");
@@ -313,7 +312,7 @@ internal static class ComposerReadModelGenerator
 
     private static string FieldClrType(ComposerReadModelField field) => field.Type switch
     {
-        ComposerReadModelFieldType.Guid => field.Required ? "Guid" : "Guid?",
+        ComposerReadModelFieldType.Uuid => field.Required ? "Guid" : "Guid?",
         ComposerReadModelFieldType.Text => field.Required ? "string" : "string?",
         _ => throw new InvalidOperationException($"Unsupported read-model field type '{field.Type}'.")
     };

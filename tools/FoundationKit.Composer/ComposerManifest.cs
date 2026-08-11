@@ -90,12 +90,19 @@ public sealed record ComposerResourceDefinition(
 
 public sealed record ComposerModuleDefinition(
     string Name,
-    IReadOnlyList<ComposerResourceDefinition> Resources);
+    IReadOnlyList<ComposerResourceDefinition> Resources)
+{
+    public IReadOnlyList<ComposerReadModelDefinition> ReadModels { get; init; } =
+        Array.Empty<ComposerReadModelDefinition>();
+}
 
 public sealed record ComposerProjectModel(IReadOnlyList<ComposerModuleDefinition> Modules)
 {
     public IReadOnlyList<ComposerResourceDefinition> Resources =>
         Modules.SelectMany(module => module.Resources).ToArray();
+
+    public IReadOnlyList<ComposerReadModelDefinition> ReadModels =>
+        Modules.SelectMany(module => module.ReadModels).ToArray();
 }
 
 public sealed record ComposerManifest(
@@ -313,9 +320,24 @@ public static class ComposerManifestParser
                 resources.Add(normalized);
             }
 
-            normalizedModules.Add(new ComposerModuleDefinition(
+            var orderedResources = resources
+                .OrderBy(resource => resource.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var readModels = ComposerReadModelManifestNormalizer.Normalize(
+                module.ReadModels,
                 moduleName,
-                resources.OrderBy(resource => resource.Name, StringComparer.OrdinalIgnoreCase).ToArray()));
+                orderedResources);
+            foreach (var readModel in readModels)
+            {
+                var apiRoute = $"{readModel.Api.RoutePrefix}/{readModel.Route}";
+                if (!apiRoutes.Add(apiRoute))
+                    throw new ComposerManifestException($"Duplicate read-model API route '{apiRoute}'.");
+            }
+
+            normalizedModules.Add(new ComposerModuleDefinition(moduleName, orderedResources)
+            {
+                ReadModels = readModels
+            });
         }
 
         return new ComposerProjectModel(
@@ -685,7 +707,10 @@ public static class ComposerManifestParser
         IReadOnlyDictionary<string, int>? CapabilityContracts,
         IReadOnlyList<ModuleDocument>? Modules);
 
-    private sealed record ModuleDocument(string? Name, IReadOnlyList<ResourceDocument>? Resources);
+    private sealed record ModuleDocument(
+        string? Name,
+        IReadOnlyList<ResourceDocument>? Resources,
+        JsonElement? ReadModels);
 
     private sealed record ResourceDocument(
         string? Name,

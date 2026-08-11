@@ -34,6 +34,20 @@
           ],
           "fields": [
             {
+              "name": "Code",
+              "type": "text",
+              "required": true,
+              "maximumLength": 64,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              },
+              "index": {
+                "enabled": true,
+                "unique": true
+              }
+            },
+            {
               "name": "Name",
               "type": "text",
               "required": true,
@@ -60,6 +74,170 @@
             "concurrency": "require-if-match",
             "maximumFilters": 3,
             "maximumSorts": 1
+          }
+        },
+        {
+          "name": "CustomerProfile",
+          "route": "customer-profiles",
+          "idType": "guid",
+          "behaviors": [
+            "crud",
+            "auditing",
+            "authorization",
+            "concurrency"
+          ],
+          "fields": [
+            {
+              "name": "CustomerCode",
+              "type": "text",
+              "required": true,
+              "maximumLength": 64,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              },
+              "index": {
+                "enabled": true,
+                "unique": true
+              }
+            },
+            {
+              "name": "Status",
+              "type": "text",
+              "required": true,
+              "maximumLength": 40,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              },
+              "index": {
+                "enabled": true,
+                "unique": false
+              }
+            },
+            {
+              "name": "Detail",
+              "type": "text",
+              "required": false,
+              "maximumLength": 200
+            }
+          ],
+          "api": {
+            "routePrefix": "api",
+            "idempotency": "required",
+            "concurrency": "require-if-match",
+            "maximumFilters": 2,
+            "maximumSorts": 0
+          }
+        }
+      ],
+      "readModels": [
+        {
+          "name": "CustomerDirectory",
+          "route": "customer-directory",
+          "kind": "query",
+          "source": "Customer",
+          "join": {
+            "type": "left",
+            "resource": "CustomerProfile",
+            "leftField": "Code",
+            "rightField": "CustomerCode"
+          },
+          "fields": [
+            {
+              "name": "Id",
+              "from": "Customer.Id",
+              "type": "guid",
+              "required": true
+            },
+            {
+              "name": "Code",
+              "from": "Customer.Code",
+              "type": "text",
+              "required": true,
+              "maximumLength": 64,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              }
+            },
+            {
+              "name": "Name",
+              "from": "Customer.Name",
+              "type": "text",
+              "required": true,
+              "maximumLength": 120,
+              "query": {
+                "filter": "prefix",
+                "sortable": true
+              }
+            },
+            {
+              "name": "ProfileStatus",
+              "from": "CustomerProfile.Status",
+              "type": "text",
+              "required": false,
+              "maximumLength": 40,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              }
+            }
+          ],
+          "api": {
+            "routePrefix": "api",
+            "maximumFilters": 3,
+            "maximumSorts": 1
+          }
+        },
+        {
+          "name": "CustomerStatement",
+          "route": "customer-statements",
+          "kind": "report",
+          "source": "Customer",
+          "join": {
+            "type": "left",
+            "resource": "CustomerProfile",
+            "leftField": "Code",
+            "rightField": "CustomerCode"
+          },
+          "fields": [
+            {
+              "name": "CustomerId",
+              "from": "Customer.Id",
+              "type": "guid",
+              "required": true
+            },
+            {
+              "name": "Code",
+              "from": "Customer.Code",
+              "type": "text",
+              "required": true,
+              "maximumLength": 64,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              }
+            },
+            {
+              "name": "Name",
+              "from": "Customer.Name",
+              "type": "text",
+              "required": true,
+              "maximumLength": 120
+            },
+            {
+              "name": "ProfileStatus",
+              "from": "CustomerProfile.Status",
+              "type": "text",
+              "required": false,
+              "maximumLength": 40
+            }
+          ],
+          "api": {
+            "routePrefix": "api",
+            "maximumFilters": 1,
+            "maximumSorts": 0
           }
         }
       ]

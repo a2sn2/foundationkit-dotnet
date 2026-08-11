@@ -12,7 +12,7 @@ public enum ComposerReadModelKind
 public enum ComposerReadModelFieldType
 {
     Text = 0,
-    Guid = 1
+    Uuid = 1
 }
 
 public sealed record ComposerReadModelJoin(
@@ -104,6 +104,11 @@ internal static class ComposerReadModelManifestNormalizer
                 throw new ComposerManifestException(
                     $"Read model '{moduleName}.{name}' source resource '{source}' must be an executable resource in the same module.");
             }
+            if (!sourceResource.Behaviors.Contains(ComposerResourceBehavior.Authorization))
+            {
+                throw new ComposerManifestException(
+                    $"Read model '{moduleName}.{name}' source resource must enable authorization in the current generated contract.");
+            }
 
             var join = NormalizeJoin(document.Join, moduleName, name, sourceResource, resourceMap);
             var fields = NormalizeFields(
@@ -125,7 +130,7 @@ internal static class ComposerReadModelManifestNormalizer
         string moduleName,
         string readModelName,
         ComposerResourceDefinition source,
-        IReadOnlyDictionary<string, ComposerResourceDefinition> resources)
+        Dictionary<string, ComposerResourceDefinition> resources)
     {
         if (document is null)
             throw new ComposerManifestException($"Read model '{moduleName}.{readModelName}' requires one bounded left join.");
@@ -145,6 +150,11 @@ internal static class ComposerReadModelManifestNormalizer
         }
         if (string.Equals(resourceName, source.Name, StringComparison.OrdinalIgnoreCase))
             throw new ComposerManifestException($"Read model '{moduleName}.{readModelName}' cannot join its source resource to itself yet.");
+        if (!joined.Behaviors.Contains(ComposerResourceBehavior.Authorization))
+        {
+            throw new ComposerManifestException(
+                $"Read model '{moduleName}.{readModelName}' join resource must enable authorization in the current generated contract.");
+        }
 
         var leftField = ResolveResourceField(
             source,
@@ -167,13 +177,13 @@ internal static class ComposerReadModelManifestNormalizer
         return new ComposerReadModelJoin(resourceName, leftField.Name, rightField.Name);
     }
 
-    private static IReadOnlyList<ComposerReadModelField> NormalizeFields(
+    private static ComposerReadModelField[] NormalizeFields(
         IReadOnlyList<ReadModelFieldDocument>? documents,
         string moduleName,
         string readModelName,
         ComposerResourceDefinition source,
         ComposerReadModelJoin join,
-        IReadOnlyDictionary<string, ComposerResourceDefinition> resources)
+        Dictionary<string, ComposerResourceDefinition> resources)
     {
         if (documents is null || documents.Count == 0)
             throw new ComposerManifestException($"Read model '{moduleName}.{readModelName}' must declare explicit projection fields.");
@@ -207,7 +217,7 @@ internal static class ComposerReadModelManifestNormalizer
             var resolved = ResolveProjectionSource(sourceResource, sourceFieldName, moduleName, readModelName);
             var declaredType = document.Type?.Trim().ToLowerInvariant() switch
             {
-                "guid" => ComposerReadModelFieldType.Guid,
+                "guid" => ComposerReadModelFieldType.Uuid,
                 "text" => ComposerReadModelFieldType.Text,
                 _ => throw new ComposerManifestException(
                     $"Read model field '{moduleName}.{readModelName}.{name}' type must be 'guid' or 'text'.")
@@ -273,8 +283,8 @@ internal static class ComposerReadModelManifestNormalizer
         IReadOnlyList<ComposerReadModelField> fields)
     {
         var routePrefix = NormalizeRoutePrefix(document?.RoutePrefix ?? "api");
-        var maximumFilters = document?.MaximumFilters ?? 10;
-        var maximumSorts = document?.MaximumSorts ?? 5;
+        var maximumFilters = document?.MaximumFilters ?? 0;
+        var maximumSorts = document?.MaximumSorts ?? 0;
         if (maximumFilters is < 0 or > 25)
             throw new ComposerManifestException("Read-model API maximumFilters must be between 0 and 25.");
         if (maximumSorts is < 0 or > 1)
@@ -313,7 +323,7 @@ internal static class ComposerReadModelManifestNormalizer
         string readModelName)
     {
         if (string.Equals(fieldName, "Id", StringComparison.OrdinalIgnoreCase))
-            return new ResolvedField("Id", ComposerReadModelFieldType.Guid, true, null, true);
+            return new ResolvedField("Id", ComposerReadModelFieldType.Uuid, true, null, true);
 
         var field = ResolveResourceField(resource, fieldName, moduleName, readModelName);
         return new ResolvedField(

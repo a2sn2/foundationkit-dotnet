@@ -56,6 +56,7 @@ internal static class ComposerExecutableResourceGenerator
         files["GENERATED-FULLSTACK.md"] = BuildFullStackReport(manifest, executable);
         files["README.md"] = BuildExecutableReadme(manifest, projectPrefix, executable);
         files["ARCHITECTURE.md"] = BuildExecutableArchitecture(manifest, executable);
+        ComposerReadModelGenerator.Apply(manifest, projectPrefix, files);
         return files;
     }
 

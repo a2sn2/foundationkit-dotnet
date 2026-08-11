@@ -1,95 +1,241 @@
 name: FoundationKit Composer Generation
 
 on:
+  push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: foundationkit-composer-generation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  apply-phase14-readmodels:
-    if: ${{ github.actor != 'github-actions[bot]' }}
-    runs-on: ubuntu-24.04
+  generated-project:
+    name: Generate, reproduce, build, and test Composer v1/v2/full-stack scaffolds
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Check out Phase 14 branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: core-vnext/read-engine-phase-14
-          fetch-depth: 0
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
 
-      - name: Apply bounded read-model patch and restore workflow
-        shell: bash
+      - name: Validate Composer schema and examples as JSON
         run: |
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-
-          generator_path = Path('tools/FoundationKit.Composer/ComposerReadModelGenerator.cs')
-          lines = generator_path.read_text(encoding='utf-8').splitlines()
-          sql_index = next((i for i, line in enumerate(lines) if 'var sql = $$"""' in line), None)
-          if sql_index is None:
-              raise SystemExit('BuildCreateViewMigration SQL anchor was not found')
-          start = next((i for i in range(sql_index + 1, len(lines)) if lines[i].strip() == 'return $$"""'), None)
-          if start is None:
-              raise SystemExit('BuildCreateViewMigration return anchor was not found')
-          end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == '""";'), None)
-          if end is None:
-              raise SystemExit('BuildCreateViewMigration return end was not found')
-          lines[start:end + 1] = [
-              '        return "        migrationBuilder.Sql(" +',
-              '            JsonSerializer.Serialize(sql.TrimEnd()) +',
-              '            ");";'
-          ]
-          generator = '\n'.join(lines) + '\n'
-          if 'using System.Globalization;' not in generator:
-              generator = generator.replace(
-                  'using System.Security.Cryptography;\n',
-                  'using System.Globalization;\nusing System.Security.Cryptography;\n',
-                  1)
-          generator = generator.replace('ComposerReadModelFieldType.Guid', 'ComposerReadModelFieldType.Uuid')
-          generator = re.sub(
-              r'(registrations|mappings)\.AppendLine\(\n(\s+)(\$\")',
-              r'\1.AppendLine(CultureInfo.InvariantCulture,\n\2\3',
-              generator)
-          generator = re.sub(
-              r'(registrations|mappings)\.AppendLine\((\$\")',
-              r'\1.AppendLine(CultureInfo.InvariantCulture, \2',
-              generator)
-          generator_path.write_text(generator, encoding='utf-8')
-
-          manifest_path = Path('tools/FoundationKit.Composer/ComposerReadModelManifest.cs')
-          manifest = manifest_path.read_text(encoding='utf-8')
-          manifest = manifest.replace('    Guid = 1', '    Uuid = 1')
-          manifest = manifest.replace('ComposerReadModelFieldType.Guid', 'ComposerReadModelFieldType.Uuid')
-          manifest = manifest.replace(
-              'IReadOnlyDictionary<string, ComposerResourceDefinition> resources)',
-              'Dictionary<string, ComposerResourceDefinition> resources)')
-          manifest = manifest.replace(
-              'private static IReadOnlyList<ComposerReadModelField> NormalizeFields(',
-              'private static ComposerReadModelField[] NormalizeFields(')
-          manifest_path.write_text(manifest, encoding='utf-8')
-          PY
-
-          python3 -m py_compile scripts/phase14-composer-readmodels-patch.py
-          python3 scripts/phase14-composer-readmodels-patch.py
           python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.golden.json >/dev/null
+          python3 -m json.tool docs/examples/foundationkit.project.v2.json >/dev/null
           python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
           python3 -m json.tool docs/examples/foundationkit.project.fullstack-b.json >/dev/null
 
-          git checkout origin/main -- .github/workflows/composer-generation.yml
-          rm scripts/phase14-composer-readmodels-patch.py
+      - name: Restore Composer
+        run: dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
 
-          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
-          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
-          git diff --check
+      - name: Build Composer
+        run: >-
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          --configuration Release
+          --no-restore
 
-          git config user.name "foundationkit-ci"
-          git config user.email "foundationkit-ci@users.noreply.github.com"
-          git add -A
-          git commit -m "feat: generate bounded SQL-view read models"
-          git push origin HEAD:core-vnext/read-engine-phase-14
+      - name: Generate repository-local v1 golden project
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.golden.json
+          --output artifacts/composer-golden
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic v1 force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v1-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.golden.json \
+            --output artifacts/composer-golden \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-golden -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v1-after.sha256
+          diff -u /tmp/composer-v1-before.sha256 /tmp/composer-v1-after.sha256
+
+      - name: Verify full v1 generated layer set
+        shell: bash
+        run: |
+          test -f artifacts/composer-golden/src/ComposerGolden.Domain/ComposerGolden.Domain.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Application/ComposerGolden.Application.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Infrastructure/ComposerGolden.Infrastructure.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Api/ComposerGolden.Api.csproj
+          test -f artifacts/composer-golden/src/ComposerGolden.Client/ComposerGolden.Client.csproj
+          test -f artifacts/composer-golden/tests/ComposerGolden.Tests/ComposerGolden.Tests.csproj
+          grep -Fq 'FoundationKit.Notifications.Smtp.csproj' artifacts/composer-golden/src/ComposerGolden.Infrastructure/ComposerGolden.Infrastructure.csproj
+          grep -Fq 'FoundationKit.Auditing.csproj' artifacts/composer-golden/src/ComposerGolden.Application/ComposerGolden.Application.csproj
+          grep -Fq '"schemaVersion": 1' artifacts/composer-golden/foundationkit.project.json
+
+      - name: Restore v1 generated solution
+        run: dotnet restore artifacts/composer-golden/ComposerGolden.sln
+
+      - name: Build v1 generated solution
+        run: >-
+          dotnet build artifacts/composer-golden/ComposerGolden.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test v1 generated solution
+        run: >-
+          dotnet test artifacts/composer-golden/ComposerGolden.sln
+          --configuration Release
+          --no-build
+
+      - name: Validate Composer v2 descriptor model
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- validate docs/examples/foundationkit.project.v2.json
+
+      - name: Generate repository-local v2 descriptor model
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.v2.json
+          --output artifacts/composer-v2
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic v2 descriptor force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.v2.json \
+            --output artifacts/composer-v2 \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-v2 -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-v2-after.sha256
+          diff -u /tmp/composer-v2-before.sha256 /tmp/composer-v2-after.sha256
+
+      - name: Verify v2 descriptor project-model artifacts
+        shell: bash
+        run: |
+          test -f artifacts/composer-v2/PROJECT-MODEL.md
+          test -f artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+          test -f artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Agents/AgentDefinition.g.cs
+          grep -Fq '"schemaVersion": 2' artifacts/composer-v2/foundationkit.project.json
+          grep -Fq '"generatorContractVersion": "2"' artifacts/composer-v2/.foundationkit-generated.json
+          grep -Fq 'CustomerManager' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+          grep -Fq 'require-if-match' artifacts/composer-v2/src/ComposerProjectModel.Application/GeneratedModules/Customers/CustomerDefinition.g.cs
+
+      - name: Restore v2 descriptor generated solution
+        run: dotnet restore artifacts/composer-v2/ComposerProjectModel.sln
+
+      - name: Build v2 descriptor generated solution
+        run: >-
+          dotnet build artifacts/composer-v2/ComposerProjectModel.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test v2 descriptor generated solution
+        run: >-
+          dotnet test artifacts/composer-v2/ComposerProjectModel.sln
+          --configuration Release
+          --no-build
+
+      - name: Validate executable full-stack manifests A and B
+        run: |
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- validate docs/examples/foundationkit.project.fullstack-a.json
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- validate docs/examples/foundationkit.project.fullstack-b.json
+
+      - name: Generate executable full-stack project A
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.fullstack-a.json
+          --output artifacts/composer-fullstack-a
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic executable A force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-fullstack-a -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-a-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.fullstack-a.json \
+            --output artifacts/composer-fullstack-a \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-fullstack-a -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-a-after.sha256
+          diff -u /tmp/composer-fullstack-a-before.sha256 /tmp/composer-fullstack-a-after.sha256
+
+      - name: Verify executable A generated surface and secret boundary
+        shell: bash
+        run: |
+          test -f artifacts/composer-fullstack-a/GENERATED-FULLSTACK.md
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Domain/GeneratedModules/Customers/Customer.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Application/GeneratedModules/Customers/CustomerContracts.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Infrastructure/GeneratedPlatform/GeneratedDbContext.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Infrastructure/GeneratedPlatform/Migrations/20260811000000_InitialGenerated.cs
+          test -f artifacts/composer-fullstack-a/src/ComposerFullStackA.Api/Program.cs
+          grep -Fq 'Swashbuckle.AspNetCore' artifacts/composer-fullstack-a/src/ComposerFullStackA.Api/ComposerFullStackA.Api.csproj
+          grep -Fq 'ConnectionStrings__Generated' artifacts/composer-fullstack-a/GENERATED-FULLSTACK.md
+          ! grep -R -E 'Password=|User Id=sa|ChangeMe' artifacts/composer-fullstack-a --exclude-dir=obj --exclude-dir=bin
+
+      - name: Restore build and test executable project A
+        run: |
+          dotnet restore artifacts/composer-fullstack-a/ComposerFullStackA.sln
+          dotnet build artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-a/ComposerFullStackA.sln --configuration Release --no-build
+
+      - name: Generate executable full-stack project B
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.fullstack-b.json
+          --output artifacts/composer-fullstack-b
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Prove deterministic executable B force regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-fullstack-b -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-b-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.fullstack-b.json \
+            --output artifacts/composer-fullstack-b \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-fullstack-b -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/composer-fullstack-b-after.sha256
+          diff -u /tmp/composer-fullstack-b-before.sha256 /tmp/composer-fullstack-b-after.sha256
+
+      - name: Restore build and test executable project B
+        run: |
+          dotnet restore artifacts/composer-fullstack-b/ComposerFullStackB.sln
+          dotnet build artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-fullstack-b/ComposerFullStackB.sln --configuration Release --no-build
