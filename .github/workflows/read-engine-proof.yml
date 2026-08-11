@@ -1,0 +1,212 @@
+name: FoundationKit Read Engine Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-read-engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql-read-engine:
+    name: Generated SQL filter, sort, paging, and index proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Validate proof tooling
+        run: |
+          python3 -m py_compile scripts/smoke-read-engine.py
+          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
+
+      - name: Generate temporary SQL credential
+        shell: bash
+        run: |
+          password="Fkit!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Build Composer and generate indexed reference product
+        run: |
+          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- \
+            validate docs/examples/foundationkit.project.fullstack-a.json
+          dotnet run --project tools/FoundationKit.Composer --configuration Release --no-build -- \
+            new docs/examples/foundationkit.project.fullstack-a.json \
+            --output artifacts/read-engine-product \
+            --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Restore build and test generated product
+        run: |
+          dotnet restore artifacts/read-engine-product/ComposerFullStackA.sln
+          dotnet build artifacts/read-engine-product/ComposerFullStackA.sln --configuration Release --no-restore
+          dotnet test artifacts/read-engine-product/ComposerFullStackA.sln --configuration Release --no-build
+          grep -R -Fq 'ConfiguredCrudQueryPolicy' artifacts/read-engine-product/src/ComposerFullStackA.Api
+          grep -R -Fq 'HasIndex' artifacts/read-engine-product/src/ComposerFullStackA.Infrastructure
+          grep -R -Fq 'CreateIndex' artifacts/read-engine-product/src/ComposerFullStackA.Infrastructure
+
+      - name: Start SQL Server
+        shell: bash
+        run: |
+          mkdir -p artifacts/read-engine-proof/logs
+          docker run --detach \
+            --name foundationkit-read-engine-sql \
+            --publish 127.0.0.1:14336:1433 \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server
+        shell: bash
+        run: |
+          sqlcmd_path=""
+          for attempt in {1..120}; do
+            if [ -z "$sqlcmd_path" ]; then
+              sqlcmd_path="$(docker exec foundationkit-read-engine-sql sh -lc 'if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then echo /opt/mssql-tools18/bin/sqlcmd; elif [ -x /opt/mssql-tools/bin/sqlcmd ]; then echo /opt/mssql-tools/bin/sqlcmd; fi' 2>/dev/null || true)"
+            fi
+            if [ -n "$sqlcmd_path" ] && docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-read-engine-sql \
+              "$sqlcmd_path" -S localhost -U sa -C -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "FOUNDATIONKIT_SQLCMD_PATH=$sqlcmd_path" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs foundationkit-read-engine-sql --tail 300
+          exit 1
+
+      - name: Start generated API
+        shell: bash
+        run: |
+          connection="Server=127.0.0.1,14336;Database=FoundationKitReadEngineProof;User Id=sa;Password=$FOUNDATIONKIT_SQL_PASSWORD;TrustServerCertificate=True;Encrypt=False"
+          echo "::add-mask::$connection"
+          ASPNETCORE_URLS="http://127.0.0.1:8401" \
+          ConnectionStrings__Generated="$connection" \
+          dotnet run \
+            --project artifacts/read-engine-product/src/ComposerFullStackA.Api/ComposerFullStackA.Api.csproj \
+            --configuration Release --no-build --no-restore \
+            > artifacts/read-engine-proof/logs/api.log 2>&1 &
+          echo $! > /tmp/foundationkit-read-engine-api.pid
+
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8401/api/foundationkit/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/foundationkit-read-engine-api.pid)" 2>/dev/null; then
+              cat artifacts/read-engine-proof/logs/api.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/read-engine-proof/logs/api.log
+          exit 1
+
+      - name: Exercise bounded SQL-side filtering sorting and paging
+        run: |
+          python3 scripts/smoke-read-engine.py \
+            --url http://127.0.0.1:8401 \
+            --evidence artifacts/read-engine-proof/runtime-proof.json
+          python3 -m json.tool artifacts/read-engine-proof/runtime-proof.json >/dev/null
+
+      - name: Prove generated index and rows directly in SQL Server
+        shell: bash
+        run: |
+          namespace="$(python3 -c 'import json; print(json.load(open("artifacts/read-engine-proof/runtime-proof.json"))["databaseNamespace"])')"
+          case "$namespace" in *[!a-z0-9_]*) echo "Unsafe generated SQL namespace"; exit 1;; esac
+          table="${namespace}_customers"
+
+          sql_scalar() {
+            docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-read-engine-sql \
+              "$FOUNDATIONKIT_SQLCMD_PATH" \
+              -S localhost -U sa -C -d FoundationKitReadEngineProof -h -1 -W \
+              -Q "SET NOCOUNT ON; $1" \
+              | tr -d '\r' | sed '/^[[:space:]]*$/d' | tail -n 1 | xargs
+          }
+
+          table_exists="$(sql_scalar "SELECT COUNT(*) FROM sys.tables WHERE name = N'$table';")"
+          rows="$(sql_scalar "SELECT COUNT(*) FROM [$table];")"
+          name_index="$(sql_scalar "SELECT COUNT(*) FROM sys.indexes i JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE OBJECT_NAME(i.object_id) = N'$table' AND c.name = N'Name' AND i.is_hypothetical = 0;")"
+
+          test "$table_exists" = "1"
+          test "$rows" = "3"
+          test "$name_index" -ge 1
+
+          cat > artifacts/read-engine-proof/sql-proof.txt <<EOF
+          Database: FoundationKitReadEngineProof
+          Table: $table
+          Resource rows: $rows
+          Indexes covering Name: $name_index
+          SQL Server metadata index proof: verified
+          EOF
+          cat artifacts/read-engine-proof/sql-proof.txt
+
+      - name: Prove provider executed WHERE and ORDER BY instead of materialize-then-sort
+        shell: bash
+        run: |
+          namespace="$(python3 -c 'import json; print(json.load(open("artifacts/read-engine-proof/runtime-proof.json"))["databaseNamespace"])')"
+          table="${namespace}_customers"
+          python3 - "$table" artifacts/read-engine-proof/logs/api.log <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          table, log_path = sys.argv[1], Path(sys.argv[2])
+          log = log_path.read_text(encoding='utf-8', errors='replace')
+          matches = [match.start() for match in re.finditer(re.escape(f'[{table}]'), log)]
+          if not matches:
+              raise SystemExit(f'No SQL command referenced generated table {table}')
+          windows = [log[max(0, pos - 1500):pos + 3000] for pos in matches]
+          if not any('WHERE' in window and 'ORDER BY' in window for window in windows):
+              raise SystemExit('No generated-table SQL command contained both WHERE and ORDER BY')
+          Path('artifacts/read-engine-proof/sql-query-log-proof.txt').write_text(
+              f'Generated table: {table}\nWHERE + ORDER BY observed in EF SQL command log: verified\n',
+              encoding='utf-8')
+          PY
+          cat artifacts/read-engine-proof/sql-query-log-proof.txt
+
+      - name: Upload read-engine evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundationkit-read-engine-proof
+          path: artifacts/read-engine-proof
+          if-no-files-found: error
+
+      - name: Print logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          cat artifacts/read-engine-proof/logs/api.log 2>/dev/null || true
+          docker logs foundationkit-read-engine-sql --tail 300 2>/dev/null || true
+
+      - name: Stop API and SQL Server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/foundationkit-read-engine-api.pid ]; then
+            kill "$(cat /tmp/foundationkit-read-engine-api.pid)" 2>/dev/null || true
+          fi
+          docker rm -f foundationkit-read-engine-sql >/dev/null 2>&1 || true

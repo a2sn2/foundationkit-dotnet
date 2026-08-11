@@ -31,9 +31,11 @@ Relational adapters should map SQL views to explicit keyless/read-only models (f
 
 ## Query execution
 
-Filtering, sorting, counting and paging over a view-backed read model must stay `IQueryable` until the EF Core async terminal operation so the provider performs `WHERE`, `ORDER BY`, and paging in SQL. Materialize-then-filter/sort is not an accepted FoundationKit path.
+Filtering, sorting, counting and paging over a table-backed resource or a view-backed read model must stay `IQueryable` until the EF Core async terminal operation so the provider performs `WHERE`, `ORDER BY`, counting and paging in SQL. Materialize-then-filter/sort is not an accepted FoundationKit path.
 
-Indexes belong to the product schema. Normal indexes are created on the underlying tables unless a provider-specific indexed/materialized-view strategy is explicitly selected. FoundationKit must not imply that every SQL Server view is automatically indexable or should be indexed.
+For generated executable resources, filter/sort intent is explicit per field rather than inferred from every property. The first SQL Server contract supports bounded text `exact` and `prefix` filtering plus explicitly enabled sorting. A field exposed for generated filtering or sorting must also opt into a product-owned index. Unsupported fields/operators fail closed before query execution.
+
+Indexes belong to the product schema. Normal indexes are created on the underlying tables unless a provider-specific indexed/materialized-view strategy is explicitly selected. FoundationKit must not imply that every SQL Server view is automatically indexable or should be indexed. Substring patterns such as `%term%` are deliberately not the default indexed-search path because a normal B-tree index may not serve them efficiently.
 
 ## Reports and statements
 
@@ -48,9 +50,10 @@ Complex reports/statements should not require deeply nested application joins ju
 - Tenant/project scoping must be explicit in every reusable query contract.
 - No `SELECT *` in generated stable views; columns are explicit and deterministic.
 - Avoid hidden N+1 fallbacks after reading a view.
+- Do not expose arbitrary client-provided SQL or dynamic column expressions; API query intent is parsed into bounded typed policies and expressions.
 
 ## Acceptance direction
 
-Before the visual UI phase, FoundationKit should prove one generated multi-table read model and one report/statement read model on SQL Server, with deterministic view DDL/migration ownership, EF keyless mapping, server-side filtering/sorting/paging where applicable, OpenAPI/Postman/typed-client contracts, authorization, and SQL evidence.
+Before the visual UI phase, FoundationKit should prove indexed server-side filter/sort/page for a generated resource, one generated multi-table read model, and one report/statement read model on SQL Server, with deterministic schema/view DDL ownership, EF read-only mapping, OpenAPI/Postman/typed-client contracts, authorization, and direct SQL evidence.
 
 Execution is tracked by GitHub issue **#135**. Declarative SQL-side searchable/sortable/indexed field work is tracked separately by **#134**; the two contracts must converge before visual UI generation begins.

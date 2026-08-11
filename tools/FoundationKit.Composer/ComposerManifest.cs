@@ -17,6 +17,13 @@ public enum ComposerResourceFieldType
     Text = 0
 }
 
+public enum ComposerResourceFieldFilterMode
+{
+    None = 0,
+    Exact = 1,
+    Prefix = 2
+}
+
 public enum ComposerResourceBehavior
 {
     Crud = 0,
@@ -51,7 +58,13 @@ public sealed record ComposerResourceField(
     string Name,
     ComposerResourceFieldType Type,
     bool Required,
-    int MaximumLength);
+    int MaximumLength)
+{
+    public ComposerResourceFieldFilterMode FilterMode { get; init; } = ComposerResourceFieldFilterMode.None;
+    public bool Sortable { get; init; }
+    public bool Indexed { get; init; }
+    public bool Unique { get; init; }
+}
 
 public sealed record ComposerResourceApi(
     string RoutePrefix,
@@ -77,12 +90,19 @@ public sealed record ComposerResourceDefinition(
 
 public sealed record ComposerModuleDefinition(
     string Name,
-    IReadOnlyList<ComposerResourceDefinition> Resources);
+    IReadOnlyList<ComposerResourceDefinition> Resources)
+{
+    public IReadOnlyList<ComposerReadModelDefinition> ReadModels { get; init; } =
+        Array.Empty<ComposerReadModelDefinition>();
+}
 
 public sealed record ComposerProjectModel(IReadOnlyList<ComposerModuleDefinition> Modules)
 {
     public IReadOnlyList<ComposerResourceDefinition> Resources =>
         Modules.SelectMany(module => module.Resources).ToArray();
+
+    public IReadOnlyList<ComposerReadModelDefinition> ReadModels =>
+        Modules.SelectMany(module => module.ReadModels).ToArray();
 }
 
 public sealed record ComposerManifest(
@@ -300,9 +320,24 @@ public static class ComposerManifestParser
                 resources.Add(normalized);
             }
 
-            normalizedModules.Add(new ComposerModuleDefinition(
+            var orderedResources = resources
+                .OrderBy(resource => resource.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var readModels = ComposerReadModelManifestNormalizer.Normalize(
+                module.ReadModels,
                 moduleName,
-                resources.OrderBy(resource => resource.Name, StringComparer.OrdinalIgnoreCase).ToArray()));
+                orderedResources);
+            foreach (var readModel in readModels)
+            {
+                var apiRoute = $"{readModel.Api.RoutePrefix}/{readModel.Route}";
+                if (!apiRoutes.Add(apiRoute))
+                    throw new ComposerManifestException($"Duplicate read-model API route '{apiRoute}'.");
+            }
+
+            normalizedModules.Add(new ComposerModuleDefinition(moduleName, orderedResources)
+            {
+                ReadModels = readModels
+            });
         }
 
         return new ComposerProjectModel(
@@ -320,6 +355,23 @@ public static class ComposerManifestParser
             ? null
             : RequireIdentifier(resource.Overrides.Manager, $"manager override for '{moduleName}.{name}'");
         var api = NormalizeApi(resource.Api);
+        var hasConfiguredFilters = fields.Any(field => field.FilterMode != ComposerResourceFieldFilterMode.None);
+        var hasConfiguredSorts = fields.Any(field => field.Sortable);
+        if (hasConfiguredFilters && api.MaximumFilters == 0)
+        {
+            throw new ComposerManifestException(
+                $"Resource '{moduleName}.{name}' declares filterable fields but api.maximumFilters is 0.");
+        }
+        if (hasConfiguredSorts && api.MaximumSorts == 0)
+        {
+            throw new ComposerManifestException(
+                $"Resource '{moduleName}.{name}' declares sortable fields but api.maximumSorts is 0.");
+        }
+        if (hasConfiguredSorts && api.MaximumSorts > 1)
+        {
+            throw new ComposerManifestException(
+                $"Resource '{moduleName}.{name}' currently supports at most one SQL sort because CrudQueryPlan exposes one OrderBy selector.");
+        }
 
         return new ComposerResourceDefinition(
             name,
@@ -379,11 +431,44 @@ public static class ComposerManifestParser
                     $"Resource field '{moduleName}.{resourceName}.{name}' maximumLength must be between 1 and {MaxTextFieldLength}.");
             }
 
-            fields.Add(new ComposerResourceField(
-                name,
-                type,
-                value.Required ?? true,
-                maximumLength));
+            var filterMode = value.Query?.Filter?.Trim().ToLowerInvariant() switch
+  {
+      null or "" or "none" => ComposerResourceFieldFilterMode.None,
+      "exact" => ComposerResourceFieldFilterMode.Exact,
+      "prefix" => ComposerResourceFieldFilterMode.Prefix,
+      _ => throw new ComposerManifestException(
+          $"Resource field '{moduleName}.{resourceName}.{name}' has unsupported query.filter '{value.Query!.Filter}'. Allowed: none, exact, prefix.")
+  };
+  var sortable = value.Query?.Sortable ?? false;
+  var indexed = value.Index?.Enabled ?? false;
+  var unique = value.Index?.Unique ?? false;
+  if (unique && !indexed)
+  {
+      throw new ComposerManifestException(
+          $"Resource field '{moduleName}.{resourceName}.{name}' cannot be unique unless index.enabled is true.");
+  }
+  if ((filterMode != ComposerResourceFieldFilterMode.None || sortable) && !indexed)
+  {
+      throw new ComposerManifestException(
+          $"Resource field '{moduleName}.{resourceName}.{name}' must enable an index before it can be filterable or sortable in the generated SQL path.");
+  }
+  if (indexed && maximumLength > 450)
+  {
+      throw new ComposerManifestException(
+          $"Indexed text field '{moduleName}.{resourceName}.{name}' maximumLength cannot exceed 450 characters in the conservative SQL Server generated contract.");
+  }
+
+  fields.Add(new ComposerResourceField(
+      name,
+      type,
+      value.Required ?? true,
+      maximumLength)
+  {
+      FilterMode = filterMode,
+      Sortable = sortable,
+      Indexed = indexed,
+      Unique = unique
+  });
         }
 
         return fields.OrderBy(field => field.Name, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -622,7 +707,10 @@ public static class ComposerManifestParser
         IReadOnlyDictionary<string, int>? CapabilityContracts,
         IReadOnlyList<ModuleDocument>? Modules);
 
-    private sealed record ModuleDocument(string? Name, IReadOnlyList<ResourceDocument>? Resources);
+    private sealed record ModuleDocument(
+        string? Name,
+        IReadOnlyList<ResourceDocument>? Resources,
+        JsonElement? ReadModels);
 
     private sealed record ResourceDocument(
         string? Name,
@@ -637,7 +725,13 @@ public static class ComposerManifestParser
         string? Name,
         string? Type,
         bool? Required,
-        int? MaximumLength);
+        int? MaximumLength,
+        QueryDocument? Query,
+        IndexDocument? Index);
+
+    private sealed record QueryDocument(string? Filter, bool? Sortable);
+
+    private sealed record IndexDocument(bool? Enabled, bool? Unique);
 
     private sealed record OverridesDocument(string? Manager);
 
