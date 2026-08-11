@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
 
-page_names = [
+primary_page_names = [
     "index.html",
     "architecture.html",
     "capabilities.html",
@@ -18,18 +18,26 @@ page_names = [
     "start.html",
     "developer.html",
 ]
+auxiliary_page_names = ["developer-projects.html"]
+page_names = [*primary_page_names, *auxiliary_page_names]
 
 required = [
     *(SITE / name for name in page_names),
     SITE / "styles.css",
     SITE / "pages.css",
+    SITE / "developer.css",
     SITE / "app.js",
     SITE / "multipage.js",
     SITE / "portal-manifest.json",
+    SITE / "assets" / "developer-avatar.png",
 ]
 for path in required:
     if not path.is_file():
         raise SystemExit(f"Pages asset missing: {path.relative_to(ROOT)}")
+
+avatar = (SITE / "assets" / "developer-avatar.png").read_bytes()
+if len(avatar) < 5_000 or not avatar.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit("Developer portrait asset must be a real PNG extracted from the supplied CV")
 
 manifest = json.loads((SITE / "portal-manifest.json").read_text(encoding="utf-8"))
 if manifest.get("product") != "FoundationKit Core":
@@ -68,7 +76,24 @@ required_page_text = {
     "frontend.html": ("FOUNDATIONKIT.BLAZOR · SOFT ORBIT", "REUSABLE RAZOR LAYER", "RTL / LTR", "PRESENTATION STATES"),
     "quality.html": ("ENGINEERING EVIDENCE", "EXACT-HEAD QUALITY", "CONTRACT DRIFT", "Repository Complete ≠ Production Approved"),
     "start.html": ("START THE FIRST PROJECT", ".\\foundationkit.ps1 start -Target Workbench", "generated\\MySystem\\MySystem.sln", "Choose → Validate → Generate"),
-    "developer.html": ("THE DEVELOPER BEHIND FOUNDATIONKIT", "SOURCE-DRIVEN PROFILE", "Waiting for the developer CV.", "Professional Positioning", "Selected Projects"),
+    "developer.html": (
+        "THE DEVELOPER BEHIND FOUNDATIONKIT",
+        "ALHassan ALShami",
+        "AHD Financial Services · Jaib Wallet",
+        "Asaas · Co-founder · QA Engineer · Frontend & RAG Systems",
+        "B.Sc. in Computer Science",
+        "Explore 16 projects",
+        "assets/developer-avatar.png",
+    ),
+    "developer-projects.html": (
+        "CV-BACKED PROJECT CATALOG",
+        "Sixteen projects.",
+        "Pump Station Analytics",
+        "RoboCam Controller",
+        "MikroTik Hotspot Portal",
+        "Arduino Traffic Light Controller",
+        "Object Tracking Algorithms",
+    ),
 }
 for page, markers in required_page_text.items():
     for marker in markers:
@@ -76,13 +101,26 @@ for page, markers in required_page_text.items():
             raise SystemExit(f"Pages {page} missing required content: {marker}")
 
 for page, html in pages.items():
-    for target in page_names:
+    for target in primary_page_names:
         if f'href="{target}"' not in html:
             raise SystemExit(f"Pages {page} missing navigation target: {target}")
     if 'src="app.js"' not in html or 'src="multipage.js"' not in html:
         raise SystemExit(f"Pages {page} must load shared interaction scripts")
     if 'href="styles.css"' not in html or 'href="pages.css"' not in html:
         raise SystemExit(f"Pages {page} must load both shared stylesheets")
+
+for page in ("developer.html", "developer-projects.html"):
+    if 'href="developer.css"' not in pages[page]:
+        raise SystemExit(f"Pages {page} must load the Developer portfolio stylesheet")
+    if 'assets/developer-avatar.png' not in pages[page]:
+        raise SystemExit(f"Pages {page} must use the CV portrait as a small avatar/icon")
+
+if "Waiting for the developer CV." in pages["developer.html"] or "CV content pending" in pages["developer.html"]:
+    raise SystemExit("Developer page still contains the pre-CV placeholder")
+if "01/10/2002" in pages["developer.html"]:
+    raise SystemExit("Developer page must not publish date of birth")
+if pages["developer-projects.html"].count('class="all-project-card"') != 16:
+    raise SystemExit("Developer Projects page must present all 16 CV-backed projects")
 
 packages_html = pages["packages.html"]
 if packages_html.count('data-package-kind="') != 17:
@@ -109,6 +147,11 @@ for selector in (".page-hero", ".route-grid", ".content-grid", ".developer-hero-
     if selector not in pages_css:
         raise SystemExit(f"Multi-page stylesheet missing required selector: {selector}")
 
+developer_css = (SITE / "developer.css").read_text(encoding="utf-8")
+for selector in (".dev-photo", ".dev-hero-layout", ".timeline", ".project-feature-grid", ".all-projects-grid"):
+    if selector not in developer_css:
+        raise SystemExit(f"Developer stylesheet missing required selector: {selector}")
+
 js = (SITE / "app.js").read_text(encoding="utf-8")
 for behavior in ("data-package-filter", "foundationkit-theme", "IntersectionObserver", "portal-manifest.json"):
     if behavior not in js:
@@ -119,4 +162,4 @@ for behavior in ("data-page", "location.pathname", "aria-expanded"):
     if behavior not in multipage_js:
         raise SystemExit(f"Multi-page navigation missing required behavior: {behavior}")
 
-print("FoundationKit multi-page Core site assets verified.")
+print("FoundationKit multi-page Core + source-grounded Developer portfolio assets verified.")
