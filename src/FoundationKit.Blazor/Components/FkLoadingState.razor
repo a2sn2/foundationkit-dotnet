@@ -1,0 +1,27 @@
+@namespace FoundationKit.Blazor.Components
+
+<section class="fk-loading @Class" role="status" aria-live="polite">
+    <div class="fk-loading__visual" aria-hidden="true">
+        <span class="fk-orbit-path fk-orbit-path--one"></span>
+        <span class="fk-orbit-path fk-orbit-path--two"></span>
+        <span class="fk-orbit-node fk-loading__pulse"></span>
+        <span class="fk-orbit-node fk-orbit-node--aqua fk-loading__pulse"></span>
+        <span class="fk-orbit-node fk-orbit-node--warm fk-loading__pulse"></span>
+    </div>
+    <h2>@Title</h2>
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p>@Description</p>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Loading";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+}
