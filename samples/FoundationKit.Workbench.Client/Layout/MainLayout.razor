@@ -5,10 +5,12 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<FkAppShell Direction="rtl"
-            NavigationLabel="التنقل في Core Studio"
-            DarkModeLabel="التبديل إلى الوضع الداكن"
-            LightModeLabel="التبديل إلى الوضع الفاتح"
+<FkAppShell Direction="auto"
+            Language="@_language"
+            LanguageChanged="SetLanguage"
+            NavigationLabel="@T("التنقل في Core Studio", "Core Studio navigation")"
+            DarkModeLabel="@T("التبديل إلى الوضع الداكن", "Switch to dark mode")"
+            LightModeLabel="@T("التبديل إلى الوضع الفاتح", "Switch to light mode")"
             Class="workbench-shell">
     <Brand>
         <FkBrandMark Name="FoundationKit"
@@ -19,28 +21,28 @@
     <Navigation>
         <FkNavItem Href="/" Match="NavLinkMatch.All">
             <Icon><MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Small" /></Icon>
-            <ChildContent>الرئيسية</ChildContent>
+            <ChildContent>@T("الرئيسية", "Overview")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="studio">
             <Icon><MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" /></Icon>
-            <ChildContent>Studio</ChildContent>
+            <ChildContent>@T("استكشاف الكور", "Studio")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="compose">
             <Icon><MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" /></Icon>
-            <ChildContent>Compose</ChildContent>
+            <ChildContent>@T("التركيب", "Compose")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="design">
             <Icon><MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" /></Icon>
-            <ChildContent>Design</ChildContent>
+            <ChildContent>@T("نظام التصميم", "Design")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="evidence">
             <Icon><MudIcon Icon="@Icons.Material.Filled.FactCheck" Size="Size.Small" /></Icon>
-            <ChildContent>Evidence</ChildContent>
+            <ChildContent>@T("الأدلة", "Evidence")</ChildContent>
         </FkNavItem>
     </Navigation>
     <TopbarStart>
-        <button class="fk-command" type="button" title="Command Palette — foundation placeholder" aria-label="فتح البحث والأوامر">
-            <span>ابحث أو نفّذ أمرًا</span>
+        <button class="fk-command" type="button" title="Command Palette — foundation placeholder" aria-label="@T("فتح البحث والأوامر", "Open search and commands")">
+            <span>@T("ابحث أو نفّذ أمرًا", "Search or run a command")</span>
             <kbd>Ctrl K</kbd>
         </button>
     </TopbarStart>
@@ -54,6 +56,19 @@
         </FkButton>
     </TopbarActions>
     <ChildContent>
-        @Body
+        <CascadingValue Value="@_language" Name="FoundationLanguage">
+            @Body
+        </CascadingValue>
     </ChildContent>
 </FkAppShell>
+
+@code {
+    private string _language = "ar";
+
+    private string T(string ar, string en) => _language == "ar" ? ar : en;
+
+    private void SetLanguage(string language)
+    {
+        _language = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en";
+    }
+}
