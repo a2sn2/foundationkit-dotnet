@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\FoundationKit.FeatureManagement\FoundationKit.FeatureManagement.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Localization\FoundationKit.Localization.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Caching\FoundationKit.Caching.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Blazor\FoundationKit.Blazor.csproj" />
     <ProjectReference Include="..\..\tools\FoundationKit.Composer\FoundationKit.Composer.csproj" />
     <ProjectReference Include="..\FoundationKit.Workbench.Contracts\FoundationKit.Workbench.Contracts.csproj" />
     <ProjectReference Include="..\FoundationKit.Workbench.Client\FoundationKit.Workbench.Client.csproj" ReferenceOutputAssembly="false" />
