@@ -1,6 +1,6 @@
 # FoundationKit Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is now the **Core Studio reference experience**: a UI for inspecting the Core, not a product portal.
+Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting and composing against the Core, not a product portal.
 
 ## What it proves
 
@@ -16,7 +16,9 @@ Workbench is the executable architecture/reference consumer for FoundationKit Co
 - opt-in relational durable idempotency through a Workbench-owned SQL migration;
 - SQL-first generated resource filtering/sorting/paging and product-owned indexes;
 - read-only SQL-view-backed read models for multi-table/report projections in generated products;
-- a first-party frontend reference that presents Core state without moving authorization or relational join logic into the browser.
+- a first-party frontend reference that presents Core state without moving authorization or relational join logic into the browser;
+- visual schema-v2 composition whose authoritative validation runs through the same `ComposerManifestParser` and `CompositionAnalyzer` as Composer tooling;
+- deterministic Blazor WebAssembly shell generation that wires the canonical generated C# client instead of creating another transport layer.
 
 The original connected user/admin workflow remains in the Workbench backend and integration smoke as historical vertical-slice evidence. It is deliberately **not** the active frontend framing after Phase 15.
 
@@ -25,23 +27,69 @@ The original connected user/admin workflow remains in the Workbench backend and 
 ```text
 /           Core baseline, phase gates and contract flow
 /studio     live capability catalog + declared/effective module composition
+/compose    visual schema-v2 starter/editor + canonical Composer validation
 /evidence   runtime and engineering proof boundaries
 /swagger    runtime OpenAPI/Swagger UI
 ```
 
-The Studio UI consumes bounded Workbench transport contracts. It never treats hidden buttons, routes, or client state as authorization. Server policies remain authoritative.
+The Studio UI consumes bounded Workbench transport contracts. It never treats hidden buttons, routes, browser validation, or client state as authorization. Server policies remain authoritative.
+
+## Visual Composer boundary
+
+The `/compose` screen does **not** implement an alternate manifest schema in Razor. It only helps produce/edit JSON and submits it to:
+
+```text
+POST /api/composer/validate
+```
+
+The Workbench endpoint applies a bounded input-size guard, then calls the canonical:
+
+```text
+ComposerManifestParser.Parse(...)
+CompositionAnalyzer.Analyze(...)
+```
+
+The response returns validation status, schema/project/profile counts, resolved capability evidence, maturity and warnings. Invalid manifests return Composer's bounded validation message rather than executing generation, SQL or arbitrary code.
+
+Browser-side starter generation is convenience only. A manifest is valid only when the server-side Composer engine accepts it.
 
 ## Reusable frontend boundary
 
 `FoundationKit.Blazor` remains the reusable Core frontend package. Phase 15 adds framework-agnostic presentation/query/display state contracts there without adding a new package or a MudBlazor dependency to reusable Core.
 
-MudBlazor remains a **Workbench sample dependency**. It is not silently promoted into the FoundationKit.Blazor package contract.
+MudBlazor remains a **Workbench sample dependency**. It is not silently promoted into the `FoundationKit.Blazor` package contract.
 
 The reusable presentation layer provides:
 
 - `PresentationState<T>` for idle/loading/ready/empty/error rendering;
 - bounded `PagedQueryState` for presentation query intent while the server still validates actual filter/sort policies;
 - `ResourceDisplayDescriptor` for safe display metadata without business-rule duplication.
+
+## Generated frontend boundary
+
+Phase 16 adds:
+
+```text
+scripts/generate-blazor-app-from-openapi.py
+```
+
+The generator accepts an OpenAPI 3.x input, safe app/namespace/client identifiers and the FoundationKit root. It produces a buildable .NET 10 Blazor WebAssembly reference shell and delegates transport generation to:
+
+```text
+scripts/generate-csharp-client-from-openapi.py
+```
+
+So the chain remains:
+
+```text
+runtime OpenAPI
+    ↓
+canonical deterministic C# typed client
+    ↓
+generated Blazor shell + FoundationKit.Blazor reference
+```
+
+The generated shell is intentionally product-neutral. It does not synthesize authorization, relational joins, secrets or business workflows. Product screens consume typed client methods; backend policies and Phase 14 read models remain authoritative.
 
 ## Core CRUD reference
 
@@ -85,7 +133,7 @@ The committed Postman collection is generated from that runtime document:
 postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The Phase 13 C# typed-client generator uses the same runtime OpenAPI source and Phase 14 proves generated read-model list operations are included in that typed contract.
+Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The C# typed-client generator uses the same serialized transport source. Phase 14 proves generated read-model list operations and Phase 16 proves the typed client can be embedded into a deterministic Blazor application shell without a second API contract.
 
 ## Run
 
@@ -98,7 +146,9 @@ Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` o
 
 Health: `/api/health`  
 Module composition: `/api/modules`  
+Composer validation: `/api/composer/validate`  
 Core Studio: `/`  
+Visual Composer: `/compose`  
 Swagger UI: `/swagger`
 
 ## Evidence boundary
