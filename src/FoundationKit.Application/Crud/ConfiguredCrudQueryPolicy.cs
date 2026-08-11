@@ -13,7 +13,7 @@ public sealed class ConfiguredCrudQueryPolicy<TEntity, TId> : ICrudQueryPolicy<T
     where TId : notnull
 {
     private const int MaximumConfiguredFields = 64;
-    private readonly IReadOnlyDictionary<string, CrudStringQueryField<TEntity>> _fields;
+    private readonly Dictionary<string, CrudStringQueryField<TEntity>> _fields;
 
     public ConfiguredCrudQueryPolicy(IEnumerable<CrudStringQueryField<TEntity>> fields)
     {
@@ -124,7 +124,7 @@ public sealed class ConfiguredCrudQueryPolicy<TEntity, TId> : ICrudQueryPolicy<T
         };
     }
 
-    private static Expression BuildStartsWith(Expression member, Expression value)
+    private static BinaryExpression BuildStartsWith(Expression member, Expression value)
     {
         var notNull = Expression.NotEqual(member, Expression.Constant(null, typeof(string)));
         var startsWith = Expression.Call(
