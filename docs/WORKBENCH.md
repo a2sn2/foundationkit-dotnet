@@ -2,6 +2,8 @@
 
 Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting and composing against the Core, not a product portal.
 
+The approved Core vNext implementation roadmap ends at **Phase 12**. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are Phase 12 closure tracks rather than additional phases.
+
 ## What it proves
 
 - SQL Server provider selection owned by the host;
@@ -20,12 +22,12 @@ Workbench is the executable architecture/reference consumer for FoundationKit Co
 - visual schema-v2 composition whose authoritative validation runs through the same `ComposerManifestParser` and `CompositionAnalyzer` as Composer tooling;
 - deterministic Blazor WebAssembly shell generation that wires the canonical generated C# client instead of creating another transport layer.
 
-The original connected user/admin workflow remains in the Workbench backend and integration smoke as historical vertical-slice evidence. It is deliberately **not** the active frontend framing after Phase 15.
+The original connected user/admin workflow remains in the Workbench backend and integration smoke as historical vertical-slice evidence. It is deliberately **not** the active frontend framing.
 
 ## Core Studio pages
 
 ```text
-/           Core baseline, phase gates and contract flow
+/           Core baseline, closure gates and contract flow
 /studio     live capability catalog + declared/effective module composition
 /compose    visual schema-v2 starter/editor + canonical Composer validation
 /evidence   runtime and engineering proof boundaries
@@ -55,7 +57,7 @@ Browser-side starter generation is convenience only. A manifest is valid only wh
 
 ## Reusable frontend boundary
 
-`FoundationKit.Blazor` remains the reusable Core frontend package. Phase 15 adds framework-agnostic presentation/query/display state contracts there without adding a new package or a MudBlazor dependency to reusable Core.
+`FoundationKit.Blazor` remains the reusable Core frontend package. The Phase 12 frontend closure adds framework-agnostic presentation/query/display state contracts there without adding a new package or a MudBlazor dependency to reusable Core.
 
 MudBlazor remains a **Workbench sample dependency**. It is not silently promoted into the `FoundationKit.Blazor` package contract.
 
@@ -67,7 +69,7 @@ The reusable presentation layer provides:
 
 ## Generated frontend boundary
 
-Phase 16 adds:
+The Phase 12 tooling closure adds:
 
 ```text
 scripts/generate-blazor-app-from-openapi.py
@@ -89,7 +91,7 @@ canonical deterministic C# typed client
 generated Blazor shell + FoundationKit.Blazor reference
 ```
 
-The generated shell is intentionally product-neutral. It does not synthesize authorization, relational joins, secrets or business workflows. Product screens consume typed client methods; backend policies and Phase 14 read models remain authoritative.
+The generated shell is intentionally product-neutral. It does not synthesize authorization, relational joins, secrets or business workflows. Product screens consume typed client methods; backend policies and SQL-view-backed read models remain authoritative.
 
 ## Core CRUD reference
 
@@ -133,7 +135,7 @@ The committed Postman collection is generated from that runtime document:
 postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The C# typed-client generator uses the same serialized transport source. Phase 14 proves generated read-model list operations and Phase 16 proves the typed client can be embedded into a deterministic Blazor application shell without a second API contract.
+Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The C# typed-client generator uses the same serialized transport source. The read closure proves generated read-model list operations; the tooling closure proves the typed client can be embedded into a deterministic Blazor application shell without a second API contract.
 
 ## Run
 
