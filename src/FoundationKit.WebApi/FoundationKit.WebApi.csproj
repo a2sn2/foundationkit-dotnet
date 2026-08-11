@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>ASP.NET Core result mapping, correlation IDs, and baseline security middleware for FoundationKit.</Description>
+    <Description>ASP.NET Core result mapping, correlation IDs, baseline security middleware, and FoundationKit OpenAPI metadata for API hosts.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FoundationKit.Application\FoundationKit.Application.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 </Project>
