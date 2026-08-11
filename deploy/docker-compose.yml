@@ -6,7 +6,7 @@ services:
       MSSQL_PID: "Developer"
       MSSQL_SA_PASSWORD: "${FOUNDATIONKIT_SQL_PASSWORD:?FOUNDATIONKIT_SQL_PASSWORD is required}"
     ports:
-      - "14333:1433"
+      - "127.0.0.1:14333:1433"
     volumes:
       - foundationkit-sql-data:/var/opt/mssql
     restart: unless-stopped
@@ -28,7 +28,7 @@ services:
     depends_on:
       - sqlserver
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     security_opt:
       - no-new-privileges:true
     cap_drop:
