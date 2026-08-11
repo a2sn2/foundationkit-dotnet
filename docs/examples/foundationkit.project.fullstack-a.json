@@ -34,20 +34,6 @@
           ],
           "fields": [
             {
-              "name": "Code",
-              "type": "text",
-              "required": true,
-              "maximumLength": 64,
-              "query": {
-                "filter": "exact",
-                "sortable": false
-              },
-              "index": {
-                "enabled": true,
-                "unique": true
-              }
-            },
-            {
               "name": "Name",
               "type": "text",
               "required": true,
@@ -88,10 +74,10 @@
           ],
           "fields": [
             {
-              "name": "CustomerCode",
+              "name": "CustomerName",
               "type": "text",
               "required": true,
-              "maximumLength": 64,
+              "maximumLength": 120,
               "query": {
                 "filter": "exact",
                 "sortable": false
@@ -140,8 +126,8 @@
           "join": {
             "type": "left",
             "resource": "CustomerProfile",
-            "leftField": "Code",
-            "rightField": "CustomerCode"
+            "leftField": "Name",
+            "rightField": "CustomerName"
           },
           "fields": [
             {
@@ -149,17 +135,6 @@
               "from": "Customer.Id",
               "type": "guid",
               "required": true
-            },
-            {
-              "name": "Code",
-              "from": "Customer.Code",
-              "type": "text",
-              "required": true,
-              "maximumLength": 64,
-              "query": {
-                "filter": "exact",
-                "sortable": false
-              }
             },
             {
               "name": "Name",
@@ -186,7 +161,7 @@
           ],
           "api": {
             "routePrefix": "api",
-            "maximumFilters": 3,
+            "maximumFilters": 2,
             "maximumSorts": 1
           }
         },
@@ -198,8 +173,8 @@
           "join": {
             "type": "left",
             "resource": "CustomerProfile",
-            "leftField": "Code",
-            "rightField": "CustomerCode"
+            "leftField": "Name",
+            "rightField": "CustomerName"
           },
           "fields": [
             {
@@ -209,22 +184,15 @@
               "required": true
             },
             {
-              "name": "Code",
-              "from": "Customer.Code",
-              "type": "text",
-              "required": true,
-              "maximumLength": 64,
-              "query": {
-                "filter": "exact",
-                "sortable": false
-              }
-            },
-            {
               "name": "Name",
               "from": "Customer.Name",
               "type": "text",
               "required": true,
-              "maximumLength": 120
+              "maximumLength": 120,
+              "query": {
+                "filter": "exact",
+                "sortable": false
+              }
             },
             {
               "name": "ProfileStatus",
