@@ -34,9 +34,9 @@ The roadmap describes direction, not a checklist that justifies empty packages. 
 
 These are completion/hardening tracks of Phase 12, **not Phase 13–16**:
 
-- [x] **12.C1 — Typed transport closure:** deterministic runtime OpenAPI → C# typed-client generation with CLR/OpenAPI requiredness alignment, ETag/Location/CorrelationId metadata, and live SQL/API execution proof.
-- [x] **12.C2 — SQL read closure:** explicit generated query/index policy, SQL-side WHERE/ORDER BY/paging, provider-neutral read-model boundary, and SQL-view-backed multi-table/query/report models with keyless EF mapping.
-- [x] **12.C3 — Frontend foundation closure:** reusable presentation/query/display primitives in `FoundationKit.Blazor`, plus Core-focused Workbench/Studio architecture evidence without making the browser an authorization boundary.
+- [x] **12.C1 — Typed transport:** deterministic runtime OpenAPI → C# typed-client generation with CLR/OpenAPI requiredness alignment, ETag/Location/CorrelationId metadata, and live SQL/API execution proof.
+- [x] **12.C2 — SQL read engine:** explicit generated query/index policy, SQL-side WHERE/ORDER BY/paging, provider-neutral read-model boundary, and SQL-view-backed multi-table/query/report models with keyless EF mapping.
+- [x] **12.C3 — Frontend foundation:** reusable presentation/query/display primitives in `FoundationKit.Blazor`, plus Core-focused Workbench/Studio architecture evidence without making the browser an authorization boundary.
 - [x] **12.C4 — Tooling closure:** visual Core Studio Composer validated by the canonical schema-v2 parser/analyzer and deterministic OpenAPI-wired Blazor WebAssembly shell generation that reuses the canonical C# typed-client generator.
 
 ## Evidence-driven future capability families
