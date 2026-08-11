@@ -594,18 +594,30 @@ def render_path_expression(
     names: dict[tuple[str, str], str],
 ) -> str:
     path_parameters = [parameter for parameter in parameters if parameter.location == "path"]
+    path_tokens = re.findall(r"\{([^{}]+)\}", path)
+    declared_tokens = [parameter.wire_name for parameter in path_parameters]
+
+    undeclared_tokens = sorted(set(path_tokens) - set(declared_tokens))
+    if undeclared_tokens:
+        raise GenerationError(
+            f"Path {path!r} contains undeclared path token(s): {', '.join(undeclared_tokens)}."
+        )
+
+    missing_tokens = sorted(set(declared_tokens) - set(path_tokens))
+    if missing_tokens:
+        raise GenerationError(
+            f"Path parameter(s) not present in {path!r}: {', '.join(missing_tokens)}."
+        )
+
     if not path_parameters:
         return json.dumps(path.lstrip("/"))
+
     expression = path.lstrip("/")
     for parameter in path_parameters:
         token = "{" + parameter.wire_name + "}"
-        if token not in expression:
-            raise GenerationError(f"Path parameter {parameter.wire_name!r} is not present in {path!r}.")
         name = names[(parameter.location, parameter.wire_name)]
         replacement = path_value_expression(parameter.schema, name)
         expression = expression.replace(token, "{" + replacement + "}")
-    if re.search(r"\{[^{}]+\}", expression):
-        raise GenerationError(f"Unresolved path token remains in {path!r}.")
     return '$"' + expression.replace('"', '\\"') + '"'
 
 
