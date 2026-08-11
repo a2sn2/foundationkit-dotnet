@@ -1,13 +1,10 @@
 (() => {
     const translations = new Map([
-        // Shared sample navigation / loading.
         ['نظرة عامة', 'Overview'],
         ['جاري تشغيل Core Studio', 'Starting Core Studio'],
         ['نجهّز Composer والعقود ونظام التصميم الموحد…', 'Preparing Composer, contracts and the unified design system…'],
         ['حدث خطأ غير متوقع.', 'An unexpected error occurred.'],
         ['إعادة التحميل', 'Reload'],
-
-        // Studio explorer.
         ['تحديث الأدلة', 'Refresh evidence'],
         ['افهم ما يعلنه الكور، وما يصبح فعالًا، وما يصل إلى الـAPI.', 'Understand what the Core declares, what becomes effective, and what reaches the API.'],
         ['الصفحة تقرأ الكتالوج وتركيب الموديولات من Workbench. لا تنشئ صلاحيات ولا تخزن أسرارًا ولا تحول metadata العرض إلى business rules.', 'This page reads the catalog and module composition from Workbench. It creates no permissions, stores no secrets, and never turns presentation metadata into business rules.'],
@@ -19,8 +16,6 @@
         ['إعدادات العرض التي يثبتها Workbench', 'Presentation settings proved by Workbench'],
         ['لم يتم التحقق من Settings/Feature Management/Localization في هذا الوضع.', 'Settings, Feature Management and Localization were not verified in this mode.'],
         ['تعذر تحميل الكتالوج وتركيب الموديولات. شغّل Workbench API أو تحقق من الكتالوج الثابت.', 'Could not load the catalog and module composition. Start the Workbench API or verify the static catalog.'],
-
-        // Visual Composer.
         ['تحقق', 'Validate'],
         ['جاري التوليد...', 'Generating…'],
         ['اختر أساس المشروع بصريًا، ثم ولّده محليًا بنفس Composer Engine.', 'Choose the project foundation visually, then generate it locally with the same Composer Engine.'],
@@ -42,8 +37,6 @@
         ['تم توليد', 'Generated'],
         ['بنجاح في', 'successfully in'],
         ['تعذر استدعاء Composer validation endpoint.', 'Could not call the Composer validation endpoint.'],
-
-        // Evidence.
         ['كل طبقة لها دليلها، ولا نخلط نجاح الـBuild مع Production approval.', 'Every layer has its own evidence; build success is not confused with production approval.'],
         ['FoundationKit يثبت العقود والتنفيذ داخل المستودع. حماية main والمراجعة المستقلة وإجراءات التشغيل الفعلية تبقى متطلبات حوكمة منفصلة قبل أي Go‑Live حقيقي.', 'FoundationKit proves contracts and implementation inside the repository. Protected main, independent review and real operating procedures remain separate governance requirements before any real go-live.'],
         ['المراحل أدناه هي طبقات إثبات مستقلة؛ فشل إحداها لا يُخفى بنجاح الأخرى.', 'The stages below are independent evidence layers; failure in one is not hidden by success in another.'],
@@ -61,8 +54,6 @@
         ['نجاح المستودع دليل هندسي، لكنه لا يثبت protected main أو المراجعة البشرية المستقلة أو إجراءات التشغيل الفعلية.', 'Repository success is engineering evidence; it does not prove protected main, independent human review, or real operating procedures.'],
         ['لا أسرار في الواجهة', 'No secrets in the UI'],
         ['Composer metadata والكتالوج والعقود يجب أن تبقى bounded وغير سرية؛ credentials والسياسات الحساسة لا تُولد داخل client assets.', 'Composer metadata, catalog data and contracts must stay bounded and non-secret; credentials and sensitive policies are never generated into client assets.'],
-
-        // Design System.
         ['نظام تصميم خفيف، لطيف، وقابل للتوليد.', 'A light, gentle and generatable design system.'],
         ['هذه الصفحة تعرض المكونات الحقيقية من FoundationKit.Blazor. نفس الـTokens والمكونات هي التي يستهلكها Core Studio والـGenerated Apps؛ ليست Mockups منفصلة.', 'This page renders real FoundationKit.Blazor components. Core Studio and Generated Apps consume the same tokens and components; these are not separate mockups.'],
         ['مساحات مريحة، سطوح هادئة، حركة صغيرة ذات معنى، وOrbit Nodes تربط بصريًا بين Project وAPI وSQL وUI.', 'Comfortable spacing, calm surfaces, small meaningful motion, and Orbit Nodes that visually connect Project, API, SQL and UI.'],
@@ -97,13 +88,22 @@
         return window.FoundationKitLocale?.current?.() || (document.documentElement.lang === 'ar' ? 'ar' : 'en');
     }
 
+    function translatedText(original, language) {
+        if (language === 'ar') return original;
+        const translated = translations.get(original.trim());
+        if (!translated) return original;
+        const leading = original.match(/^\s*/)?.[0] || '';
+        const trailing = original.match(/\s*$/)?.[0] || '';
+        return `${leading}${translated}${trailing}`;
+    }
+
     function translateTextNode(node, language) {
         if (!node?.nodeValue || !node.parentElement) return;
         if (node.parentElement.closest('script,style,code,pre')) return;
 
-        let original = originals.get(node);
         const current = node.nodeValue;
         const trimmed = current.trim();
+        let original = originals.get(node);
 
         if (!original && translations.has(trimmed)) {
             original = current;
@@ -111,17 +111,10 @@
         }
         if (!original) return;
 
-        if (language === 'ar') {
-            node.nodeValue = original;
-            return;
+        const targetValue = translatedText(original, language);
+        if (current !== targetValue) {
+            node.nodeValue = targetValue;
         }
-
-        const source = original.trim();
-        const translated = translations.get(source);
-        if (!translated) return;
-        const leading = original.match(/^\s*/)?.[0] || '';
-        const trailing = original.match(/\s*$/)?.[0] || '';
-        node.nodeValue = `${leading}${translated}${trailing}`;
     }
 
     function translateAttributes(element, language) {
@@ -136,7 +129,11 @@
                 element.dataset[key] = current;
             }
             if (!original) continue;
-            element.setAttribute(attribute, language === 'ar' ? original : (translations.get(original.trim()) || original));
+
+            const targetValue = language === 'ar' ? original : (translations.get(original.trim()) || original);
+            if (current !== targetValue) {
+                element.setAttribute(attribute, targetValue);
+            }
         }
     }
 
