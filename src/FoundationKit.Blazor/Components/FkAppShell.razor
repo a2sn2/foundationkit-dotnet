@@ -1,0 +1,75 @@
+@namespace FoundationKit.Blazor.Components
+
+<div class="fk-shell @Class" dir="@NormalizedDirection">
+    <aside class="fk-shell__sidebar" aria-label="@NavigationLabel">
+        @if (Brand is not null)
+        {
+            @Brand
+        }
+        else
+        {
+            <FkBrandMark Href="/" />
+        }
+        <nav class="fk-nav" aria-label="@NavigationLabel">
+            @Navigation
+        </nav>
+        @if (SidebarFooter is not null)
+        {
+            <div style="margin-top:auto">@SidebarFooter</div>
+        }
+    </aside>
+
+    <header class="fk-shell__topbar">
+        @if (TopbarStart is not null)
+        {
+            @TopbarStart
+        }
+        <span class="fk-spacer"></span>
+        @if (TopbarActions is not null)
+        {
+            @TopbarActions
+        }
+        <FkThemeToggle LightLabel="@DarkModeLabel" DarkLabel="@LightModeLabel" />
+    </header>
+
+    <main class="fk-shell__content">
+        @ChildContent
+    </main>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? Brand { get; set; }
+
+    [Parameter]
+    public RenderFragment? Navigation { get; set; }
+
+    [Parameter]
+    public RenderFragment? SidebarFooter { get; set; }
+
+    [Parameter]
+    public RenderFragment? TopbarStart { get; set; }
+
+    [Parameter]
+    public RenderFragment? TopbarActions { get; set; }
+
+    [Parameter]
+    public string Direction { get; set; } = "ltr";
+
+    [Parameter]
+    public string NavigationLabel { get; set; } = "Application navigation";
+
+    [Parameter]
+    public string DarkModeLabel { get; set; } = "Switch to dark mode";
+
+    [Parameter]
+    public string LightModeLabel { get; set; } = "Switch to light mode";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string NormalizedDirection => string.Equals(Direction, "rtl", StringComparison.OrdinalIgnoreCase) ? "rtl" : "ltr";
+}
