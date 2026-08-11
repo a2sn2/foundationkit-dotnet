@@ -52,3 +52,5 @@ Complex reports/statements should not require deeply nested application joins ju
 ## Acceptance direction
 
 Before the visual UI phase, FoundationKit should prove one generated multi-table read model and one report/statement read model on SQL Server, with deterministic view DDL/migration ownership, EF keyless mapping, server-side filtering/sorting/paging where applicable, OpenAPI/Postman/typed-client contracts, authorization, and SQL evidence.
+
+Execution is tracked by GitHub issue **#135**. Declarative SQL-side searchable/sortable/indexed field work is tracked separately by **#134**; the two contracts must converge before visual UI generation begins.
