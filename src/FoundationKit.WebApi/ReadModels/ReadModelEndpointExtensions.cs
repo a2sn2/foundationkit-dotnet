@@ -45,7 +45,10 @@ public static class ReadModelEndpointExtensions
 
         var options = new FoundationReadModelApiOptions();
         configure?.Invoke(options);
-        Validate(options);
+        Validate(
+            options.MaximumPageSize,
+            options.MaximumFilters,
+            options.MaximumSorts);
 
         var normalizedName = name.Trim();
         var normalizedRoute = NormalizeRoute(route, nameof(route), 96);
@@ -121,18 +124,24 @@ public static class ReadModelEndpointExtensions
         return group;
     }
 
-    private static void Validate(FoundationReadModelApiOptions options)
+    private static void Validate(
+        int maximumPageSize,
+        int maximumFilters,
+        int maximumSorts)
     {
-        if (options.MaximumPageSize is < 1 or > PageRequest.MaximumPageSize)
+        if (maximumPageSize is < 1 or > PageRequest.MaximumPageSize)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(options.MaximumPageSize),
+                nameof(maximumPageSize),
+                maximumPageSize,
                 $"Maximum page size must be between 1 and {PageRequest.MaximumPageSize}.");
         }
-        if (options.MaximumFilters is < 0 or > 25)
-            throw new ArgumentOutOfRangeException(nameof(options.MaximumFilters));
-        if (options.MaximumSorts is < 0 or > 10)
-            throw new ArgumentOutOfRangeException(nameof(options.MaximumSorts));
+
+        if (maximumFilters is < 0 or > 25)
+            throw new ArgumentOutOfRangeException(nameof(maximumFilters), maximumFilters, "Maximum filters must be between 0 and 25.");
+
+        if (maximumSorts is < 0 or > 10)
+            throw new ArgumentOutOfRangeException(nameof(maximumSorts), maximumSorts, "Maximum sorts must be between 0 and 10.");
     }
 
     private static string NormalizeRoute(string value, string parameterName, int maximumLength)
