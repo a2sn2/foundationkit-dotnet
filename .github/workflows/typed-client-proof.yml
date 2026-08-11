@@ -197,10 +197,11 @@ jobs:
           var create = await client.CreateCustomerAsync(
               idempotencyKey: "typed-client-create",
               request: new CustomerCreateRequest("Typed Client", "phase13"));
-          Require(create.Result.IsSuccess, $"create failed: {create.Result.Error?.Code}");
+          Require(create.Result.IsSuccess, $"create failed: {create.Result.ErrorDetails?.Code}");
           Require(create.Result.StatusCode == HttpStatusCode.Created, "create status was not 201");
           Require(create.Metadata.Location is not null, "create Location metadata was not preserved");
-          var created = create.Result.Value;
+          var created = create.Result.Value
+              ?? throw new InvalidOperationException("create returned no payload");
           Require(created.Version == 1, "create version was not 1");
 
           var get = await client.GetCustomerAsync(id: created.Id);
@@ -213,8 +214,10 @@ jobs:
               idempotencyKey: "typed-client-update",
               entityTag: get.Metadata.EntityTag!,
               request: new CustomerUpdateRequest("Typed Client Updated", "phase13-update"));
-          Require(update.Result.IsSuccess, $"update failed: {update.Result.Error?.Code}");
-          Require(update.Result.Value.Version == 2, "update version was not 2");
+          Require(update.Result.IsSuccess, $"update failed: {update.Result.ErrorDetails?.Code}");
+          var updated = update.Result.Value
+              ?? throw new InvalidOperationException("update returned no payload");
+          Require(updated.Version == 2, "update version was not 2");
           Require(update.Metadata.EntityTag == "\"2\"", $"expected ETag 2, got {update.Metadata.EntityTag}");
 
           var list = await client.ListCustomerAsync(
@@ -223,12 +226,14 @@ jobs:
               filter: Array.Empty<string>(),
               sort: Array.Empty<string>());
           Require(list.Result.IsSuccess, "list failed");
-          Require(list.Result.Value.Items.Any(item => item.Id == created.Id), "list did not contain created item");
+          var listed = list.Result.Value
+              ?? throw new InvalidOperationException("list returned no payload");
+          Require(listed.Items.Any(item => item.Id == created.Id), "list did not contain created item");
 
           var delete = await client.DeleteCustomerAsync(
               id: created.Id,
               idempotencyKey: "typed-client-delete");
-          Require(delete.Result.IsSuccess, $"delete failed: {delete.Result.Error?.Code}");
+          Require(delete.Result.IsSuccess, $"delete failed: {delete.Result.ErrorDetails?.Code}");
           Require(delete.Result.StatusCode == HttpStatusCode.NoContent, "delete status was not 204");
 
           var afterDelete = await client.GetCustomerAsync(id: created.Id);
@@ -241,7 +246,7 @@ jobs:
             "createLocation": "{{create.Metadata.Location}}",
             "initialEntityTag": "\\\"1\\\"",
             "updatedEntityTag": "\\\"2\\\"",
-            "updatedVersion": {{update.Result.Value.Version}},
+            "updatedVersion": {{updated.Version}},
             "listContainsCreatedItem": true,
             "deleteStatus": 204,
             "readAfterDeleteStatus": 404,
