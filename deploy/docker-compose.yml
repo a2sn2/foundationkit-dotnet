@@ -20,6 +20,11 @@ services:
       ConnectionStrings__Workbench: "Server=sqlserver,1433;Database=FoundationKitWorkbench;User Id=sa;Password=${FOUNDATIONKIT_SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False"
       Database__MigrationAttempts: "60"
       Database__MigrationDelaySeconds: "2"
+      ComposerStudio__FoundationRoot: "/workspace/repository"
+      ComposerStudio__GenerationRoot: "/workspace/repository/generated"
+    volumes:
+      - ../src:/workspace/repository/src:ro
+      - ../generated:/workspace/repository/generated
     depends_on:
       - sqlserver
     ports:
