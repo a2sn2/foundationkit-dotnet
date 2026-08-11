@@ -84,9 +84,25 @@ Every host registers an immutable project identity. DI, configuration, business 
 
 ## Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer. Its backend proves SQL, module composition, API behavior, idempotency and integration evidence. Its Blazor client is the **Core Studio** reference experience for inspecting capabilities, modules, contract evidence, schema-v2 composition and the first-party design system; it is not a product portal and is not an authorization boundary.
+Workbench is the executable architecture/reference consumer. Its backend proves SQL, module composition, API behavior, idempotency and integration evidence. Its Blazor client is the **Core Studio** reference experience for inspecting capabilities, modules, contract evidence, schema-v2 composition, local project generation and the first-party design system; it is not a product portal and is not an authorization boundary.
 
-The `/compose` page creates/edits bounded manifest JSON but submits it to the same `ComposerManifestParser` and `CompositionAnalyzer` used by Composer tooling. Browser validation never becomes authoritative.
+The `/compose` page creates/edits bounded schema-v2 manifest JSON, validates it through the same `ComposerManifestParser` and `CompositionAnalyzer` used by Composer tooling, and can then generate the deterministic project through `ComposerProjectModelGenerator`. The browser neither becomes authoritative nor supplies arbitrary filesystem paths.
+
+The normal local path is:
+
+```text
+clone/download FoundationKit
+        ↓
+.\foundationkit.ps1 start -Target Workbench
+        ↓
+http://localhost:8080/compose
+        ↓
+choose → apply → validate → Generate Project
+        ↓
+<repository>\generated\<ProjectName>
+```
+
+When started through Docker, FoundationKit `src/` is mounted read-only and only `generated/` is writable. Generated local solutions retain repository-local project references and Composer's ownership/hash safety for optional force regeneration. See `docs/LOCAL-STUDIO-GENERATION.md`.
 
 The `/design` page is a living design-system reference. It renders the same `FoundationKit.Blazor` components consumed by generated applications rather than maintaining a mock component catalog.
 
@@ -106,7 +122,7 @@ dotnet run --project samples/FoundationKit.Workbench/FoundationKit.Workbench.Api
 ```
 
 Core Studio: `/`  
-Visual Composer: `/compose`  
+Visual Composer + local generation: `/compose`  
 Living Design System: `/design`  
 Runtime OpenAPI: `/swagger`
 
@@ -160,9 +176,9 @@ The approved implementation roadmap ends at **Phase 12**. The final closure is r
 
 These are closure tracks, not Phase 13–16.
 
-The Soft Orbit UI baseline is a final shared-design closure required before the first real consumer project; it does not create another backend phase.
+The Soft Orbit UI baseline and local Studio generation workflow are final developer-experience closures required before the first real consumer project; they do not create another backend phase.
 
-The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, shared design system, generated frontend scaffolding, documentation, security and the 17-package boundary.
+The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, shared design system, local project generation, generated frontend scaffolding, documentation, security and the 17-package boundary.
 
 This is **repository completion**, not Production approval. Protected-main enforcement, independent approval and real operational go-live controls remain environment/process governance under issue #35.
 
@@ -176,6 +192,7 @@ Pull requests verify tracked-source hygiene, architecture boundaries, generated 
 - `docs/PACKAGES.md`
 - `docs/WORKBENCH.md`
 - `docs/DESIGN-SYSTEM.md`
+- `docs/LOCAL-STUDIO-GENERATION.md`
 - `docs/PROJECT-ISOLATION-AND-COMPATIBILITY.md`
 - `docs/CRUD-MODULE-ENGINE.md`
 - `docs/CONTRACT-SOURCE-OF-TRUTH.md`

@@ -54,6 +54,20 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             cancellationToken);
     }
 
+    public Task<ApiResult<ComposerGenerationResponse>> GenerateComposerProjectAsync(
+        string manifestJson,
+        bool force = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(manifestJson);
+        return SendAsync<ComposerGenerationResponse>(
+            new HttpRequestMessage(HttpMethod.Post, "/api/composer/generate")
+            {
+                Content = JsonContent.Create(new ComposerGenerationRequest(manifestJson, force))
+            },
+            cancellationToken);
+    }
+
     public Task<ApiResult<HealthResponse>> GetHealthAsync(
         CancellationToken cancellationToken = default) =>
         SendAsync<HealthResponse>(

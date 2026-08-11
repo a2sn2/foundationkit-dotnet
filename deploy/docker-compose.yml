@@ -6,7 +6,7 @@ services:
       MSSQL_PID: "Developer"
       MSSQL_SA_PASSWORD: "${FOUNDATIONKIT_SQL_PASSWORD:?FOUNDATIONKIT_SQL_PASSWORD is required}"
     ports:
-      - "14333:1433"
+      - "127.0.0.1:14333:1433"
     volumes:
       - foundationkit-sql-data:/var/opt/mssql
     restart: unless-stopped
@@ -20,10 +20,15 @@ services:
       ConnectionStrings__Workbench: "Server=sqlserver,1433;Database=FoundationKitWorkbench;User Id=sa;Password=${FOUNDATIONKIT_SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False"
       Database__MigrationAttempts: "60"
       Database__MigrationDelaySeconds: "2"
+      ComposerStudio__FoundationRoot: "/workspace/repository"
+      ComposerStudio__GenerationRoot: "/workspace/repository/generated"
+    volumes:
+      - ../src:/workspace/repository/src:ro
+      - ../generated:/workspace/repository/generated
     depends_on:
       - sqlserver
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     security_opt:
       - no-new-privileges:true
     cap_drop:

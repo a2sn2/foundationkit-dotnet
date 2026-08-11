@@ -46,6 +46,9 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added Core Studio `/design` as a living design-system reference that renders the real reusable FoundationKit components, and refreshed Workbench/Studio surfaces away from the earlier dark/glow-heavy reference styling.
 - Updated deterministic generated Blazor applications to consume the same `_content/FoundationKit.Blazor/foundationkit.css` / `foundationkit.js` assets and `Fk*` components as Core Studio, so examples and future projects no longer ship an independent visual DNA.
 - Added explicit shared-design CI assertions for browser-compatible build/publish, deterministic generation, static-web-asset publication, no MudBlazor dependency in reusable Core, and one visual source of truth.
+- Completed the local Core Studio developer loop: `/compose` now supports bounded visual starter choices, canonical schema-v2 validation, and one-click deterministic project generation through the existing `ComposerProjectModelGenerator` into `generated/<ProjectName>`.
+- Bounded local generation to a configured host workspace: Docker exposes FoundationKit `src` read-only and only `generated/` writable; the browser never supplies a free filesystem path, while generated local solutions retain repository-relative FoundationKit project references.
+- Preserved Composer ownership/hash protections for optional safe regeneration and added Workbench tests proving initial generation, non-force refusal, safe force regeneration, and refusal after a user-added file.
 - Retained Production-governance separation under issue #35.
 - Strengthened Core-only repository verification and CI.
 

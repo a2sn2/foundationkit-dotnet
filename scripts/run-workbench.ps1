@@ -7,6 +7,11 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker Desktop is required."
 }
 
+$generatedRoot = Join-Path $root "generated"
+if (-not (Test-Path $generatedRoot)) {
+    New-Item -ItemType Directory -Path $generatedRoot | Out-Null
+}
+
 if ([string]::IsNullOrWhiteSpace($env:FOUNDATIONKIT_SQL_PASSWORD)) {
     $suffix = [Guid]::NewGuid().ToString("N").Substring(0, 18)
     $env:FOUNDATIONKIT_SQL_PASSWORD = "Fkit!${suffix}Aa1"
@@ -22,6 +27,7 @@ for ($attempt = 1; $attempt -le 120; $attempt++) {
     try {
         Invoke-RestMethod -Uri "$url/api/health" -TimeoutSec 3 | Out-Null
         Write-Host "FoundationKit Workbench is ready: $url"
+        Write-Host "Generated projects will be written under: $generatedRoot"
         Start-Process $url
         exit 0
     }

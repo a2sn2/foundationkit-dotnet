@@ -271,6 +271,39 @@
       "name": "FoundationKit.Workbench.Api",
       "item": [
         {
+          "name": "GenerateFoundationKitComposerProject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/composer/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "composer",
+                "generate"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GenerateFoundationKitComposerProject`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"force\": true,\n  \"manifestJson\": \"value\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
           "name": "ValidateFoundationKitComposerManifest",
           "request": {
             "method": "POST",
