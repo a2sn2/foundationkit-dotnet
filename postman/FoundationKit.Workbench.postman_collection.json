@@ -268,6 +268,44 @@
       ]
     },
     {
+      "name": "FoundationKit.Workbench.Api",
+      "item": [
+        {
+          "name": "ValidateFoundationKitComposerManifest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/composer/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "composer",
+                "validate"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `ValidateFoundationKitComposerManifest`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manifestJson\": \"value\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Shared platform",
       "item": [
         {
