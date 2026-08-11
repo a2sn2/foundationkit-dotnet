@@ -29,21 +29,23 @@ jobs:
           from pathlib import Path
 
           path = Path('tools/FoundationKit.Composer/ComposerReadModelGenerator.cs')
-          text = path.read_text(encoding='utf-8')
-          old = '''        return $$"""
-                    migrationBuilder.Sql("""
-            {{sql.TrimEnd()}}
-                    """);
-            """;
-          '''
-          new = '''        return "        migrationBuilder.Sql(" +
-            JsonSerializer.Serialize(sql.TrimEnd()) +
-            ");";
-          '''
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f'BuildCreateViewMigration raw-string anchor count was {count}, expected 1')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          sql_index = next((i for i, line in enumerate(lines) if 'var sql = $$"""' in line), None)
+          if sql_index is None:
+              raise SystemExit('BuildCreateViewMigration SQL anchor was not found')
+          start = next((i for i in range(sql_index + 1, len(lines)) if lines[i].strip() == 'return $$"""'), None)
+          if start is None:
+              raise SystemExit('BuildCreateViewMigration return anchor was not found')
+          end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == '""";'), None)
+          if end is None:
+              raise SystemExit('BuildCreateViewMigration return end was not found')
+          replacement = [
+              '        return "        migrationBuilder.Sql(" +',
+              '            JsonSerializer.Serialize(sql.TrimEnd()) +',
+              '            ");";'
+          ]
+          lines[start:end + 1] = replacement
+          path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
 
           python3 -m py_compile scripts/phase14-composer-readmodels-patch.py
