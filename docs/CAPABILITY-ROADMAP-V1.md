@@ -2,7 +2,7 @@
 
 The roadmap describes direction, not a checklist that justifies empty packages. Evidence-driven capability families may remain intentionally unimplemented until a real product need establishes their semantics.
 
-## Delivered foundation
+## Delivered Core vNext v1 foundation
 
 - [x] Domain/Application/Infrastructure/WebApi/Blazor base packages.
 - [x] Capability graph, dependency resolver, seven profiles, contract versions, maturity evidence.
@@ -32,10 +32,12 @@ The roadmap describes direction, not a checklist that justifies empty packages. 
 - [x] provider-neutral read-model boundary plus generated SQL-view-backed multi-table/query/report models with keyless EF mapping and server-side querying.
 - [x] first-party reusable frontend presentation/query/display primitives in `FoundationKit.Blazor` without a new package or forced MudBlazor dependency.
 - [x] Core-focused Workbench/Studio reference UI for capability/module/contract evidence; browser state remains presentation-only.
+- [x] visual Core Studio Composer that submits schema-v2 JSON to the canonical `ComposerManifestParser` and `CompositionAnalyzer` rather than implementing a second manifest engine.
+- [x] deterministic OpenAPI-wired Blazor WebAssembly application scaffolding that delegates typed transport generation to the canonical C# client generator and references exact-head `FoundationKit.Blazor`.
 
-## Next backend/platform families
+## Evidence-driven future capability families
 
-These remain evidence-driven and are **not automatically packages** and are **not required merely to declare Core vNext v1 complete**:
+These remain evidence-driven and are **not automatically packages** and are **not required for Core vNext v1 repository completion**:
 
 - [ ] advanced approvals, tasks/work items, SLA/business-hours, activity/comments;
 - [ ] notification templates/preferences/routing/retries/history;
@@ -59,15 +61,17 @@ These remain evidence-driven and are **not automatically packages** and are **no
 - [x] generated SQL query/index + SQL-view read-model/report proof.
 - [x] concurrent project-isolation and compatible legacy-consumer proof.
 - [x] first-party frontend state/design foundation plus Core Studio reference experience.
-- [ ] visual Workbench/Studio composer using the same schema-v2 deterministic engine.
-- [ ] opt-in generated frontend application template wired to the canonical typed transport contract.
+- [x] visual Workbench/Core Studio composer using the same schema-v2 parser/analyzer.
+- [x] opt-in deterministic generated frontend application shell wired to the canonical typed transport contract.
 
-The remaining two tooling items are the planned **Phase 16 closure increment**. They are tooling/product-generation work, not justification for new reusable runtime packages.
+The v1 repository implementation/tooling roadmap is closed by Phase 16. Future work should start from a concrete product or provider requirement rather than reopening completed v1 phases.
 
 ## Definition of done
 
 A reusable capability requires explicit purpose/non-goals, dependency boundary, provider-neutral public contracts where applicable, bounded inputs, security/privacy review, success/failure tests, architecture tests, Workbench/runtime proof when behavior is executable, compatibility/migration documentation, generated catalog synchronization, CI/security gates, and a maturity assessment matching actual evidence.
 
-Core vNext v1 is considered repository-complete when the current backend/read/typed-client contracts, first-party frontend foundation, visual schema-v2 Studio composer, generated frontend template, documentation/dependency hygiene, and exact-head quality/security/package gates are all coherent. External Production governance (protected main, independent approval and real go-live controls) remains a separate environment/process decision.
+**Core vNext v1 repository completion** means the backend/read/typed-client contracts, first-party frontend foundation, canonical visual Composer, deterministic generated frontend shell, active documentation, dependency hygiene, and exact-head quality/security/package gates are coherent on `main`.
+
+This definition does **not** mean Production Approved. Protected-main enforcement, independent approval, organization-level security controls and real operational go-live requirements remain separate environment/process governance tracked by issue #35.
 
 A roadmap item is never implemented solely to make the roadmap look complete.
