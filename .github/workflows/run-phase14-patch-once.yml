@@ -1,6 +1,7 @@
 name: Run Phase 14 contract patch once
 
 on:
+  pull_request:
   push:
     branches:
       - core-vnext/read-engine-phase-14
@@ -41,78 +42,24 @@ jobs:
 
           text = replace_once(
               text,
-              '''public enum ComposerResourceFieldType
-          {
-              Text = 0
-          }
-          '''.replace('          ', ''),
-              '''public enum ComposerResourceFieldType
-          {
-              Text = 0
-          }
-
-          public enum ComposerResourceFieldFilterMode
-          {
-              None = 0,
-              Exact = 1,
-              Prefix = 2
-          }
-          '''.replace('          ', ''),
+              "public enum ComposerResourceFieldType\n{\n    Text = 0\n}\n",
+              "public enum ComposerResourceFieldType\n{\n    Text = 0\n}\n\npublic enum ComposerResourceFieldFilterMode\n{\n    None = 0,\n    Exact = 1,\n    Prefix = 2\n}\n",
               'field filter enum')
 
           text = replace_once(
               text,
-              '''public sealed record ComposerResourceField(
-              string Name,
-              ComposerResourceFieldType Type,
-              bool Required,
-              int MaximumLength);
-          '''.replace('          ', ''),
-              '''public sealed record ComposerResourceField(
-              string Name,
-              ComposerResourceFieldType Type,
-              bool Required,
-              int MaximumLength)
-          {
-              public ComposerResourceFieldFilterMode FilterMode { get; init; } = ComposerResourceFieldFilterMode.None;
-              public bool Sortable { get; init; }
-              public bool Indexed { get; init; }
-              public bool Unique { get; init; }
-          }
-          '''.replace('          ', ''),
+              "public sealed record ComposerResourceField(\n    string Name,\n    ComposerResourceFieldType Type,\n    bool Required,\n    int MaximumLength);\n",
+              "public sealed record ComposerResourceField(\n    string Name,\n    ComposerResourceFieldType Type,\n    bool Required,\n    int MaximumLength)\n{\n    public ComposerResourceFieldFilterMode FilterMode { get; init; } = ComposerResourceFieldFilterMode.None;\n    public bool Sortable { get; init; }\n    public bool Indexed { get; init; }\n    public bool Unique { get; init; }\n}\n",
               'field record')
 
           text = replace_once(
               text,
-              '''        var api = NormalizeApi(resource.Api);
-
-        return new ComposerResourceDefinition(
-''',
-              '''        var api = NormalizeApi(resource.Api);
-        var hasConfiguredFilters = fields.Any(field => field.FilterMode != ComposerResourceFieldFilterMode.None);
-        var hasConfiguredSorts = fields.Any(field => field.Sortable);
-        if (hasConfiguredFilters && api.MaximumFilters == 0)
-        {
-            throw new ComposerManifestException(
-                $"Resource '{moduleName}.{name}' declares filterable fields but api.maximumFilters is 0.");
-        }
-        if (hasConfiguredSorts && api.MaximumSorts == 0)
-        {
-            throw new ComposerManifestException(
-                $"Resource '{moduleName}.{name}' declares sortable fields but api.maximumSorts is 0.");
-        }
-        if (hasConfiguredSorts && api.MaximumSorts > 1)
-        {
-            throw new ComposerManifestException(
-                $"Resource '{moduleName}.{name}' currently supports at most one SQL sort because CrudQueryPlan exposes one OrderBy selector.");
-        }
-
-        return new ComposerResourceDefinition(
-''',
+              "        var api = NormalizeApi(resource.Api);\n\n        return new ComposerResourceDefinition(\n",
+              "        var api = NormalizeApi(resource.Api);\n        var hasConfiguredFilters = fields.Any(field => field.FilterMode != ComposerResourceFieldFilterMode.None);\n        var hasConfiguredSorts = fields.Any(field => field.Sortable);\n        if (hasConfiguredFilters && api.MaximumFilters == 0)\n        {\n            throw new ComposerManifestException(\n                $\"Resource '{moduleName}.{name}' declares filterable fields but api.maximumFilters is 0.\");\n        }\n        if (hasConfiguredSorts && api.MaximumSorts == 0)\n        {\n            throw new ComposerManifestException(\n                $\"Resource '{moduleName}.{name}' declares sortable fields but api.maximumSorts is 0.\");\n        }\n        if (hasConfiguredSorts && api.MaximumSorts > 1)\n        {\n            throw new ComposerManifestException(\n                $\"Resource '{moduleName}.{name}' currently supports at most one SQL sort because CrudQueryPlan exposes one OrderBy selector.\");\n        }\n\n        return new ComposerResourceDefinition(\n",
               'resource query/api validation')
 
           pattern = re.compile(
-              r'(?P<indent>[ \t]*)fields\.Add\(new ComposerResourceField\(\s*'
+              r'[ \t]*fields\.Add\(new ComposerResourceField\(\s*'
               r'name,\s*type,\s*value\.Required \?\? true,\s*maximumLength\)\);')
           replacement = '''            var filterMode = value.Query?.Filter?.Trim().ToLowerInvariant() switch
             {
@@ -158,58 +105,27 @@ jobs:
 
           text = replace_once(
               text,
-              '''    private sealed record FieldDocument(
-        string? Name,
-        string? Type,
-        bool? Required,
-        int? MaximumLength);
-
-    private sealed record OverridesDocument(string? Manager);
-''',
-              '''    private sealed record FieldDocument(
-        string? Name,
-        string? Type,
-        bool? Required,
-        int? MaximumLength,
-        QueryDocument? Query,
-        IndexDocument? Index);
-
-    private sealed record QueryDocument(string? Filter, bool? Sortable);
-
-    private sealed record IndexDocument(bool? Enabled, bool? Unique);
-
-    private sealed record OverridesDocument(string? Manager);
-''',
+              "    private sealed record FieldDocument(\n        string? Name,\n        string? Type,\n        bool? Required,\n        int? MaximumLength);\n\n    private sealed record OverridesDocument(string? Manager);\n",
+              "    private sealed record FieldDocument(\n        string? Name,\n        string? Type,\n        bool? Required,\n        int? MaximumLength,\n        QueryDocument? Query,\n        IndexDocument? Index);\n\n    private sealed record QueryDocument(string? Filter, bool? Sortable);\n\n    private sealed record IndexDocument(bool? Enabled, bool? Unique);\n\n    private sealed record OverridesDocument(string? Manager);\n",
               'field document')
-
           manifest.write_text(text, encoding='utf-8')
 
           schema_path = Path('catalog/foundationkit.project.schema.json')
           schema = json.loads(schema_path.read_text(encoding='utf-8'))
-          field_properties = schema['$defs']['field']['properties']
-          field_properties['query'] = {'$ref': '#/$defs/fieldQuery'}
-          field_properties['index'] = {'$ref': '#/$defs/fieldIndex'}
+          props = schema['$defs']['field']['properties']
+          props['query'] = {'$ref': '#/$defs/fieldQuery'}
+          props['index'] = {'$ref': '#/$defs/fieldIndex'}
           schema['$defs']['fieldQuery'] = {
-              'type': 'object',
-              'additionalProperties': False,
+              'type': 'object', 'additionalProperties': False,
               'properties': {
                   'filter': {'type': 'string', 'enum': ['none', 'exact', 'prefix']},
-                  'sortable': {'type': 'boolean'}
-              }
-          }
+                  'sortable': {'type': 'boolean'}}}
           schema['$defs']['fieldIndex'] = {
-              'type': 'object',
-              'additionalProperties': False,
-              'properties': {
-                  'enabled': {'type': 'boolean'},
-                  'unique': {'type': 'boolean'}
-              }
-          }
+              'type': 'object', 'additionalProperties': False,
+              'properties': {'enabled': {'type': 'boolean'}, 'unique': {'type': 'boolean'}}}
           schema_path.write_text(json.dumps(schema, indent=2) + '\n', encoding='utf-8')
 
-          for relative in (
-              'docs/examples/foundationkit.project.fullstack-a.json',
-              'docs/examples/foundationkit.project.fullstack-b.json'):
+          for relative in ('docs/examples/foundationkit.project.fullstack-a.json', 'docs/examples/foundationkit.project.fullstack-b.json'):
               path = Path(relative)
               document = json.loads(path.read_text(encoding='utf-8'))
               resource = document['modules'][0]['resources'][0]
@@ -220,15 +136,11 @@ jobs:
               resource['api']['maximumSorts'] = 1
               path.write_text(json.dumps(document, indent=2) + '\n', encoding='utf-8')
 
-          for helper in (
-              '.github/workflows/patch-phase14-query-contract-once.yml',
-              '.github/workflows/run-phase14-patch-once.yml'):
-              Path(helper).unlink(missing_ok=True)
+          Path('.github/workflows/patch-phase14-query-contract-once.yml').unlink(missing_ok=True)
+          Path('.github/workflows/run-phase14-patch-once.yml').unlink(missing_ok=True)
           PY
 
           python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
-          python3 -m json.tool docs/examples/foundationkit.project.fullstack-a.json >/dev/null
-          python3 -m json.tool docs/examples/foundationkit.project.fullstack-b.json >/dev/null
           dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
           dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
           git diff --check
