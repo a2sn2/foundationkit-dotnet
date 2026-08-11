@@ -1,7 +1,7 @@
 @namespace FoundationKit.Blazor.Components
 
 <NavLink href="@Href"
-         class="fk-nav-item @Class"
+         class="@CssClass"
          Match="@Match"
          ActiveClass="active"
          @attributes="AdditionalAttributes">
@@ -30,4 +30,8 @@
 
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.IsNullOrWhiteSpace(Class)
+        ? "fk-nav-item"
+        : $"fk-nav-item {Class}";
 }
