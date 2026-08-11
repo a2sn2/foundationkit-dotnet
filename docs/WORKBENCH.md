@@ -1,8 +1,8 @@
 # FoundationKit Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting, composing and visually validating against the Core, not a product portal.
+Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting, composing, validating and locally generating against the Core, not a product portal.
 
-The approved Core vNext implementation roadmap ends at **Phase 12**. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are Phase 12 closure tracks rather than additional phases. The Soft Orbit UI baseline is the final shared-design closure before the first real consumer project; it does not create a new backend phase.
+The approved Core vNext implementation roadmap ends at **Phase 12**. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are Phase 12 closure tracks rather than additional phases. Soft Orbit and the local Studio generation loop are final developer-experience closures before the first real consumer project; they do not create new backend phases.
 
 ## What it proves
 
@@ -20,6 +20,7 @@ The approved Core vNext implementation roadmap ends at **Phase 12**. Typed trans
 - read-only SQL-view-backed read models for multi-table/report projections in generated products;
 - a first-party frontend reference that presents Core state without moving authorization or relational join logic into the browser;
 - visual schema-v2 composition whose authoritative validation runs through the same `ComposerManifestParser` and `CompositionAnalyzer` as Composer tooling;
+- bounded local generation through the same `ComposerProjectModelGenerator`, with no browser-controlled destination path;
 - deterministic Blazor WebAssembly shell generation that wires the canonical generated C# client instead of creating another transport layer;
 - one shared Soft Orbit design system consumed by Core Studio and generated Blazor applications.
 
@@ -30,7 +31,7 @@ The original connected user/admin workflow remains in the Workbench backend and 
 ```text
 /           Core baseline, closure gates and contract flow
 /studio     live capability catalog + declared/effective module composition
-/compose    visual schema-v2 starter/editor + canonical Composer validation
+/compose    visual schema-v2 choose/edit/validate + local project generation
 /design     living Soft Orbit tokens + real first-party reusable components
 /evidence   runtime and engineering proof boundaries
 /swagger    runtime OpenAPI/Swagger UI
@@ -38,28 +39,55 @@ The original connected user/admin workflow remains in the Workbench backend and 
 
 The Studio UI consumes bounded Workbench transport contracts. It never treats hidden buttons, routes, browser validation, or client state as authorization. Server policies remain authoritative.
 
-## Visual Composer boundary
+## Visual Composer and local generation boundary
 
-The `/compose` screen does **not** implement an alternate manifest schema in Razor. It only helps produce/edit JSON and submits it to:
+The `/compose` screen does **not** implement an alternate manifest schema or generator in Razor. Its visual controls only create a schema-v2 starter and the JSON remains editable for advanced project models.
+
+Canonical validation uses:
 
 ```text
 POST /api/composer/validate
-```
-
-The Workbench endpoint applies a bounded input-size guard, then calls the canonical:
-
-```text
+    ↓
 ComposerManifestParser.Parse(...)
+    ↓
 CompositionAnalyzer.Analyze(...)
 ```
 
-The response returns validation status, schema/project/profile counts, resolved capability evidence, maturity and warnings. Invalid manifests return Composer's bounded validation message rather than executing generation, SQL or arbitrary code.
+The validation response returns schema/project/profile counts, resolved capability evidence, maturity and warnings. Invalid manifests return bounded Composer errors rather than executing generation, SQL or arbitrary code.
 
-Browser-side starter generation is convenience only. A manifest is valid only when the server-side Composer engine accepts it.
+After a schema-v2 manifest passes validation, local generation uses:
+
+```text
+POST /api/composer/generate
+    ↓
+ComposerManifestParser.Parse(...)
+    ↓
+CompositionAnalyzer.Analyze(...)
+    ↓
+ComposerProjectModelGenerator.GenerateAsync(...)
+```
+
+The browser does not provide an arbitrary output path. The server derives the directory from the validated project name and writes only under the configured Studio generation root. The repository manager configures that root as:
+
+```text
+<FoundationKit repository>/generated
+```
+
+so the normal local result is:
+
+```text
+generated/<ProjectName>/<ProjectName>.sln
+```
+
+When Workbench is started via Docker, `src/` is mounted read-only and only `generated/` is writable. This preserves repository-local generated ProjectReferences while preventing the local Studio generation endpoint from writing into the Core source tree.
+
+A non-empty destination fails closed unless safe regeneration is explicitly selected. Force regeneration still uses Composer's ownership marker and SHA-256 checks and refuses replacement after user files or generated files have changed.
+
+See `docs/LOCAL-STUDIO-GENERATION.md` for the end-user workflow.
 
 ## Reusable frontend / design-system boundary
 
-`FoundationKit.Blazor` remains the reusable Core frontend package and stays inside the 17-package baseline. It is now a Razor Class Library that owns transport/presentation helpers **and** the first-party product-neutral design system. It still has no MudBlazor dependency.
+`FoundationKit.Blazor` remains the reusable Core frontend package and stays inside the 17-package baseline. It is a Razor Class Library that owns transport/presentation helpers **and** the first-party product-neutral design system. It has no MudBlazor dependency.
 
 MudBlazor remains a **Workbench sample dependency** for controls that have not been promoted into reusable first-party primitives. Workbench-specific Mud surfaces are visually mapped back to FoundationKit semantic tokens.
 
@@ -170,9 +198,10 @@ Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` o
 
 Health: `/api/health`  
 Module composition: `/api/modules`  
-Composer validation: `/api/composer/validate`  
+Composer validation: `POST /api/composer/validate`  
+Local project generation: `POST /api/composer/generate`  
 Core Studio: `/`  
-Visual Composer: `/compose`  
+Visual Composer + generation: `/compose`  
 Design System: `/design`  
 Swagger UI: `/swagger`
 
