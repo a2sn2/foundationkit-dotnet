@@ -1,6 +1,6 @@
 # FoundationKit Capability Roadmap v1
 
-The roadmap describes direction, not a checklist that justifies empty packages.
+The roadmap describes direction, not a checklist that justifies empty packages. Evidence-driven capability families may remain intentionally unimplemented until a real product need establishes their semantics.
 
 ## Delivered foundation
 
@@ -23,14 +23,19 @@ The roadmap describes direction, not a checklist that justifies empty packages.
 - [x] runtime OpenAPI as canonical serialized transport contract for derived client artifacts.
 - [x] deterministic OpenAPI-to-Postman generation with exact committed-artifact drift detection in CI.
 - [x] unified module capability composition with declared/effective separation, dependency closure, fluent cross-cutting capability intent, deterministic registry snapshots, and Workbench runtime discovery.
-- [x] durable/replay-safe HTTP idempotency behind the Phase 7 contract using provider-neutral Application contracts, a relational EF adapter, bounded WebApi replay orchestration, consumer-owned schema, and Workbench SQL replay/fingerprint proof.
-- [x] Composer schema v2 project model for Project → Modules → Resources → Behaviors → Overrides → API, mapped back into the canonical capability graph and generated deterministically while preserving schema v1 generation/build/test compatibility.
-- [x] bounded schema-v2 executable resource generation for product-owned Domain/contracts/validation/CRUD/authorization/audit/concurrency/idempotency/SQL/API/OpenAPI with deterministic Postman derivation.
-- [x] concurrent generated Project A/B proof on one SQL Server database with project/resource/idempotency/migration isolation while retaining legacy schema-v1 and descriptor-only schema-v2 compatibility.
+- [x] durable/replay-safe HTTP idempotency behind the API contract using provider-neutral Application contracts, relational EF adapter, bounded WebApi replay orchestration, consumer-owned schema, and SQL replay/fingerprint proof.
+- [x] Composer schema v2 Project → Modules → Resources → Behaviors → Overrides → API model while preserving schema-v1 compatibility.
+- [x] bounded schema-v2 executable resources for product-owned Domain/contracts/validation/CRUD/authorization/audit/concurrency/idempotency/SQL/API/OpenAPI.
+- [x] concurrent generated Project A/B proof on one SQL Server database with project/resource/idempotency/migration isolation.
+- [x] deterministic runtime OpenAPI → C# typed-client generation with CLR/OpenAPI requiredness alignment and transport metadata preservation.
+- [x] explicit generated resource query/index policy with SQL Server WHERE/ORDER BY/paging and direct index metadata proof.
+- [x] provider-neutral read-model boundary plus generated SQL-view-backed multi-table/query/report models with keyless EF mapping and server-side querying.
+- [x] first-party reusable frontend presentation/query/display primitives in `FoundationKit.Blazor` without a new package or forced MudBlazor dependency.
+- [x] Core-focused Workbench/Studio reference UI for capability/module/contract evidence; browser state remains presentation-only.
 
 ## Next backend/platform families
 
-These remain evidence-driven and are not automatically packages:
+These remain evidence-driven and are **not automatically packages** and are **not required merely to declare Core vNext v1 complete**:
 
 - [ ] advanced approvals, tasks/work items, SLA/business-hours, activity/comments;
 - [ ] notification templates/preferences/routing/retries/history;
@@ -40,23 +45,29 @@ These remain evidence-driven and are not automatically packages:
 - [ ] webhooks and realtime;
 - [ ] distributed caching provider;
 - [ ] external HTTP resilience conventions;
-- [ ] search, reporting, import/export;
+- [ ] search, reporting, import/export beyond the current bounded SQL-view read-model foundation;
 - [ ] privacy/PII, retention/anonymization;
 - [ ] money/currency and numbering/sequences;
 - [ ] PostgreSQL/Redis/object-storage/messaging/OpenTelemetry provider adapters where justified.
 
 ## Tooling and full-stack experience
 
-- [x] derive deterministic Postman evidence from the runtime/OpenAPI contract source of truth.
-- [ ] derive a future typed-client artifact from the same runtime/OpenAPI contract when the frontend phase begins.
+- [x] derive deterministic Postman evidence from runtime OpenAPI.
+- [x] derive deterministic C# typed clients from the same runtime OpenAPI.
 - [x] Composer manifest model for Project → Modules → Resources → Behaviors → Providers → Overrides → API.
 - [x] generated-project proof for Database + CRUD + Validation + Authorization + Audit + API + OpenAPI + Postman.
+- [x] generated SQL query/index + SQL-view read-model/report proof.
 - [x] concurrent project-isolation and compatible legacy-consumer proof.
+- [x] first-party frontend state/design foundation plus Core Studio reference experience.
 - [ ] visual Workbench/Studio composer using the same schema-v2 deterministic engine.
-- [ ] first-party frontend template/design system after backend phases are stable.
+- [ ] opt-in generated frontend application template wired to the canonical typed transport contract.
+
+The remaining two tooling items are the planned **Phase 16 closure increment**. They are tooling/product-generation work, not justification for new reusable runtime packages.
 
 ## Definition of done
 
 A reusable capability requires explicit purpose/non-goals, dependency boundary, provider-neutral public contracts where applicable, bounded inputs, security/privacy review, success/failure tests, architecture tests, Workbench/runtime proof when behavior is executable, compatibility/migration documentation, generated catalog synchronization, CI/security gates, and a maturity assessment matching actual evidence.
+
+Core vNext v1 is considered repository-complete when the current backend/read/typed-client contracts, first-party frontend foundation, visual schema-v2 Studio composer, generated frontend template, documentation/dependency hygiene, and exact-head quality/security/package gates are all coherent. External Production governance (protected main, independent approval and real go-live controls) remains a separate environment/process decision.
 
 A roadmap item is never implemented solely to make the roadmap look complete.
