@@ -60,68 +60,21 @@ pages = {name: (SITE / name).read_text(encoding="utf-8") for name in page_names}
 all_html = "\n".join(pages.values())
 
 required_page_text = {
-    "index.html": (
-        "FoundationKit",
-        "CORE-ONLY REPOSITORY",
-        "Explore the Core",
-        "Developer",
-    ),
-    "architecture.html": (
-        "ARCHITECTURE",
-        "Reusable Core.",
-        "Five explicit layers.",
-        "Authorization is server-authoritative",
-    ),
-    "capabilities.html": (
-        "MODULE / CRUD / API ENGINE",
-        "SQL-FIRST READS",
-        "PROJECT ISOLATION + RELIABILITY",
-        "SUPPORTING CAPABILITIES",
-    ),
-    "packages.html": (
-        "17 REUSABLE PACKAGES",
-        "FoundationKit.Domain",
-        "FoundationKit.Blazor",
-        "FoundationKit.Caching",
-    ),
-    "composer.html": (
-        "COMPOSER · SCHEMA V2",
-        "Seven canonical profiles",
-        "Visual and CLI share the same engine",
-        "Safe regeneration",
-    ),
-    "frontend.html": (
-        "FOUNDATIONKIT.BLAZOR · SOFT ORBIT",
-        "REUSABLE RAZOR LAYER",
-        "RTL / LTR",
-        "PRESENTATION STATES",
-    ),
-    "quality.html": (
-        "ENGINEERING EVIDENCE",
-        "EXACT-HEAD QUALITY",
-        "CONTRACT DRIFT",
-        "Repository Complete ≠ Production Approved",
-    ),
-    "start.html": (
-        "START THE FIRST PROJECT",
-        ".\\foundationkit.ps1 start -Target Workbench",
-        "generated\\MySystem\\MySystem.sln",
-        "Choose → Validate → Generate",
-    ),
-    "developer.html": (
-        "THE DEVELOPER BEHIND FOUNDATIONKIT",
-        "SOURCE-DRIVEN PROFILE",
-        "Waiting for the developer CV.",
-        "Professional Positioning",
-        "Selected Projects",
-    ),
+    "index.html": ("FoundationKit", "CORE-ONLY REPOSITORY", "EXPLORE THE CORE", "Developer"),
+    "architecture.html": ("ARCHITECTURE", "Reusable Core.", "Five explicit layers.", "Authorization is server-authoritative"),
+    "capabilities.html": ("MODULE / CRUD / API ENGINE", "SQL-FIRST READS", "PROJECT ISOLATION + RELIABILITY", "SUPPORTING CAPABILITIES"),
+    "packages.html": ("17 REUSABLE PACKAGES", "FoundationKit.Domain", "FoundationKit.Blazor", "FoundationKit.Caching"),
+    "composer.html": ("COMPOSER · SCHEMA V2", "Seven canonical profiles", "Visual and CLI share the same engine", "Safe regeneration"),
+    "frontend.html": ("FOUNDATIONKIT.BLAZOR · SOFT ORBIT", "REUSABLE RAZOR LAYER", "RTL / LTR", "PRESENTATION STATES"),
+    "quality.html": ("ENGINEERING EVIDENCE", "EXACT-HEAD QUALITY", "CONTRACT DRIFT", "Repository Complete ≠ Production Approved"),
+    "start.html": ("START THE FIRST PROJECT", ".\\foundationkit.ps1 start -Target Workbench", "generated\\MySystem\\MySystem.sln", "Choose → Validate → Generate"),
+    "developer.html": ("THE DEVELOPER BEHIND FOUNDATIONKIT", "SOURCE-DRIVEN PROFILE", "Waiting for the developer CV.", "Professional Positioning", "Selected Projects"),
 }
 for page, markers in required_page_text.items():
     for marker in markers:
         if marker not in pages[page]:
             raise SystemExit(f"Pages {page} missing required content: {marker}")
 
-# Every page must participate in the same top-level site navigation.
 for page, html in pages.items():
     for target in page_names:
         if f'href="{target}"' not in html:
@@ -135,23 +88,10 @@ packages_html = pages["packages.html"]
 if packages_html.count('data-package-kind="') != 17:
     raise SystemExit("Packages page must present all 17 reusable package cards")
 for package in (
-    "FoundationKit.Domain",
-    "FoundationKit.Application",
-    "FoundationKit.Infrastructure",
-    "FoundationKit.WebApi",
-    "FoundationKit.Blazor",
-    "FoundationKit.Auditing",
-    "FoundationKit.Security",
-    "FoundationKit.Identity",
-    "FoundationKit.Authorization",
-    "FoundationKit.Workflow",
-    "FoundationKit.Approvals",
-    "FoundationKit.Notifications",
-    "FoundationKit.Notifications.Smtp",
-    "FoundationKit.Settings",
-    "FoundationKit.FeatureManagement",
-    "FoundationKit.Localization",
-    "FoundationKit.Caching",
+    "FoundationKit.Domain", "FoundationKit.Application", "FoundationKit.Infrastructure", "FoundationKit.WebApi", "FoundationKit.Blazor",
+    "FoundationKit.Auditing", "FoundationKit.Security", "FoundationKit.Identity", "FoundationKit.Authorization", "FoundationKit.Workflow",
+    "FoundationKit.Approvals", "FoundationKit.Notifications", "FoundationKit.Notifications.Smtp", "FoundationKit.Settings",
+    "FoundationKit.FeatureManagement", "FoundationKit.Localization", "FoundationKit.Caching",
 ):
     if package not in packages_html:
         raise SystemExit(f"Packages page missing: {package}")
