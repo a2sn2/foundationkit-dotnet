@@ -25,7 +25,7 @@ else
     <a href="@(Disabled ? null : Href)"
        class="@CssClass"
        aria-disabled="@Disabled.ToString().ToLowerInvariant()"
-       tabindex="@(Disabled ? -1 : null)"
+       tabindex="@(Disabled ? "-1" : null)"
        @attributes="AdditionalAttributes">
         @if (LeadingContent is not null)
         {
