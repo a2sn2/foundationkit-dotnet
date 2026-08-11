@@ -18,7 +18,9 @@ Postman       typed C# client     generated Blazor shell
 
 Runtime OpenAPI remains the source. The Blazor shell generator delegates to the typed-client generator; it does not implement another HTTP contract algorithm.
 
-## Phase 13 typed-client evidence
+This work belongs to the **Phase 12 closure** of the approved Core vNext roadmap; it is not a separate later phase.
+
+## Typed-client evidence
 
 The live OpenAPI document produced by a Composer-generated executable SQL product is used to generate C# source deterministically. CI compiles that source against exact-head `FoundationKit.Blazor` and executes the generated client against the same running API.
 
@@ -113,11 +115,11 @@ capture live OpenAPI
 
 No timestamp, machine path, random identifier, token, password or environment secret is written into generated client source.
 
-## Phase 15 presentation boundary
+## Presentation boundary
 
-`FoundationKit.Blazor` now also provides reusable presentation/query/display state without introducing a new package or a MudBlazor dependency. Browser state is presentation-only: backend authorization/query policy and Phase 14 SQL-view read models remain authoritative.
+`FoundationKit.Blazor` also provides reusable presentation/query/display state without introducing a new package or a MudBlazor dependency. Browser state is presentation-only: backend authorization/query policy and SQL-view-backed read models remain authoritative.
 
-## Phase 16 generated application shell
+## Generated application shell
 
 `scripts/generate-blazor-app-from-openapi.py` closes the first-party frontend scaffolding chain. It validates safe app/namespace/client identifiers, references exact-head `FoundationKit.Blazor`, emits a .NET 10 Blazor WebAssembly shell and then invokes:
 
@@ -171,4 +173,4 @@ A consumer may wrap or extend the generated client at its own application bounda
 
 `FoundationKit Typed Client Proof` proves live runtime transport end to end. `FoundationKit Frontend Generation Proof` proves deterministic Blazor scaffolding and canonical client reuse. Both remain subordinate to the normal Core CI, Composer generation, full-stack SQL/read-engine, package integrity, Security Scan, CodeQL and Windows checks.
 
-Core vNext v1 repository completion after Phase 16 therefore has one continuous frontend contract path rather than separate hand-authored API/client/UI definitions.
+The final Phase 12 closure therefore has one continuous frontend contract path rather than separate hand-authored API/client/UI definitions.
