@@ -8,7 +8,7 @@ FoundationKit currently ships 17 reusable packages. Package version, capability 
 - `FoundationKit.Application` — results/errors, validation, pagination, repositories/specifications, UoW/clock/current-user/event ports, capability graph, project isolation contracts, module definitions, generic CRUD application orchestration, and provider-neutral durable-idempotency acquisition/replay contracts.
 - `FoundationKit.Infrastructure` — provider-neutral EF repository/UoW/event adapters, relational EF idempotency adapter/model composition, and Core module/EF composition helpers; no SQL Server/PostgreSQL provider selection and no reusable product migrations.
 - `FoundationKit.WebApi` — HTTP result/Problem Details/correlation/header helpers, generic CRUD endpoint mapping, and opt-in durable idempotency orchestration over endpoint metadata plus `IIdempotencyStore`.
-- `FoundationKit.Blazor` — typed API results/errors, resilient response parsing, async state and ViewModel/client primitives.
+- `FoundationKit.Blazor` — typed API results/errors and metadata, resilient response parsing, async/presentation/query state, semantic Soft Orbit design tokens/static assets, and product-neutral first-party Razor primitives for theme, app shell/navigation, buttons, cards, badges, page headers and loading/empty states. The reusable package does not depend on MudBlazor or own product authorization/business semantics.
 
 ## Optional/reference packages
 
@@ -31,6 +31,10 @@ The consuming host selects relational/storage providers and owns its schema/migr
 
 `FoundationKit.Infrastructure` may depend on EF Core Relational for reusable relational adapters while remaining vendor-neutral. A consuming application that enables the durable idempotency EF adapter must call `AddFoundationIdempotencyStore()` from its own model and own the resulting migration/table. FoundationKit does not ship a reusable SQL Server or PostgreSQL migration for that table.
 
+## Frontend dependency rule
+
+`FoundationKit.Blazor` is the single reusable UI/design-system package. A product or Workbench sample may use an additional component library, but that dependency must not be promoted into reusable Core solely to style the sample. Generated applications should consume the first-party semantic tokens/components and override product branding at the host boundary rather than copying shared CSS.
+
 ## Package count rule
 
-A new package requires an independently useful boundary and evidence. The current Core vNext work strengthens existing packages and intentionally keeps 17+17 output.
+A new package requires an independently useful boundary and evidence. The current Core vNext and shared-UI work strengthen existing packages and intentionally keep 17+17 output.
