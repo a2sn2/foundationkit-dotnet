@@ -1,0 +1,36 @@
+@namespace FoundationKit.Blazor.Components
+
+<span class="@CssClass" @attributes="AdditionalAttributes">@ChildContent</span>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public FoundationBadgeTone Tone { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var tone = Tone switch
+            {
+                FoundationBadgeTone.Primary => "fk-badge--primary",
+                FoundationBadgeTone.Aqua => "fk-badge--aqua",
+                FoundationBadgeTone.Success => "fk-badge--success",
+                FoundationBadgeTone.Warning => "fk-badge--warning",
+                FoundationBadgeTone.Danger => "fk-badge--danger",
+                FoundationBadgeTone.Info => "fk-badge--info",
+                _ => string.Empty
+            };
+            return string.Join(' ', new[] { "fk-badge", tone, Class }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+    }
+}
