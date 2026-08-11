@@ -15,7 +15,10 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "enum": [1, 2]
+      "enum": [
+        1,
+        2
+      ]
     },
     "name": {
       "type": "string",
@@ -72,11 +75,15 @@
             "const": 1
           }
         },
-        "required": ["schemaVersion"]
+        "required": [
+          "schemaVersion"
+        ]
       },
       "then": {
         "not": {
-          "required": ["modules"]
+          "required": [
+            "modules"
+          ]
         }
       }
     },
@@ -87,10 +94,14 @@
             "const": 2
           }
         },
-        "required": ["schemaVersion"]
+        "required": [
+          "schemaVersion"
+        ]
       },
       "then": {
-        "required": ["modules"]
+        "required": [
+          "modules"
+        ]
       }
     }
   ],
@@ -111,14 +122,83 @@
       "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
       "not": {
         "enum": [
-          "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class",
-          "const", "continue", "decimal", "default", "delegate", "do", "double", "else", "enum", "event",
-          "explicit", "extern", "false", "finally", "fixed", "float", "for", "foreach", "goto", "if",
-          "implicit", "in", "int", "interface", "internal", "is", "lock", "long", "namespace", "new", "null",
-          "object", "operator", "out", "override", "params", "private", "protected", "public", "readonly", "ref",
-          "return", "sbyte", "sealed", "short", "sizeof", "stackalloc", "static", "string", "struct", "switch",
-          "this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using",
-          "virtual", "void", "volatile", "while"
+          "abstract",
+          "as",
+          "base",
+          "bool",
+          "break",
+          "byte",
+          "case",
+          "catch",
+          "char",
+          "checked",
+          "class",
+          "const",
+          "continue",
+          "decimal",
+          "default",
+          "delegate",
+          "do",
+          "double",
+          "else",
+          "enum",
+          "event",
+          "explicit",
+          "extern",
+          "false",
+          "finally",
+          "fixed",
+          "float",
+          "for",
+          "foreach",
+          "goto",
+          "if",
+          "implicit",
+          "in",
+          "int",
+          "interface",
+          "internal",
+          "is",
+          "lock",
+          "long",
+          "namespace",
+          "new",
+          "null",
+          "object",
+          "operator",
+          "out",
+          "override",
+          "params",
+          "private",
+          "protected",
+          "public",
+          "readonly",
+          "ref",
+          "return",
+          "sbyte",
+          "sealed",
+          "short",
+          "sizeof",
+          "stackalloc",
+          "static",
+          "string",
+          "struct",
+          "switch",
+          "this",
+          "throw",
+          "true",
+          "try",
+          "typeof",
+          "uint",
+          "ulong",
+          "unchecked",
+          "unsafe",
+          "ushort",
+          "using",
+          "virtual",
+          "void",
+          "volatile",
+          "while"
         ]
       }
     },
@@ -137,7 +217,10 @@
     "module": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "resources"],
+      "required": [
+        "name",
+        "resources"
+      ],
       "properties": {
         "name": {
           "$ref": "#/$defs/safeIdentifier"
@@ -155,7 +238,12 @@
     "resource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "route", "idType", "behaviors"],
+      "required": [
+        "name",
+        "route",
+        "idType",
+        "behaviors"
+      ],
       "properties": {
         "name": {
           "$ref": "#/$defs/safeIdentifier"
@@ -165,7 +253,12 @@
         },
         "idType": {
           "type": "string",
-          "enum": ["guid", "string", "long", "int"]
+          "enum": [
+            "guid",
+            "string",
+            "long",
+            "int"
+          ]
         },
         "behaviors": {
           "type": "array",
@@ -212,14 +305,20 @@
     "field": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "type", "maximumLength"],
+      "required": [
+        "name",
+        "type",
+        "maximumLength"
+      ],
       "properties": {
         "name": {
           "$ref": "#/$defs/safeIdentifier"
         },
         "type": {
           "type": "string",
-          "enum": ["text"]
+          "enum": [
+            "text"
+          ]
         },
         "required": {
           "type": "boolean"
@@ -228,6 +327,12 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 4000
+        },
+        "query": {
+          "$ref": "#/$defs/fieldQuery"
+        },
+        "index": {
+          "$ref": "#/$defs/fieldIndex"
         }
       }
     },
@@ -249,11 +354,18 @@
         },
         "idempotency": {
           "type": "string",
-          "enum": ["disabled", "optional", "required"]
+          "enum": [
+            "disabled",
+            "optional",
+            "required"
+          ]
         },
         "concurrency": {
           "type": "string",
-          "enum": ["application-policy", "require-if-match"]
+          "enum": [
+            "application-policy",
+            "require-if-match"
+          ]
         },
         "maximumFilters": {
           "type": "integer",
@@ -266,9 +378,41 @@
           "maximum": 10
         },
         "rateLimitPolicyName": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1,
           "maxLength": 96
+        }
+      }
+    },
+    "fieldQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "filter": {
+          "type": "string",
+          "enum": [
+            "none",
+            "exact",
+            "prefix"
+          ]
+        },
+        "sortable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "fieldIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "unique": {
+          "type": "boolean"
         }
       }
     }
