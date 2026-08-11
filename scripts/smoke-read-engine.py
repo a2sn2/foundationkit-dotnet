@@ -78,24 +78,24 @@ def admin_headers(**extra: str) -> dict[str, str]:
     return result
 
 
-def create_customer(base_url: str, code: str, name: str, key: str) -> dict[str, Any]:
+def create_customer(base_url: str, name: str, key: str) -> dict[str, Any]:
     response = request(
         base_url,
         "POST",
         "/api/customers",
-        body={"code": code, "name": name, "note": f"proof-{name.lower()}"},
+        body={"name": name, "note": f"proof-{name.lower()}"},
         headers=admin_headers(**{"Idempotency-Key": key}),
     )
     require_status(response, 201, f"create customer {name}")
     payload = response.json()
-    if not isinstance(payload, dict) or payload.get("code") != code or payload.get("name") != name:
+    if not isinstance(payload, dict) or payload.get("name") != name:
         raise AssertionError(f"create customer {name}: unexpected payload {payload!r}")
     return payload
 
 
 def create_profile(
     base_url: str,
-    customer_code: str,
+    customer_name: str,
     status: str,
     detail: str,
     key: str,
@@ -104,13 +104,13 @@ def create_profile(
         base_url,
         "POST",
         "/api/customer-profiles",
-        body={"customerCode": customer_code, "status": status, "detail": detail},
+        body={"customerName": customer_name, "status": status, "detail": detail},
         headers=admin_headers(**{"Idempotency-Key": key}),
     )
-    require_status(response, 201, f"create profile {customer_code}")
+    require_status(response, 201, f"create profile {customer_name}")
     payload = response.json()
-    if not isinstance(payload, dict) or payload.get("customerCode") != customer_code:
-        raise AssertionError(f"create profile {customer_code}: unexpected payload {payload!r}")
+    if not isinstance(payload, dict) or payload.get("customerName") != customer_name:
+        raise AssertionError(f"create profile {customer_name}: unexpected payload {payload!r}")
     return payload
 
 
@@ -148,13 +148,13 @@ def main() -> int:
         raise AssertionError(f"health did not expose a database namespace: {health_payload!r}")
 
     created = [
-        create_customer(base_url, "C001", "Alpha", "read-engine-alpha"),
-        create_customer(base_url, "C002", "Alpine", "read-engine-alpine"),
-        create_customer(base_url, "C003", "Beta", "read-engine-beta"),
+        create_customer(base_url, "Alpha", "read-engine-alpha"),
+        create_customer(base_url, "Alpine", "read-engine-alpine"),
+        create_customer(base_url, "Beta", "read-engine-beta"),
     ]
     profiles = [
-        create_profile(base_url, "C001", "Active", "verified", "read-engine-profile-1"),
-        create_profile(base_url, "C002", "Pending", "review", "read-engine-profile-2"),
+        create_profile(base_url, "Alpha", "Active", "verified", "read-engine-profile-1"),
+        create_profile(base_url, "Alpine", "Pending", "review", "read-engine-profile-2"),
     ]
 
     resource_query = query_string(
@@ -221,12 +221,12 @@ def main() -> int:
     )
     directory_items, directory_payload = paged_items(directory_response, "customer directory")
     directory_projection = [
-        (item.get("code"), item.get("name"), item.get("profileStatus"))
+        (item.get("name"), item.get("profileStatus"))
         for item in directory_items
     ]
     if directory_projection != [
-        ("C002", "Alpine", "Pending"),
-        ("C001", "Alpha", "Active"),
+        ("Alpine", "Pending"),
+        ("Alpha", "Active"),
     ]:
         raise AssertionError(f"unexpected directory view projection: {directory_projection!r}")
     if directory_payload.get("totalCount") != 2:
@@ -239,13 +239,13 @@ def main() -> int:
         headers=ADMIN_HEADERS,
     )
     active_items, active_payload = paged_items(active_response, "directory joined-field filter")
-    if active_payload.get("totalCount") != 1 or [item.get("code") for item in active_items] != ["C001"]:
+    if active_payload.get("totalCount") != 1 or [item.get("name") for item in active_items] != ["Alpha"]:
         raise AssertionError(f"joined-field view filter mismatch: {active_payload!r}")
 
     left_join_response = request(
         base_url,
         "GET",
-        "/api/customer-directory?" + query_string(("filter", "Code|eq|C003")),
+        "/api/customer-directory?" + query_string(("filter", "Name|startswith|Beta")),
         headers=ADMIN_HEADERS,
     )
     left_join_items, left_join_payload = paged_items(left_join_response, "directory left join")
@@ -257,18 +257,14 @@ def main() -> int:
     statement_response = request(
         base_url,
         "GET",
-        "/api/customer-statements?" + query_string(("filter", "Code|eq|C001")),
+        "/api/customer-statements?" + query_string(("filter", "Name|eq|Alpha")),
         headers=ADMIN_HEADERS,
     )
     statement_items, statement_payload = paged_items(statement_response, "customer statement report")
     if statement_payload.get("totalCount") != 1:
         raise AssertionError(f"statement totalCount mismatch: {statement_payload!r}")
     statement = statement_items[0]
-    if (
-        statement.get("code") != "C001"
-        or statement.get("name") != "Alpha"
-        or statement.get("profileStatus") != "Active"
-    ):
+    if statement.get("name") != "Alpha" or statement.get("profileStatus") != "Active":
         raise AssertionError(f"statement projection mismatch: {statement!r}")
 
     unauthenticated_view = request(base_url, "GET", "/api/customer-directory")
@@ -278,7 +274,7 @@ def main() -> int:
         base_url,
         "POST",
         "/api/customer-directory",
-        body={"code": "X"},
+        body={"name": "X"},
         headers=ADMIN_HEADERS,
     )
     require_status(mutate_view, 405, "read-model endpoint is GET-only")
@@ -301,9 +297,10 @@ def main() -> int:
             "leftJoinNullPreserved": True,
         },
         "customerStatement": {
-            "filter": "Code|eq|C001",
+            "filter": "Name|eq|Alpha",
             "row": statement,
         },
+        "customerWriteContractPreserved": True,
         "undeclaredFilterRejected": True,
         "unsupportedOperatorRejected": True,
         "readModelsRequireAuthorization": True,
