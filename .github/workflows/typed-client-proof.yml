@@ -196,7 +196,7 @@ jobs:
 
           var create = await client.CreateCustomerAsync(
               idempotencyKey: "typed-client-create",
-              request: new CustomerCreateRequest("typed-client-001", "Typed Client", "phase14"));
+              request: new CustomerCreateRequest("Typed Client", "phase13"));
           Require(create.Result.IsSuccess, $"create failed: {create.Result.ErrorDetails?.Code}");
           Require(create.Result.StatusCode == HttpStatusCode.Created, "create status was not 201");
           Require(create.Metadata.Location is not null, "create Location metadata was not preserved");
@@ -213,7 +213,7 @@ jobs:
               id: created.Id,
               idempotencyKey: "typed-client-update",
               entityTag: get.Metadata.EntityTag!,
-              request: new CustomerUpdateRequest("typed-client-001", "Typed Client Updated", "phase14-update"));
+              request: new CustomerUpdateRequest("Typed Client Updated", "phase13-update"));
           Require(update.Result.IsSuccess, $"update failed: {update.Result.ErrorDetails?.Code}");
           var updated = update.Result.Value
               ?? throw new InvalidOperationException("update returned no payload");
