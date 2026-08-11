@@ -41,6 +41,9 @@ Runtime OpenAPI (transport SSOT)
                   Blazor app shell
                           |
                           v
+          FoundationKit.Blazor Soft Orbit
+                          |
+                          v
                     product UI
 ```
 
@@ -70,7 +73,8 @@ Runtime OpenAPI is the canonical serialized transport contract. CI proves determ
 - idempotency and `If-Match` headers;
 - ETag, Location and CorrelationId response metadata;
 - CRUD and read-model list operations;
-- a buildable .NET 10 Blazor WebAssembly reference shell that embeds the same generated typed client and exact-head `FoundationKit.Blazor` project reference.
+- a buildable .NET 10 Blazor WebAssembly reference shell that embeds the same generated typed client and exact-head `FoundationKit.Blazor` project reference;
+- the shared Soft Orbit tokens/components/static assets used by Core Studio and generated applications.
 
 Unsupported OpenAPI shapes fail closed instead of producing partial clients. The frontend shell generator delegates transport generation to `scripts/generate-csharp-client-from-openapi.py`; it does not implement a second API-client algorithm.
 
@@ -80,9 +84,11 @@ Every host registers an immutable project identity. DI, configuration, business 
 
 ## Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer. Its backend proves SQL, module composition, API behavior, idempotency and integration evidence. Its Blazor client is the **Core Studio** reference experience for inspecting capabilities, modules, contract evidence and schema-v2 composition; it is not a product portal and is not an authorization boundary.
+Workbench is the executable architecture/reference consumer. Its backend proves SQL, module composition, API behavior, idempotency and integration evidence. Its Blazor client is the **Core Studio** reference experience for inspecting capabilities, modules, contract evidence, schema-v2 composition and the first-party design system; it is not a product portal and is not an authorization boundary.
 
 The `/compose` page creates/edits bounded manifest JSON but submits it to the same `ComposerManifestParser` and `CompositionAnalyzer` used by Composer tooling. Browser validation never becomes authoritative.
+
+The `/design` page is a living design-system reference. It renders the same `FoundationKit.Blazor` components consumed by generated applications rather than maintaining a mock component catalog.
 
 Run on Windows:
 
@@ -101,6 +107,7 @@ dotnet run --project samples/FoundationKit.Workbench/FoundationKit.Workbench.Api
 
 Core Studio: `/`  
 Visual Composer: `/compose`  
+Living Design System: `/design`  
 Runtime OpenAPI: `/swagger`
 
 ## Composer
@@ -118,11 +125,27 @@ The proven backend chain covers:
 - OpenAPI -> Postman -> typed-client alignment;
 - two generated projects sharing one SQL Server database without project data/schema/idempotency collisions.
 
-## Frontend foundation
+## Frontend foundation — Soft Orbit
 
-`FoundationKit.Blazor` remains the reusable frontend package. It contains transport/result helpers plus reusable presentation/query/display state. The reusable package does **not** take a MudBlazor dependency; MudBlazor remains a Workbench sample choice.
+`FoundationKit.Blazor` is the reusable frontend/design-system package. It remains inside the 17-package baseline and does **not** depend on MudBlazor; MudBlazor remains a Workbench sample choice.
+
+The package now owns:
+
+- typed HTTP result/metadata handling;
+- reusable presentation/query/display state;
+- semantic Light/Dark design tokens;
+- spacing/radius/elevation/motion/status/focus rules;
+- responsive RTL/LTR application-shell behavior;
+- the temporary replaceable FoundationKit Orbit Nodes mark;
+- first-party product-neutral components such as `FkButton`, `FkCard`, `FkBadge`, `FkPageHeader`, `FkEmptyState`, `FkLoadingState`, `FkThemeToggle`, `FkAppShell` and `FkNavItem`.
+
+The visual direction is **Soft Orbit**: light-first neutral surfaces, selective Iris emphasis, Aqua secondary signals, small warm accents, low shadows, controlled soft geometry and purposeful node/orbit micro-interactions. It does not reuse JAIB logos, JAIB brand colors, wallet-specific UI, or proprietary brand assets.
+
+Generated applications link the same `_content/FoundationKit.Blazor/foundationkit.css` and `foundationkit.js` assets and use the same components. Product branding should override semantic tokens/logo/name at the host boundary rather than fork shared component CSS.
 
 Browser state is presentation only. Server authorization, query policy and relational composition remain authoritative. `scripts/generate-blazor-app-from-openapi.py` provides an opt-in product-neutral starting shell, not universal product UX.
+
+See `docs/DESIGN-SYSTEM.md`.
 
 ## Core vNext roadmap boundary
 
@@ -137,19 +160,22 @@ The approved implementation roadmap ends at **Phase 12**. The final closure is r
 
 These are closure tracks, not Phase 13–16.
 
-The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, generated frontend scaffolding, documentation, security and the 17-package boundary.
+The Soft Orbit UI baseline is a final shared-design closure required before the first real consumer project; it does not create another backend phase.
+
+The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, shared design system, generated frontend scaffolding, documentation, security and the 17-package boundary.
 
 This is **repository completion**, not Production approval. Protected-main enforcement, independent approval and real operational go-live controls remain environment/process governance under issue #35.
 
 ## Quality gates
 
-Pull requests verify tracked-source hygiene, architecture boundaries, generated metadata, Release build/tests, package count/integrity, dependency/SBOM evidence, security scans, CodeQL, Composer generation, typed-client generation, generated frontend build/publish, Workbench publish, SQL integration, read-engine SQL execution and Windows checks.
+Pull requests verify tracked-source hygiene, architecture boundaries, generated metadata, Release build/tests, package count/integrity, dependency/SBOM evidence, security scans, CodeQL, Composer generation, typed-client generation, shared-design generated frontend build/publish, Workbench publish, SQL integration, read-engine SQL execution and Windows checks.
 
 ## Key documentation
 
 - `docs/ARCHITECTURE.md`
 - `docs/PACKAGES.md`
 - `docs/WORKBENCH.md`
+- `docs/DESIGN-SYSTEM.md`
 - `docs/PROJECT-ISOLATION-AND-COMPATIBILITY.md`
 - `docs/CRUD-MODULE-ENGINE.md`
 - `docs/CONTRACT-SOURCE-OF-TRUTH.md`

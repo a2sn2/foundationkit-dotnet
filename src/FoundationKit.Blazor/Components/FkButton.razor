@@ -1,0 +1,105 @@
+@namespace FoundationKit.Blazor.Components
+
+@if (string.IsNullOrWhiteSpace(Href))
+{
+    <button type="@Type"
+            class="@CssClass"
+            disabled="@Disabled"
+            aria-busy="@Loading.ToString().ToLowerInvariant()"
+            @onclick="HandleClickAsync"
+            @attributes="AdditionalAttributes">
+        @if (Loading)
+        {
+            <span class="fk-loading-dot" aria-hidden="true"></span>
+            <span class="fk-sr-only">Loading</span>
+        }
+        @if (LeadingContent is not null)
+        {
+            <span aria-hidden="true">@LeadingContent</span>
+        }
+        @ChildContent
+    </button>
+}
+else
+{
+    <a href="@(Disabled ? null : Href)"
+       class="@CssClass"
+       aria-disabled="@Disabled.ToString().ToLowerInvariant()"
+       tabindex="@(Disabled ? "-1" : null)"
+       @attributes="AdditionalAttributes">
+        @if (LeadingContent is not null)
+        {
+            <span aria-hidden="true">@LeadingContent</span>
+        }
+        @ChildContent
+    </a>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? LeadingContent { get; set; }
+
+    [Parameter]
+    public FoundationButtonVariant Variant { get; set; } = FoundationButtonVariant.Primary;
+
+    [Parameter]
+    public FoundationButtonSize Size { get; set; } = FoundationButtonSize.Medium;
+
+    [Parameter]
+    public bool IconOnly { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var variant = Variant switch
+            {
+                FoundationButtonVariant.Secondary => "fk-button--secondary",
+                FoundationButtonVariant.Ghost => "fk-button--ghost",
+                FoundationButtonVariant.Danger => "fk-button--danger",
+                _ => "fk-button--primary"
+            };
+            var size = Size switch
+            {
+                FoundationButtonSize.Small => "fk-button--small",
+                FoundationButtonSize.Large => "fk-button--large",
+                _ => string.Empty
+            };
+            var icon = IconOnly ? "fk-button--icon" : string.Empty;
+            return string.Join(' ', new[] { "fk-button", variant, size, icon, Class }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+    }
+
+    private Task HandleClickAsync()
+    {
+        if (Disabled || Loading || !OnClick.HasDelegate)
+            return Task.CompletedTask;
+
+        return OnClick.InvokeAsync();
+    }
+}

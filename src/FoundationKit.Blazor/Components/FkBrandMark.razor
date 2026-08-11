@@ -1,0 +1,59 @@
+@namespace FoundationKit.Blazor.Components
+
+@if (string.IsNullOrWhiteSpace(Href))
+{
+    <span class="fk-brand" aria-label="@AccessibleName">
+        <span class="fk-brand__mark" aria-hidden="true">
+            <span class="fk-brand__line"></span>
+            <span class="fk-brand__node"></span>
+        </span>
+        @if (ShowText)
+        {
+            <span class="fk-brand__text">
+                <span class="fk-brand__name">@Name</span>
+                @if (!string.IsNullOrWhiteSpace(Tagline))
+                {
+                    <span class="fk-brand__tagline">@Tagline</span>
+                }
+            </span>
+        }
+    </span>
+}
+else
+{
+    <a class="fk-brand" href="@Href" aria-label="@AccessibleName">
+        <span class="fk-brand__mark" aria-hidden="true">
+            <span class="fk-brand__line"></span>
+            <span class="fk-brand__node"></span>
+        </span>
+        @if (ShowText)
+        {
+            <span class="fk-brand__text">
+                <span class="fk-brand__name">@Name</span>
+                @if (!string.IsNullOrWhiteSpace(Tagline))
+                {
+                    <span class="fk-brand__tagline">@Tagline</span>
+                }
+            </span>
+        }
+    </a>
+}
+
+@code {
+    [Parameter]
+    public string Name { get; set; } = "FoundationKit";
+
+    [Parameter]
+    public string? Tagline { get; set; } = "Composable Application Foundation";
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public bool ShowText { get; set; } = true;
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    private string AccessibleName => string.IsNullOrWhiteSpace(AriaLabel) ? Name : AriaLabel;
+}

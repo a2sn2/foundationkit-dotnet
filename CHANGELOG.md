@@ -42,6 +42,10 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added deterministic OpenAPI → Blazor WebAssembly application scaffolding that validates safe identifiers, references exact-head `FoundationKit.Blazor`, and delegates all transport generation to the existing deterministic C# client generator.
 - Added `FoundationKit Frontend Generation Proof` for repeat-generation SHA identity, `--check` drift detection, unsafe identifier rejection, restore/build/publish evidence and canonical typed-client wiring.
 - Closed the approved **Core vNext roadmap at Phase 12** with the typed/read/frontend/tooling closure tracks above; no Phase 13–16 roadmap was introduced.
+- Added the final **Soft Orbit shared UI baseline** before the first real consumer project: converted the existing `FoundationKit.Blazor` package into a browser-compatible Razor Class Library, added semantic light/dark design tokens and first-party product-neutral Razor primitives, persistent theme behavior, RTL/LTR-aware responsive shell behavior and the replaceable Orbit Nodes mark without adding package #18 or MudBlazor to reusable Core.
+- Added Core Studio `/design` as a living design-system reference that renders the real reusable FoundationKit components, and refreshed Workbench/Studio surfaces away from the earlier dark/glow-heavy reference styling.
+- Updated deterministic generated Blazor applications to consume the same `_content/FoundationKit.Blazor/foundationkit.css` / `foundationkit.js` assets and `Fk*` components as Core Studio, so examples and future projects no longer ship an independent visual DNA.
+- Added explicit shared-design CI assertions for browser-compatible build/publish, deterministic generation, static-web-asset publication, no MudBlazor dependency in reusable Core, and one visual source of truth.
 - Retained Production-governance separation under issue #35.
 - Strengthened Core-only repository verification and CI.
 

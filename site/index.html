@@ -1,49 +1,54 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FoundationKit Core vNext — composable .NET 10 core, deterministic Composer, SQL-first read models, runtime OpenAPI, typed clients and Core Studio.">
+  <meta name="theme-color" content="#F7F8FC">
+  <meta name="description" content="FoundationKit Core vNext — composable .NET 10 core, deterministic Composer, SQL-first read models, typed clients and the Soft Orbit shared UI baseline.">
   <title>FoundationKit Core vNext</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main>
-    <p>FoundationKit</p>
-    <h1>Core vNext</h1>
-    <p>A composable .NET 10 system-building foundation with deterministic schema-v2 composition, project isolation, SQL-first read models, runtime OpenAPI, typed clients, and a first-party Core Studio reference experience.</p>
-    <section>
-      <h2>Module / CRUD Engine</h2>
-      <p>Configuration-first reusable orchestration with explicit mapping, validation, authorization, query, concurrency, manager and audit extension seams.</p>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="FoundationKit home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span><strong>FoundationKit</strong><small>Composable Application Foundation</small></span>
+    </a>
+    <span class="baseline">Soft Orbit · Core v1</span>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">FOUNDATIONKIT CORE VNEXT</span>
+        <h1>Build the foundation once. Keep every generated app coherent.</h1>
+        <p>A composable .NET 10 system-building foundation with deterministic schema-v2 composition, project isolation, SQL-first read models, runtime OpenAPI, typed clients, and one shared Soft Orbit design system.</p>
+        <div class="hero-meta">
+          <span>17 reusable packages</span><span>Phase 12 closed</span><span>RTL / LTR</span><span>Light / Dark</span>
+        </div>
+      </div>
+      <div class="orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring inner"></span><span class="core"></span>
+        <b class="tag api">API</b><b class="tag sql">SQL</b><b class="tag ui">UI</b>
+      </div>
     </section>
-    <section>
-      <h2>Project Isolation</h2>
-      <p>Immutable project identity, host-local composition state, and deterministic project-scoped SQL/resource namespaces keep generated consumers separate without global mutable state.</p>
+
+    <section class="grid">
+      <article><span>01</span><h2>Module / CRUD Engine</h2><p>Configuration-first reusable orchestration with explicit mapping, validation, authorization, query, concurrency, manager and audit extension seams.</p></article>
+      <article><span>02</span><h2>Project Isolation</h2><p>Immutable project identity, host-local composition state, and deterministic project-scoped SQL/resource namespaces avoid global mutable state.</p></article>
+      <article><span>03</span><h2>Phase 12 Closure</h2><p>The approved roadmap ends at Phase 12. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend tooling are closure tracks.</p></article>
+      <article><span>04</span><h2>Composer → Product</h2><p>One canonical schema-v2 parser/analyzer drives deterministic project generation. Visual composition submits to that same engine.</p></article>
+      <article><span>05</span><h2>SQL-first Read Contracts</h2><p>Explicit query/index policy for resources; multi-table responses and reports use product-owned SQL views with keyless read-only EF mappings.</p></article>
+      <article><span>06</span><h2>OpenAPI → Typed Frontend</h2><p>Runtime OpenAPI is the serialized transport source for deterministic Postman, C# clients, and the generated Blazor shell.</p></article>
+      <article><span>07</span><h2>Soft Orbit Design System</h2><p>Core Studio and generated applications share semantic tokens, responsive shell behavior and first-party FoundationKit.Blazor components.</p></article>
+      <article><span>08</span><h2>Completion Boundary</h2><p>Repository completion and green CI are engineering evidence, not Production approval. Go-live governance remains separate.</p></article>
     </section>
-    <section>
-      <h2>Phase 12 Closure</h2>
-      <p>The approved roadmap ends at Phase 12. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are closure tracks inside Phase 12.</p>
+
+    <section class="contract">
+      <span class="eyebrow">ONE CONTRACT CHAIN</span>
+      <div><b>Composer</b><i>→</i><b>SQL / API</b><i>→</i><b>Runtime OpenAPI</b><i>→</i><b>Typed Client</b><i>→</i><b>Soft Orbit UI</b></div>
     </section>
-    <section>
-      <h2>Composer → Product</h2>
-      <p>One canonical schema-v2 parser/analyzer drives deterministic project generation. The visual Composer submits to that same engine instead of maintaining browser-only manifest rules.</p>
-    </section>
-    <section>
-      <h2>SQL-first Read Contracts</h2>
-      <p>Generated resources use explicit filter/sort/index policy; multi-table responses and reports use product-owned SQL views with keyless read-only EF mappings.</p>
-    </section>
-    <section>
-      <h2>OpenAPI → Typed Frontend</h2>
-      <p>Runtime OpenAPI is the serialized transport source for deterministic Postman, C# typed clients, and an opt-in Blazor WebAssembly application shell.</p>
-    </section>
-    <section>
-      <h2>Core Studio</h2>
-      <p>Workbench exposes capability/module evidence, canonical manifest validation, and engineering proof while keeping authorization and business semantics on the server.</p>
-    </section>
-    <section>
-      <h2>Completion Boundary</h2>
-      <p>Repository completion and green CI are engineering evidence, not Production approval. External protected-main, independent-review, and go-live governance remain separate.</p>
-    </section>
+
     <pre id="manifest">Loading Core manifest…</pre>
   </main>
   <script src="app.js"></script>

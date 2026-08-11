@@ -6,23 +6,17 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
     <section class="hero-grid">
         <div>
-            <div class="eyebrow">FOUNDATIONKIT CORE STUDIO</div>
-            <MudText Typo="Typo.h2" Class="hero-title">من الـManifest إلى SQL وOpenAPI والـTyped Client — بعقد واحد يمكن إثباته.</MudText>
+            <div class="eyebrow">FOUNDATIONKIT · SOFT ORBIT</div>
+            <MudText Typo="Typo.h2" Class="hero-title">من الـManifest إلى SQL وOpenAPI والواجهة — بعقد واحد وهوية واحدة.</MudText>
             <MudText Typo="Typo.h6" Class="hero-copy">
-                هذه الواجهة مرجع للكور نفسه: القدرات، تركيب الموديولات، عقود الـAPI، محرك القراءة SQL‑first،
-                والـRead Models المبنية على Views. التصميم البصري النهائي سيُثبت لاحقًا بشكل موحد للكور وللمشاريع المولدة.
+                Core Studio هو المرجع الحي للكور ونظام التصميم معًا: القدرات، تركيب الموديولات، عقود الـAPI، محرك القراءة SQL‑first،
+                والـRead Models والـGenerated Apps كلها تتحرك فوق نفس FoundationKit.Blazor tokens والمكونات.
             </MudText>
-            <MudStack Row="true" Spacing="2" Class="mt-6 flex-wrap">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="studio" StartIcon="@Icons.Material.Filled.AccountTree">
-                    افتح Core Studio
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="evidence" StartIcon="@Icons.Material.Filled.FactCheck">
-                    أدلة التنفيذ
-                </MudButton>
-                <MudButton Variant="Variant.Text" Href="swagger" Target="_blank" StartIcon="@Icons.Material.Filled.Api">
-                    Runtime OpenAPI
-                </MudButton>
-            </MudStack>
+            <div class="fk-row fk-wrap" style="margin-top:var(--fk-space-6)">
+                <FkButton Href="compose">ابدأ من Composer</FkButton>
+                <FkButton Variant="FoundationButtonVariant.Secondary" Href="design">افتح Design System</FkButton>
+                <FkButton Variant="FoundationButtonVariant.Ghost" Href="evidence">أدلة التنفيذ</FkButton>
+            </div>
         </div>
 
         <div class="core-orbit" aria-hidden="true">
@@ -30,25 +24,23 @@
             <div class="orbit orbit-two"></div>
             <div class="core-node">FK</div>
             <span class="satellite satellite-api">OPENAPI</span>
-            <span class="satellite satellite-ui">CLIENT</span>
+            <span class="satellite satellite-ui">UI</span>
             <span class="satellite satellite-db">SQL</span>
         </div>
     </section>
 
     @if (_loading)
     {
-        <div class="loading-panel" role="status" aria-live="polite">
-            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-            <MudText>جاري قراءة حالة الكور والكتالوج والموديولات...</MudText>
-        </div>
+        <FkLoadingState Title="نقرأ حالة الكور"
+                        Description="Catalog → Modules → SQL health → design baseline" />
     }
     else
     {
-        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-4 flex-wrap">
-            <MudChip T="string" Color="@RuntimeColor" Variant="Variant.Outlined">@RuntimeLabel</MudChip>
-            <MudChip T="string" Color="@HealthColor" Variant="Variant.Outlined">@HealthLabel</MudChip>
-            <MudText Class="muted-text">@RuntimeDescription</MudText>
-        </MudStack>
+        <div class="fk-row fk-wrap" style="margin-top:var(--fk-space-5)">
+            <FkBadge Tone="@RuntimeTone">@RuntimeLabel</FkBadge>
+            <FkBadge Tone="@HealthTone">@HealthLabel</FkBadge>
+            <span class="fk-muted">@RuntimeDescription</span>
+        </div>
 
         <section class="section-block">
             <div class="section-heading">
@@ -64,7 +56,7 @@
                     <MudPaper Class="metric-card" Elevation="0">
                         <MudText Typo="Typo.overline">REUSABLE PACKAGES</MudText>
                         <MudText Typo="Typo.h2">@PackageCount</MudText>
-                        <MudText Class="muted-text">حزمة Core قابلة لإعادة الاستخدام، بدون إنشاء package #18 لمجرد الواجهة.</MudText>
+                        <MudText Class="muted-text">حزمة Core قابلة لإعادة الاستخدام، بدون إنشاء package #18 للواجهة.</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" sm="6" lg="3">
@@ -83,9 +75,9 @@
                 </MudItem>
                 <MudItem xs="12" sm="6" lg="3">
                     <MudPaper Class="metric-card" Elevation="0">
-                        <MudText Typo="Typo.overline">CONTRACT CHAIN</MudText>
+                        <MudText Typo="Typo.overline">VISUAL DNA</MudText>
                         <MudText Typo="Typo.h2">1</MudText>
-                        <MudText Class="muted-text">Backend → OpenAPI → Postman/Typed Client → UI، بدون مصدر حقيقة ثانٍ.</MudText>
+                        <MudText Class="muted-text">Core Studio والأمثلة والمشاريع المولدة تشترك في نفس Soft Orbit baseline.</MudText>
                     </MudPaper>
                 </MudItem>
             </MudGrid>
@@ -115,8 +107,9 @@
             <div class="section-heading">
                 <div>
                     <div class="eyebrow">PHASE 12 CLOSURE</div>
-                    <MudText Typo="Typo.h3">مسارات الإغلاق التي ثبّتت الأساس قبل التصميم النهائي</MudText>
+                    <MudText Typo="Typo.h3">المسارات التي ثبّتت الأساس قبل أول مشروع</MudText>
                 </div>
+                <FkButton Variant="FoundationButtonVariant.Secondary" Href="design">راجع المكونات الحقيقية</FkButton>
             </div>
 
             <MudGrid>
@@ -124,7 +117,7 @@
                 {
                     <MudItem xs="12" md="6" lg="3">
                         <MudPaper Class="architecture-card" Elevation="0">
-                            <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">@track.Id</MudChip>
+                            <FkBadge Tone="FoundationBadgeTone.Success">@track.Id</FkBadge>
                             <MudText Typo="Typo.h6">@track.Title</MudText>
                             <MudText Class="muted-text">@track.Description</MudText>
                         </MudPaper>
@@ -145,8 +138,8 @@
     private int PackageCount => _catalog?.Packages.Count ?? 17;
     private int CapabilityCount => _catalog?.Packages.SelectMany(package => package.Capabilities).Select(item => item.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
     private int ModuleCount => _modules.Count;
-    private Color RuntimeColor => _runtime?.Mode == "local" ? Color.Success : Color.Warning;
-    private Color HealthColor => string.Equals(_health?.Status, "healthy", StringComparison.OrdinalIgnoreCase) ? Color.Success : Color.Warning;
+    private FoundationBadgeTone RuntimeTone => _runtime?.Mode == "local" ? FoundationBadgeTone.Success : FoundationBadgeTone.Warning;
+    private FoundationBadgeTone HealthTone => string.Equals(_health?.Status, "healthy", StringComparison.OrdinalIgnoreCase) ? FoundationBadgeTone.Success : FoundationBadgeTone.Warning;
     private string RuntimeLabel => _runtime?.Mode == "local" ? "LIVE WORKBENCH" : "STATIC CATALOG MODE";
     private string HealthLabel => string.Equals(_health?.Status, "healthy", StringComparison.OrdinalIgnoreCase) ? "SQL HEALTHY" : "SQL NOT VERIFIED";
     private string RuntimeDescription => _runtime?.Mode == "local"
@@ -155,19 +148,19 @@
 
     private static readonly IReadOnlyList<FlowStep> ContractFlow =
     [
-        new("01", "Composer v2", "Project → Modules → Resources/Read Models"),
+        new("01", "Composer v2", "Project → Modules → Resources / Read Models"),
         new("02", "Generated Backend", "Entities, policies, migrations, SQL views"),
         new("03", "Runtime OpenAPI", "العقد المتسلسل canonical للـtransport"),
         new("04", "Typed Client", "C# deterministic client مع metadata وETag"),
-        new("05", "Core UI", "Presentation فقط؛ authorization يبقى على السيرفر")
+        new("05", "Shared UI", "FoundationKit.Blazor tokens/components؛ authorization يبقى على السيرفر")
     ];
 
     private static readonly IReadOnlyList<ClosureTrackCard> ClosureTracks =
     [
         new("12.C1", "Typed Transport", "OpenAPI → deterministic C# client مع ETag/Location/Correlation metadata."),
         new("12.C2", "SQL Read Engine", "SQL-side filter/sort/page + indexed fields + view-backed multi-table/report reads."),
-        new("12.C3", "Frontend Foundation", "Reusable presentation state + Core Studio reference experience دون business logic في المتصفح."),
-        new("12.C4", "Tooling Closure", "Canonical visual Composer validation + deterministic OpenAPI-wired Blazor shell generation.")
+        new("12.C3", "Frontend Foundation", "Reusable presentation state + Core Studio دون business logic في المتصفح."),
+        new("12.C4", "Tooling Closure", "Canonical visual Composer validation + deterministic OpenAPI-wired Blazor generation.")
     ];
 
     protected override async Task OnInitializedAsync()
