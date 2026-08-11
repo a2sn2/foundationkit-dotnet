@@ -14,6 +14,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  phase14-generator-patch:
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'core-vnext/read-engine-phase-14' && github.actor != 'github-actions[bot]' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Phase 14 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: core-vnext/read-engine-phase-14
+          fetch-depth: 0
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Apply and verify one-shot generator patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/patch-phase14-generator-once.yml').read_text(encoding='utf-8')
+          start_marker = "          python3 - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          lines = workflow[start:end].splitlines()
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+          exec(compile(script, '<phase14-generator-patch>', 'exec'), {})
+          PY
+
+          git checkout origin/main -- .github/workflows/composer-generation.yml
+          rm -f .github/workflows/patch-phase14-generator-once.yml
+          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
+          git diff --check
+
+          git config user.name "foundationkit-ci"
+          git config user.email "foundationkit-ci@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: generate SQL query policies and indexes"
+          git push origin HEAD:core-vnext/read-engine-phase-14
+
   generated-project:
     name: Generate, reproduce, build, and test Composer v1/v2/full-stack scaffolds
     runs-on: ubuntu-latest
