@@ -4,53 +4,475 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#F7F8FC">
-  <meta name="description" content="FoundationKit Core vNext — composable .NET 10 core, deterministic Composer, SQL-first read models, typed clients and the Soft Orbit shared UI baseline.">
-  <title>FoundationKit Core vNext</title>
+  <meta name="description" content="FoundationKit Core — a composable .NET 10 system-building foundation with deterministic Composer, SQL-first reads, typed transport, project isolation, local Core Studio generation and the Soft Orbit UI baseline.">
+  <meta name="color-scheme" content="light dark">
+  <title>FoundationKit Core — Complete Core Reference</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="FoundationKit home">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar" id="top">
+    <a class="brand" href="#overview" aria-label="FoundationKit Core home">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span><strong>FoundationKit</strong><small>Composable Application Foundation</small></span>
+      <span class="brand-copy"><strong>FoundationKit</strong><small>Composable .NET Application Foundation</small></span>
     </a>
-    <span class="baseline">Soft Orbit · Core v1</span>
+
+    <button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Open navigation">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+      <a href="#architecture">Architecture</a>
+      <a href="#packages">Packages</a>
+      <a href="#composer">Composer</a>
+      <a href="#runtime">Runtime</a>
+      <a href="#frontend">Frontend</a>
+      <a href="#quality">Quality</a>
+      <a href="#start">Start</a>
+    </nav>
+
+    <div class="top-actions">
+      <span class="baseline" data-baseline>Core vNext · Phase 12</span>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+      </button>
+      <a class="icon-button github-link" href="https://github.com/a2sn2/foundationkit-dotnet" target="_blank" rel="noreferrer" aria-label="Open FoundationKit repository" title="Repository">↗</a>
+    </div>
   </header>
 
-  <main id="top">
-    <section class="hero">
-      <div>
-        <span class="eyebrow">FOUNDATIONKIT CORE VNEXT</span>
-        <h1>Build the foundation once. Keep every generated app coherent.</h1>
-        <p>A composable .NET 10 system-building foundation with deterministic schema-v2 composition, project isolation, SQL-first read models, runtime OpenAPI, typed clients, and one shared Soft Orbit design system.</p>
-        <div class="hero-meta">
-          <span>17 reusable packages</span><span>Phase 12 closed</span><span>RTL / LTR</span><span>Light / Dark</span>
+  <main id="main">
+    <section class="hero section-shell" id="overview" data-reveal>
+      <div class="hero-copy">
+        <div class="hero-kicker"><span class="live-dot"></span> CORE-ONLY REPOSITORY · .NET 10</div>
+        <h1>One reusable foundation.<br><span>Many isolated products.</span></h1>
+        <p class="hero-lead">FoundationKit is the complete shared Core behind generated .NET applications: deterministic composition, reusable application contracts, SQL-backed execution, runtime transport contracts, typed clients, and one first-party frontend foundation.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#start">Start locally <span>→</span></a>
+          <a class="button secondary" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noreferrer">Read architecture</a>
+        </div>
+        <div class="metric-strip" aria-label="Core baseline metrics">
+          <div><strong data-package-count>17</strong><span>Reusable packages</span></div>
+          <div><strong data-test-count>266</strong><span>Passing tests</span></div>
+          <div><strong>12</strong><span>Roadmap end phase</span></div>
+          <div><strong>7</strong><span>Composition profiles</span></div>
         </div>
       </div>
-      <div class="orbit" aria-hidden="true">
-        <span class="ring"></span><span class="ring inner"></span><span class="core"></span>
-        <b class="tag api">API</b><b class="tag sql">SQL</b><b class="tag ui">UI</b>
+
+      <div class="hero-visual" aria-label="FoundationKit composition map">
+        <div class="core-orbit">
+          <span class="orbit-line orbit-a"></span>
+          <span class="orbit-line orbit-b"></span>
+          <span class="orbit-line orbit-c"></span>
+          <div class="orbit-center">
+            <span class="brand-mark large" aria-hidden="true"><i></i><i></i><i></i></span>
+            <b>Core</b><small>FoundationKit</small>
+          </div>
+          <span class="orbit-node node-composer"><b>Composer</b><small>schema v2</small></span>
+          <span class="orbit-node node-api"><b>API</b><small>OpenAPI</small></span>
+          <span class="orbit-node node-data"><b>Data</b><small>SQL views</small></span>
+          <span class="orbit-node node-ui"><b>UI</b><small>Soft Orbit</small></span>
+        </div>
       </div>
     </section>
 
-    <section class="grid">
-      <article><span>01</span><h2>Module / CRUD Engine</h2><p>Configuration-first reusable orchestration with explicit mapping, validation, authorization, query, concurrency, manager and audit extension seams.</p></article>
-      <article><span>02</span><h2>Project Isolation</h2><p>Immutable project identity, host-local composition state, and deterministic project-scoped SQL/resource namespaces avoid global mutable state.</p></article>
-      <article><span>03</span><h2>Phase 12 Closure</h2><p>The approved roadmap ends at Phase 12. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend tooling are closure tracks.</p></article>
-      <article><span>04</span><h2>Composer → Product</h2><p>One canonical schema-v2 parser/analyzer drives deterministic project generation. Visual composition submits to that same engine.</p></article>
-      <article><span>05</span><h2>SQL-first Read Contracts</h2><p>Explicit query/index policy for resources; multi-table responses and reports use product-owned SQL views with keyless read-only EF mappings.</p></article>
-      <article><span>06</span><h2>OpenAPI → Typed Frontend</h2><p>Runtime OpenAPI is the serialized transport source for deterministic Postman, C# clients, and the generated Blazor shell.</p></article>
-      <article><span>07</span><h2>Soft Orbit Design System</h2><p>Core Studio and generated applications share semantic tokens, responsive shell behavior and first-party FoundationKit.Blazor components.</p></article>
-      <article><span>08</span><h2>Completion Boundary</h2><p>Repository completion and green CI are engineering evidence, not Production approval. Go-live governance remains separate.</p></article>
+    <section class="section section-shell" id="core-map" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">THE CORE AT A GLANCE</span>
+          <h2>Everything in the repository belongs to one coherent system-building path.</h2>
+        </div>
+        <p>No hidden second generator, no product-specific schema in reusable packages, and no browser-side authorization or relational business logic.</p>
+      </div>
+
+      <div class="flow-track" aria-label="FoundationKit end-to-end contract chain">
+        <article><span>01</span><b>Visual / CLI Composer</b><small>One canonical manifest engine</small></article>
+        <i>→</i>
+        <article><span>02</span><b>Generated Product</b><small>Domain · App · Infra · API</small></article>
+        <i>→</i>
+        <article><span>03</span><b>SQL + Read Models</b><small>Tables · indexes · views</small></article>
+        <i>→</i>
+        <article><span>04</span><b>Runtime OpenAPI</b><small>Serialized transport SSOT</small></article>
+        <i>→</i>
+        <article><span>05</span><b>Typed Client</b><small>Deterministic C# transport</small></article>
+        <i>→</i>
+        <article><span>06</span><b>Soft Orbit UI</b><small>Shared Blazor foundation</small></article>
+      </div>
     </section>
 
-    <section class="contract">
-      <span class="eyebrow">ONE CONTRACT CHAIN</span>
-      <div><b>Composer</b><i>→</i><b>SQL / API</b><i>→</i><b>Runtime OpenAPI</b><i>→</i><b>Typed Client</b><i>→</i><b>Soft Orbit UI</b></div>
+    <section class="section section-shell" id="architecture" data-reveal>
+      <div class="section-heading">
+        <span class="eyebrow">ARCHITECTURE</span>
+        <h2>Clean boundaries stay explicit even when generation is configuration-first.</h2>
+        <p>FoundationKit shares reusable code while each consumer owns runtime state, provider choices, migrations, credentials, policies and product semantics.</p>
+      </div>
+
+      <div class="architecture-layout">
+        <div class="layer-stack">
+          <article class="layer domain"><span>01</span><div><b>Domain</b><p>Entities, aggregate roots, value objects, domain events and exceptions with no framework dependency.</p></div></article>
+          <article class="layer application"><span>02</span><div><b>Application</b><p>Results, validation, repositories/specifications, UoW, capability composition, project/module contracts, generic CRUD orchestration and provider-neutral reliability contracts.</p></div></article>
+          <article class="layer infrastructure"><span>03</span><div><b>Infrastructure</b><p>Provider-neutral EF adapters, relational idempotency adapter, domain-event dispatch and module/EF composition helpers. The host still selects the concrete database provider.</p></div></article>
+          <article class="layer webapi"><span>04</span><div><b>WebApi</b><p>Problem Details, correlation, generic endpoints, request-pipeline helpers, concurrency/idempotency orchestration and runtime contract metadata.</p></div></article>
+          <article class="layer blazor"><span>05</span><div><b>Blazor</b><p>Typed API/error state plus the reusable Soft Orbit design system. It does not depend on server persistence.</p></div></article>
+        </div>
+
+        <aside class="principles-card">
+          <span class="mini-label">BOUNDARY RULES</span>
+          <ul class="check-list">
+            <li><span>✓</span> Lower layers do not depend upward for convenience.</li>
+            <li><span>✓</span> Reusable packages do not own product migrations.</li>
+            <li><span>✓</span> Consumers choose provider, schema and deployment.</li>
+            <li><span>✓</span> Authorization stays server-authoritative.</li>
+            <li><span>✓</span> Unsupported generation shapes fail closed.</li>
+            <li><span>✓</span> Project runtime state is isolated by host.</li>
+          </ul>
+          <a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noreferrer">Architecture source →</a>
+        </aside>
+      </div>
     </section>
 
-    <pre id="manifest">Loading Core manifest…</pre>
+    <section class="section section-shell" id="packages" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">17 REUSABLE PACKAGES</span>
+          <h2>The package boundary is intentionally compact.</h2>
+        </div>
+        <p>Package version, capability maturity and capability contract version are separate concepts. New features strengthen existing boundaries unless a genuinely independent package is justified.</p>
+      </div>
+
+      <div class="package-toolbar" role="group" aria-label="Filter packages">
+        <button class="filter-chip active" type="button" data-package-filter="all">All · 17</button>
+        <button class="filter-chip" type="button" data-package-filter="base">Base · 5</button>
+        <button class="filter-chip" type="button" data-package-filter="optional">Optional / Reference · 12</button>
+      </div>
+
+      <div class="package-grid" id="package-grid">
+        <article class="package-card" data-package-kind="base"><span class="package-index">01</span><div><b>FoundationKit.Domain</b><small>Base · framework-free</small><p>Entity, aggregate, value-object and domain-event primitives.</p></div></article>
+        <article class="package-card" data-package-kind="base"><span class="package-index">02</span><div><b>FoundationKit.Application</b><small>Base · orchestration</small><p>Results, validation, repositories, specifications, UoW, capability graph, project isolation, modules, CRUD and idempotency contracts.</p></div></article>
+        <article class="package-card" data-package-kind="base"><span class="package-index">03</span><div><b>FoundationKit.Infrastructure</b><small>Base · provider-neutral EF</small><p>EF repository/UoW/event adapters, relational idempotency and Core model-composition helpers.</p></div></article>
+        <article class="package-card" data-package-kind="base"><span class="package-index">04</span><div><b>FoundationKit.WebApi</b><small>Base · HTTP</small><p>Problem Details, correlation, generic CRUD endpoints and request/reliability pipeline helpers.</p></div></article>
+        <article class="package-card" data-package-kind="base"><span class="package-index">05</span><div><b>FoundationKit.Blazor</b><small>Base · frontend</small><p>Typed transport/presentation state and the first-party Soft Orbit Razor design system.</p></div></article>
+
+        <article class="package-card" data-package-kind="optional"><span class="package-index">06</span><div><b>FoundationKit.Auditing</b><small>Reference</small><p>Bounded audit event/context/sink contracts and CRUD audit observer.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">07</span><div><b>FoundationKit.Security</b><small>Preview</small><p>Reverse-proxy, rate-partition and MFA-assurance conventions.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">08</span><div><b>FoundationKit.Identity</b><small>Reference</small><p>Account policy, security event, notification and step-up contracts without a universal user store.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">09</span><div><b>FoundationKit.Authorization</b><small>Reference</small><p>Permissions, roles, grants, evaluator and ownership primitives; product roles remain host-owned.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">10</span><div><b>FoundationKit.Workflow</b><small>Reference</small><p>Deterministic transition definitions/resolution with bounded audit intent.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">11</span><div><b>FoundationKit.Approvals</b><small>Reference</small><p>Approve/reject decisions, maker-checker gate, workflow resolution and audit intent.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">12</span><div><b>FoundationKit.Notifications</b><small>Reference</small><p>Channel-neutral bounded message, sender and delivery-result contracts.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">13</span><div><b>FoundationKit.Notifications.Smtp</b><small>Reference provider</small><p>Validated narrow SMTP transport adapter over the Notifications contract.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">14</span><div><b>FoundationKit.Settings</b><small>Reference</small><p>Bounded keys/scopes/values with deterministic source precedence.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">15</span><div><b>FoundationKit.FeatureManagement</b><small>Reference</small><p>Settings-backed Boolean feature decisions with explicit defaults and fail-closed invalid configuration.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">16</span><div><b>FoundationKit.Localization</b><small>Reference</small><p>Culture metadata, RTL/LTR directionality, fallback and bounded time-zone identity.</p></div></article>
+        <article class="package-card" data-package-kind="optional"><span class="package-index">17</span><div><b>FoundationKit.Caching</b><small>Reference</small><p>Byte-cache contracts, TTL/hit/miss/remove semantics and in-memory reference provider.</p></div></article>
+      </div>
+
+      <div class="source-row"><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/PACKAGES.md" target="_blank" rel="noreferrer">Package contracts →</a><span>Exactly 17 <code>.nupkg</code> + 17 <code>.snupkg</code> in the verified baseline.</span></div>
+    </section>
+
+    <section class="section section-shell" id="composer" data-reveal>
+      <div class="section-heading">
+        <span class="eyebrow">COMPOSER · SCHEMA V2</span>
+        <h2>Describe project intent once. Analyze and generate through one canonical engine.</h2>
+        <p>The Visual Composer and CLI both converge on the same manifest parser, dependency analyzer and schema-aware project generator.</p>
+      </div>
+
+      <div class="composer-grid">
+        <article class="feature-card accent-card">
+          <span class="card-icon">◇</span>
+          <h3>Project model</h3>
+          <pre class="mini-code"><code>Project
+ ├─ Profile / Providers
+ └─ Modules
+     └─ Resources
+         ├─ Behaviors
+         ├─ Fields
+         ├─ Overrides
+         └─ API
+
+Read Models → SQL Views</code></pre>
+        </article>
+        <article class="feature-card">
+          <span class="card-icon">⌁</span>
+          <h3>Seven profiles</h3>
+          <div class="tag-cloud"><span>minimal</span><span>standard</span><span>enterprise</span><span>fintech</span><span>saas</span><span>internal-business</span><span>public-portal</span></div>
+          <p>Profiles expand through the canonical capability dependency graph; resource behaviors do not create a second graph.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-icon">✓</span>
+          <h3>Fail-closed generation</h3>
+          <p>Safe identifiers, bounded routes/types/options and explicit supported combinations. Unsupported manager, provider, query or behavior combinations are rejected rather than partially emitted.</p>
+        </article>
+        <article class="feature-card">
+          <span class="card-icon">↻</span>
+          <h3>Deterministic ownership</h3>
+          <p>Generated files are tracked by an ownership marker and SHA-256 hashes. Force-regeneration refuses modified generated files or user-added files.</p>
+        </article>
+      </div>
+
+      <div class="local-studio-card">
+        <div>
+          <span class="mini-label">LOCAL CORE STUDIO</span>
+          <h3>Choose → Validate → Generate directly on your machine.</h3>
+          <p>Core Studio writes only to <code>generated/&lt;ProjectName&gt;</code>. The browser cannot provide an arbitrary filesystem path; Foundation source is mounted read-only and generated output is the writable workspace.</p>
+        </div>
+        <div class="command-card">
+          <div class="command-head"><span>PowerShell</span><button class="copy-button" type="button" data-copy=".\foundationkit.ps1 start -Target Workbench">Copy</button></div>
+          <code>.\foundationkit.ps1 start -Target Workbench</code>
+          <small>Then open <b>http://localhost:8080/compose</b></small>
+        </div>
+      </div>
+      <div class="source-row"><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/LOCAL-STUDIO-GENERATION.md" target="_blank" rel="noreferrer">Local generation guide →</a><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/COMPOSER-PROJECT-MODEL-V2.md" target="_blank" rel="noreferrer">Project model v2 →</a></div>
+    </section>
+
+    <section class="section section-shell" id="runtime" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">MODULE / CRUD / API ENGINE</span>
+          <h2>Reusable orchestration, explicit product semantics.</h2>
+        </div>
+        <p>The Core supplies generic mechanics. The consumer still owns semantic authorization, business managers, provider decisions and domain rules.</p>
+      </div>
+
+      <div class="runtime-diagram">
+        <div class="runtime-column request-column"><span>REQUEST</span><b>HTTP / Typed Client</b><small>Headers · query · DTO</small></div>
+        <div class="runtime-arrow">→</div>
+        <div class="runtime-column engine-column"><span>API ENGINE</span><b>Transport boundary</b><small>Pagination · filters · sorts · ETag · idempotency</small></div>
+        <div class="runtime-arrow">→</div>
+        <div class="runtime-column service-column"><span>CRUD SERVICE</span><b>Application orchestration</b><small>Validation · authorization · manager · mapper · repository · UoW · concurrency · observers</small></div>
+        <div class="runtime-arrow">→</div>
+        <div class="runtime-column result-column"><span>RESULT</span><b>Typed outcome</b><small>HTTP · Problem Details · OpenAPI</small></div>
+      </div>
+
+      <div class="two-column-grid">
+        <article class="info-panel">
+          <span class="mini-label">WRITE PATH</span>
+          <h3>Entities and tables remain authoritative for commands.</h3>
+          <pre class="mini-code"><code>API
+ ↓
+Application command / service
+ ↓
+Entity / Aggregate
+ ↓
+Repository + UoW
+ ↓
+Tables</code></pre>
+          <p>Optimistic concurrency is explicit through policy + ETag/If-Match and is not duplicated in update DTOs.</p>
+        </article>
+        <article class="info-panel aqua-panel">
+          <span class="mini-label">MULTI-TABLE / REPORT READ</span>
+          <h3>Read Models are purpose-built instead of browser-side joins.</h3>
+          <pre class="mini-code"><code>API Query
+ ↓
+Read-model contract
+ ↓
+Keyless EF mapping
+ ↓
+SQL View
+ ↓
+Tables</code></pre>
+          <p>Filtering, sorting, count and paging stay SQL-side with explicit allowed fields and product-owned indexes.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-shell" id="transport" data-reveal>
+      <div class="section-heading">
+        <span class="eyebrow">TRANSPORT SOURCE OF TRUTH</span>
+        <h2>Runtime OpenAPI is the canonical serialized transport contract.</h2>
+        <p>Derived artifacts flow one way. Drift is tested instead of manually synchronized.</p>
+      </div>
+
+      <div class="transport-chain">
+        <article><span>1</span><b>C# contracts + endpoint metadata</b><small>Runtime behavior source</small></article>
+        <i>→</i>
+        <article class="highlight"><span>2</span><b>Runtime OpenAPI</b><small>Serialized transport SSOT</small></article>
+        <i>↘</i>
+        <article><span>3A</span><b>Postman</b><small>Deterministic generated collection</small></article>
+        <article><span>3B</span><b>C# Typed Client</b><small>Requiredness + headers + metadata</small></article>
+        <i>→</i>
+        <article><span>4</span><b>Blazor Shell</b><small>Same typed transport + shared UI</small></article>
+      </div>
+
+      <div class="detail-grid three">
+        <article><b>Requiredness aligned</b><p>CLR nullable/required semantics are checked against generated OpenAPI client shapes.</p></article>
+        <article><b>Reliability metadata preserved</b><p>Idempotency-Key, If-Match, ETag, Location and CorrelationId flow through the typed boundary.</p></article>
+        <article><b>Unsupported shapes fail closed</b><p>The client generator rejects transport shapes it cannot represent safely instead of silently dropping semantics.</p></article>
+      </div>
+    </section>
+
+    <section class="section section-shell" id="isolation" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">PROJECT ISOLATION + RELIABILITY</span>
+          <h2>Share Core code, never shared mutable project identity.</h2>
+        </div>
+        <p>Each host owns one immutable project identity. Shared infrastructure is namespaced so independent products do not collapse into one runtime state.</p>
+      </div>
+
+      <div class="isolation-visual">
+        <div class="product-node product-a"><span>A</span><b>Project A</b><small>own DI · config · policy · migrations</small></div>
+        <div class="shared-core"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>FoundationKit Core</b><small>shared reusable code</small></div>
+        <div class="product-node product-b"><span>B</span><b>Project B</b><small>own DI · config · policy · migrations</small></div>
+        <div class="sql-shared"><b>Shared SQL Server is allowed</b><small>project-scoped resource tables · idempotency · migration history</small></div>
+      </div>
+
+      <div class="detail-grid four">
+        <article><b>Project identity</b><p>Immutable identity is registered per host; global mutable composition state is avoided.</p></article>
+        <article><b>Durable idempotency</b><p>Project-scoped acquisition/replay prevents one product from reusing another product's key space.</p></article>
+        <article><b>Optimistic concurrency</b><p>Explicit application policy and HTTP preconditions provide typed 412/428 outcomes.</p></article>
+        <article><b>A/B SQL proof</b><p>CI runs two generated products concurrently against one SQL Server and verifies data/replay isolation.</p></article>
+      </div>
+      <div class="source-row"><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/PROJECT-ISOLATION-AND-COMPATIBILITY.md" target="_blank" rel="noreferrer">Isolation & compatibility policy →</a></div>
+    </section>
+
+    <section class="section section-shell" id="frontend" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">FOUNDATIONKIT.BLAZOR · SOFT ORBIT</span>
+          <h2>One visual DNA for Core Studio and generated apps.</h2>
+        </div>
+        <p>The UI foundation is reusable Core, not a Workbench skin. Product branding overrides semantic tokens and identity at the host boundary instead of forking the shared component CSS.</p>
+      </div>
+
+      <div class="frontend-showcase">
+        <div class="token-board">
+          <span class="token token-iris"><i></i><b>Iris</b><small>primary emphasis</small></span>
+          <span class="token token-aqua"><i></i><b>Aqua</b><small>secondary signal</small></span>
+          <span class="token token-warm"><i></i><b>Warm</b><small>small accent</small></span>
+          <span class="token token-neutral"><i></i><b>Neutral</b><small>quiet surfaces</small></span>
+        </div>
+        <div class="component-board">
+          <div class="component-window">
+            <div class="window-head"><span class="brand-mark mini" aria-hidden="true"><i></i><i></i><i></i></span><b>Generated Product</b><span class="window-actions"><i></i><i></i></span></div>
+            <div class="window-body"><aside><span class="active"></span><span></span><span></span><span></span></aside><section><span class="fake-eyebrow"></span><span class="fake-title"></span><div class="fake-cards"><i></i><i></i><i></i></div><div class="fake-table"></div></section></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-list">
+        <code>FkAppShell</code><code>FkNavItem</code><code>FkButton</code><code>FkCard</code><code>FkBadge</code><code>FkPageHeader</code><code>FkEmptyState</code><code>FkLoadingState</code><code>FkThemeToggle</code><code>FkBrandMark</code>
+      </div>
+
+      <div class="detail-grid three">
+        <article><b>Light / Dark</b><p>Semantic tokens and persistent theme behavior without product-specific color assumptions.</p></article>
+        <article><b>RTL / LTR</b><p>Responsive shell behavior supports both text directions at the reusable UI boundary.</p></article>
+        <article><b>No MudBlazor dependency in Core UI</b><p>MudBlazor remains a Workbench/sample concern and is not promoted into FoundationKit.Blazor.</p></article>
+      </div>
+      <div class="source-row"><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/DESIGN-SYSTEM.md" target="_blank" rel="noreferrer">Design system source →</a></div>
+    </section>
+
+    <section class="section section-shell" id="roadmap" data-reveal>
+      <div class="section-heading">
+        <span class="eyebrow">ROADMAP BOUNDARY</span>
+        <h2>The approved Core vNext roadmap ends at Phase 12.</h2>
+        <p>The final typed/read/frontend/tooling work is recorded as Phase 12 closure tracks—not Phase 13–16.</p>
+      </div>
+
+      <div class="closure-grid">
+        <article><span>12.C1</span><b>Typed transport</b><p>Runtime OpenAPI → deterministic C# typed client with requiredness, reliability headers and response metadata.</p></article>
+        <article><span>12.C2</span><b>SQL read engine</b><p>Query/index intent, SQL-side execution and SQL-view-backed multi-table/report read models.</p></article>
+        <article><span>12.C3</span><b>Frontend foundation</b><p>Reusable presentation/query state and Core Studio reference experience.</p></article>
+        <article><span>12.C4</span><b>Tooling closure</b><p>Visual canonical Composer plus deterministic OpenAPI-wired generated Blazor shell.</p></article>
+      </div>
+
+      <div class="future-note">
+        <div><span class="status-dot planned"></span><b>Evidence-driven future capabilities</b></div>
+        <p>Files/documents, jobs/messaging, webhooks/realtime, multi-tenancy, external search/reporting, privacy/retention, money/numbering, Redis/PostgreSQL/object-storage providers and AI remain future product/provider-driven work. They are not silently claimed as delivered by the Phase 12 baseline.</p>
+      </div>
+      <div class="source-row"><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/CAPABILITY-ROADMAP-V1.md" target="_blank" rel="noreferrer">Roadmap source →</a></div>
+    </section>
+
+    <section class="section section-shell" id="quality" data-reveal>
+      <div class="section-heading split-heading">
+        <div>
+          <span class="eyebrow">ENGINEERING EVIDENCE</span>
+          <h2>Exact-head gates prove one coherent repository state.</h2>
+        </div>
+        <p>Green CI is repository engineering evidence. It is deliberately kept separate from Production approval and operational go-live governance.</p>
+      </div>
+
+      <div class="quality-layout">
+        <div class="quality-score">
+          <div class="score-ring"><strong data-test-count>266</strong><span>tests</span></div>
+          <div><b>0 failed</b><p>253 FoundationKit tests + 13 Workbench tests in the local-generation baseline.</p></div>
+        </div>
+        <div class="gate-grid">
+          <span>✓ FoundationKit CI</span>
+          <span>✓ Composer Generation</span>
+          <span>✓ Composer Full-Stack Proof</span>
+          <span>✓ Typed Client Proof</span>
+          <span>✓ Read Engine Proof</span>
+          <span>✓ Frontend Generation Proof</span>
+          <span>✓ Security Scan</span>
+          <span>✓ CodeQL</span>
+          <span>✓ Windows Manager Check</span>
+          <span>✓ SQL / OpenAPI / Postman smoke</span>
+          <span>✓ Package integrity</span>
+          <span>✓ Project A/B isolation</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-shell production-boundary" data-reveal>
+      <div class="boundary-icon">!</div>
+      <div>
+        <span class="mini-label">PRODUCTION BOUNDARY</span>
+        <h2>Repository complete does not mean Production Approved.</h2>
+        <p>Real go-live still requires protected-main governance, independent approval and environment-specific security, operations, recovery, identity, secrets, compliance and acceptance controls. That boundary remains tracked separately.</p>
+      </div>
+      <a class="button secondary" href="https://github.com/a2sn2/foundationkit-dotnet/issues/35" target="_blank" rel="noreferrer">Governance issue #35</a>
+    </section>
+
+    <section class="section section-shell start-section" id="start" data-reveal>
+      <div class="start-copy">
+        <span class="eyebrow">START THE FIRST PROJECT</span>
+        <h2>Download Core. Run Studio. Choose. Validate. Generate.</h2>
+        <p>The normal Windows workflow keeps FoundationKit source local and generates each new product under its own isolated workspace.</p>
+        <div class="start-steps">
+          <span><b>1</b> Clone / download repo</span>
+          <span><b>2</b> Start Workbench</span>
+          <span><b>3</b> Open <code>/compose</code></span>
+          <span><b>4</b> Choose + Validate</span>
+          <span><b>5</b> Generate Project</span>
+          <span><b>6</b> Open generated solution</span>
+        </div>
+      </div>
+      <div class="terminal-card">
+        <div class="terminal-head"><span><i></i><i></i><i></i></span><b>PowerShell</b></div>
+        <pre><code><span class="prompt">PS&gt;</span> git clone https://github.com/a2sn2/foundationkit-dotnet.git
+<span class="prompt">PS&gt;</span> cd foundationkit-dotnet
+<span class="prompt">PS&gt;</span> .\foundationkit.ps1 start -Target Workbench
+
+<span class="comment"># Studio opens locally</span>
+http://localhost:8080/compose
+
+<span class="comment"># Generated output</span>
+generated\MySystem\MySystem.sln</code></pre>
+        <button class="copy-button wide" type="button" data-copy="git clone https://github.com/a2sn2/foundationkit-dotnet.git\ncd foundationkit-dotnet\n.\foundationkit.ps1 start -Target Workbench">Copy startup commands</button>
+      </div>
+    </section>
+
+    <section class="docs-section section-shell" data-reveal>
+      <div class="section-heading"><span class="eyebrow">SOURCE DOCUMENTATION</span><h2>Every visual claim links back to repository truth.</h2></div>
+      <div class="docs-grid">
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noreferrer"><b>Architecture</b><small>layers · runtime · provider boundaries</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/PACKAGES.md" target="_blank" rel="noreferrer"><b>Package contracts</b><small>all 17 reusable packages</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/COMPOSER-PROJECT-MODEL-V2.md" target="_blank" rel="noreferrer"><b>Composer model</b><small>schema v2 project semantics</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/CRUD-MODULE-ENGINE.md" target="_blank" rel="noreferrer"><b>Module / CRUD Engine</b><small>application orchestration contract</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/architecture/READ-MODEL-VIEW-POLICY.md" target="_blank" rel="noreferrer"><b>Read Model policy</b><small>SQL views · reports · joins</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/TYPED-CLIENT-GENERATION-V1.md" target="_blank" rel="noreferrer"><b>Typed client</b><small>OpenAPI → deterministic C#</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/DESIGN-SYSTEM.md" target="_blank" rel="noreferrer"><b>Soft Orbit</b><small>shared frontend design system</small><span>↗</span></a>
+        <a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/docs/LOCAL-STUDIO-GENERATION.md" target="_blank" rel="noreferrer"><b>Local Studio</b><small>choose · validate · generate</small><span>↗</span></a>
+      </div>
+    </section>
   </main>
+
+  <footer class="footer">
+    <div class="footer-brand"><span class="brand-mark mini" aria-hidden="true"><i></i><i></i><i></i></span><div><b>FoundationKit Core</b><small data-manifest-summary>.NET 10 · Phase 12 · 17 packages</small></div></div>
+    <div class="footer-links"><a href="#top">Back to top ↑</a><a href="https://github.com/a2sn2/foundationkit-dotnet" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://github.com/a2sn2/foundationkit-dotnet/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a></div>
+  </footer>
+
   <script src="app.js"></script>
 </body>
 </html>
