@@ -87,6 +87,12 @@ window.FoundationKitLocale = (() => {
         return normalized;
     }
 
+    function notify(language) {
+        document.dispatchEvent(new CustomEvent('foundationkit:languagechange', {
+            detail: { language }
+        }));
+    }
+
     function initialize(fallback = 'en') {
         let stored = normalize(fallback);
         try {
@@ -108,6 +114,7 @@ window.FoundationKitLocale = (() => {
         } catch {
             // Language persistence is best-effort; direction and rendering still update.
         }
+        notify(normalized);
         return normalized;
     }
 
