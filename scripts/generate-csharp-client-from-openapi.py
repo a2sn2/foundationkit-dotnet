@@ -628,7 +628,7 @@ def path_value_expression(schema: dict[str, Any], name: str) -> str:
     schema_type = schema.get("type")
     fmt = schema.get("format")
     if schema_type == "string" and fmt == "uuid":
-        return f"Uri.EscapeDataString({name}.ToString(\"D\"))"
+        return f"Uri.EscapeDataString({name}.ToString())"
     if schema_type == "string" and fmt in (None, ""):
         return f"Uri.EscapeDataString({name})"
     if schema_type == "integer":
