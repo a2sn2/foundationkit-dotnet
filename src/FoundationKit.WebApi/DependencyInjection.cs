@@ -1,4 +1,5 @@
 using FoundationKit.Application.Isolation;
+using FoundationKit.WebApi.Api;
 using FoundationKit.WebApi.Errors;
 using FoundationKit.WebApi.Idempotency;
 using FoundationKit.WebApi.Middleware;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace FoundationKit.WebApi;
 
@@ -23,6 +25,11 @@ public static class DependencyInjection
 
         services.AddOptions<FoundationIdempotencyOptions>();
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.Configure<SwaggerGenOptions>(options =>
+        {
+            options.OperationFilter<FoundationApiOperationFilter>();
+            options.SchemaFilter<FoundationRequiredPropertiesSchemaFilter>();
+        });
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFoundationExceptionMapper, DefaultFoundationExceptionMapper>());
