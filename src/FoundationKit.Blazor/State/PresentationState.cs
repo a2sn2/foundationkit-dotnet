@@ -76,7 +76,7 @@ public sealed record PagedQueryState
     public IReadOnlyList<string> Filters { get; }
     public IReadOnlyList<string> Sorts { get; }
 
-    private static IReadOnlyList<string> Normalize(
+    private static string[] Normalize(
         IReadOnlyList<string>? values,
         string parameterName,
         int maximumCount)
