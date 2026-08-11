@@ -179,10 +179,19 @@ public static class CompositionAnalyzer
             throw new ComposerManifestException(
                 $"Executable resource '{identity}' cannot declare a rate-limit policy until Composer can generate the matching host policy registration.");
         }
-        if (resource.Api.MaximumFilters != 0 || resource.Api.MaximumSorts != 0)
+
+        var hasConfiguredFilters = resource.Fields.Any(
+            field => field.FilterMode != ComposerResourceFieldFilterMode.None);
+        var hasConfiguredSorts = resource.Fields.Any(field => field.Sortable);
+        if (resource.Api.MaximumFilters > 0 && !hasConfiguredFilters)
         {
             throw new ComposerManifestException(
-                $"Executable resource '{identity}' currently requires maximumFilters=0 and maximumSorts=0 because no generated query policy is emitted yet.");
+                $"Executable resource '{identity}' exposes API filters but declares no filterable fields.");
+        }
+        if (resource.Api.MaximumSorts > 0 && !hasConfiguredSorts)
+        {
+            throw new ComposerManifestException(
+                $"Executable resource '{identity}' exposes API sorts but declares no sortable fields.");
         }
 
         var hasConcurrency = resource.Behaviors.Contains(ComposerResourceBehavior.Concurrency);
