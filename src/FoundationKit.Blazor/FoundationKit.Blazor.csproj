@@ -1,5 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <Description>Typed HTTP result handling and asynchronous UI state helpers for Blazor applications.</Description>
+    <Description>Typed HTTP handling, presentation state, semantic design tokens, and reusable first-party Blazor UI primitives for FoundationKit applications.</Description>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 </Project>
