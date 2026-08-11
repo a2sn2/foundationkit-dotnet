@@ -1,0 +1,293 @@
+@page "/design"
+
+<PageTitle>Design System — FoundationKit</PageTitle>
+
+<FkPageHeader Eyebrow="SOFT ORBIT · LIVING SYSTEM"
+              Title="نظام تصميم خفيف، لطيف، وقابل للتوليد."
+              Description="هذه الصفحة تعرض المكونات الحقيقية من FoundationKit.Blazor. نفس الـTokens والمكونات هي التي يستهلكها Core Studio والـGenerated Apps؛ ليست Mockups منفصلة.">
+    <Actions>
+        <FkBadge Tone="FoundationBadgeTone.Primary">Light-first</FkBadge>
+        <FkBadge Tone="FoundationBadgeTone.Aqua">RTL / LTR</FkBadge>
+        <FkBadge Tone="FoundationBadgeTone.Success">Reduced motion</FkBadge>
+    </Actions>
+</FkPageHeader>
+
+<section class="design-section">
+    <div class="design-section__head">
+        <div><span>FOUNDATION</span><h2>Visual DNA</h2></div>
+        <p>Neutral first. Iris for importance. Aqua for active/positive signals. Warm accents only when they add meaning.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-8">
+            <div class="fk-hero design-hero">
+                <div class="fk-hero__grid">
+                    <div>
+                        <FkBadge Tone="FoundationBadgeTone.Primary">Soft Orbit</FkBadge>
+                        <h1>Technical clarity without visual weight.</h1>
+                        <p>مساحات مريحة، سطوح هادئة، حركة صغيرة ذات معنى، وOrbit Nodes تربط بصريًا بين Project وAPI وSQL وUI.</p>
+                        <div class="fk-row fk-wrap design-actions">
+                            <FkButton>Primary action</FkButton>
+                            <FkButton Variant="FoundationButtonVariant.Secondary">Secondary</FkButton>
+                            <FkButton Variant="FoundationButtonVariant.Ghost">Ghost</FkButton>
+                        </div>
+                    </div>
+                    <div class="fk-orbit-stage" aria-hidden="true">
+                        <div class="fk-orbit-stage__ring"></div>
+                        <div class="fk-orbit-stage__ring fk-orbit-stage__ring--inner"></div>
+                        <div class="fk-orbit-stage__core"></div>
+                        <span class="fk-orbit-stage__satellite fk-orbit-stage__satellite--one">API</span>
+                        <span class="fk-orbit-stage__satellite fk-orbit-stage__satellite--two">SQL</span>
+                        <span class="fk-orbit-stage__satellite fk-orbit-stage__satellite--three">UI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="fk-col-4">
+            <FkCard Variant="FoundationCardVariant.Muted" Class="design-principles">
+                <span class="fk-caption">WE ARE</span>
+                <h3>خفيف · واضح · ذكي · ودود</h3>
+                <p>Composable, calm, professional, product-ready, developer-friendly.</p>
+                <span class="fk-caption">WE ARE NOT</span>
+                <p>Neon، gaming، heavy glass، black dashboard، أو generic admin template.</p>
+            </FkCard>
+        </div>
+    </div>
+</section>
+
+<section class="design-section" id="colors">
+    <div class="design-section__head">
+        <div><span>SEMANTIC TOKENS</span><h2>Colors</h2></div>
+        <p>المكونات لا تعرف “بنفسجي” أو “رمادي 3”. تعرف Primary وCanvas وSurface وText وBorder.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        @foreach (var token in ColorTokens)
+        {
+            <div class="fk-col-3">
+                <div class="fk-token-swatch" style="background:@token.Value;color:@token.TextColor">
+                    <strong>@token.Name</strong>
+                    <code>@token.Variable</code>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="design-section" id="type">
+    <div class="design-section__head">
+        <div><span>TYPE + RHYTHM</span><h2>Typography</h2></div>
+        <p>Arabic-first stack مع Latin stack مستقل، وأوزان محدودة تمنع الواجهة من أن تصبح ثقيلة.</p>
+    </div>
+
+    <FkCard>
+        <div class="type-specimen">
+            <div><code>Display</code><strong class="type-display">نبني الأساس مرة واحدة.</strong></div>
+            <div><code>H1</code><strong class="type-h1">واجهة جاهزة للمشروع الحقيقي.</strong></div>
+            <div><code>H2</code><strong class="type-h2">Read Models وعقود واضحة.</strong></div>
+            <div><code>Body</code><p>النص الأساسي مريح للقراءة ولا يعتمد على أحجام صغيرة أو تباين ضعيف.</p></div>
+            <div dir="ltr"><code>Latin</code><strong class="type-h2">Composable application foundation.</strong></div>
+        </div>
+    </FkCard>
+</section>
+
+<section class="design-section" id="spacing">
+    <div class="design-section__head">
+        <div><span>4PX FOUNDATION</span><h2>Spacing + Radius</h2></div>
+        <p>كل المسافات والقيم الهندسية تأتي من Scale محدد، لا أرقام عشوائية بين شاشة وأخرى.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-8">
+            <FkCard>
+                <div class="spacing-demo">
+                    @foreach (var spacing in SpacingTokens)
+                    {
+                        <div><span style="height:@($"{spacing.Pixels}px")"></span><code>@spacing.Pixels px</code></div>
+                    }
+                </div>
+            </FkCard>
+        </div>
+        <div class="fk-col-4">
+            <FkCard>
+                <div class="radius-demo">
+                    <div style="border-radius:var(--fk-radius-sm)">8</div>
+                    <div style="border-radius:var(--fk-radius-control)">12</div>
+                    <div style="border-radius:var(--fk-radius-card)">16</div>
+                    <div style="border-radius:var(--fk-radius-lg)">20</div>
+                    <div style="border-radius:var(--fk-radius-xl)">24</div>
+                </div>
+            </FkCard>
+        </div>
+    </div>
+</section>
+
+<section class="design-section" id="components">
+    <div class="design-section__head">
+        <div><span>REAL COMPONENTS</span><h2>Buttons + Badges + Cards</h2></div>
+        <p>الحالات التالية هي نفس المكونات العامة، وليست CSS demo منفصلًا.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-6">
+            <FkCard>
+                <h3>Buttons</h3>
+                <div class="fk-row fk-wrap">
+                    <FkButton>حفظ</FkButton>
+                    <FkButton Variant="FoundationButtonVariant.Secondary">معاينة</FkButton>
+                    <FkButton Variant="FoundationButtonVariant.Ghost">إلغاء</FkButton>
+                    <FkButton Variant="FoundationButtonVariant.Danger">حذف</FkButton>
+                    <FkButton Disabled="true">Disabled</FkButton>
+                    <FkButton Loading="true">Loading</FkButton>
+                </div>
+            </FkCard>
+        </div>
+        <div class="fk-col-6">
+            <FkCard>
+                <h3>Status</h3>
+                <div class="fk-row fk-wrap">
+                    <FkBadge>Neutral</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Primary">Primary</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Aqua">Aqua</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Success">Approved</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Warning">Pending</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Danger">Failed</FkBadge>
+                    <FkBadge Tone="FoundationBadgeTone.Info">Info</FkBadge>
+                </div>
+            </FkCard>
+        </div>
+        <div class="fk-col-4">
+            <FkCard>
+                <span class="fk-caption">DEFAULT CARD</span>
+                <h3>هادئة افتراضيًا</h3>
+                <p class="fk-muted">الحدود والسطح يصنعان hierarchy قبل الظلال.</p>
+            </FkCard>
+        </div>
+        <div class="fk-col-4">
+            <FkCard Variant="FoundationCardVariant.Muted">
+                <span class="fk-caption">MUTED CARD</span>
+                <h3>للمحتوى الثانوي</h3>
+                <p class="fk-muted">سطح أخف بدون elevation غير ضروري.</p>
+            </FkCard>
+        </div>
+        <div class="fk-col-4">
+            <FkCard Interactive="true" tabindex="0">
+                <span class="fk-caption">INTERACTIVE CARD</span>
+                <h3>يتحرك فقط لأنه قابل للتفاعل</h3>
+                <p class="fk-muted">Hover بسيط: -2px وحدود Primary Soft.</p>
+            </FkCard>
+        </div>
+    </div>
+</section>
+
+<section class="design-section" id="forms">
+    <div class="design-section__head">
+        <div><span>FUNCTIONAL UI</span><h2>Forms + Table</h2></div>
+        <p>وظيفة النظام أهم من الزخرفة؛ Labels واضحة، Focus مرئي، Error لا يعتمد على اللون وحده.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-4">
+            <FkCard>
+                <div class="fk-stack">
+                    <div class="fk-field-group">
+                        <label class="fk-label" for="demo-name">اسم المشروع</label>
+                        <input id="demo-name" class="fk-field" value="FirstProject" />
+                        <small class="fk-field-help">Safe project identifier.</small>
+                    </div>
+                    <div class="fk-field-group">
+                        <label class="fk-label" for="demo-error">Route</label>
+                        <input id="demo-error" class="fk-field" aria-invalid="true" value="bad route /" />
+                        <small class="fk-field-error">⚠ استخدم مسارًا bounded بدون فراغات.</small>
+                    </div>
+                    <FkButton>حفظ الإعدادات</FkButton>
+                </div>
+            </FkCard>
+        </div>
+        <div class="fk-col-8">
+            <div class="fk-toolbar">
+                <input class="fk-field design-search" placeholder="ابحث في العملاء…" />
+                <FkButton Variant="FoundationButtonVariant.Secondary">Filters</FkButton>
+                <FkButton Variant="FoundationButtonVariant.Ghost">Saved view</FkButton>
+            </div>
+            <div class="fk-table-wrap">
+                <table class="fk-table">
+                    <thead><tr><th>الاسم</th><th>الحالة</th><th>Read Model</th><th>آخر تحديث</th></tr></thead>
+                    <tbody>
+                        <tr><td>Alpha</td><td><FkBadge Tone="FoundationBadgeTone.Success">Active</FkBadge></td><td class="fk-mono">CustomerDirectory</td><td>اليوم</td></tr>
+                        <tr><td>Beta</td><td><FkBadge Tone="FoundationBadgeTone.Warning">Pending</FkBadge></td><td class="fk-mono">CustomerStatement</td><td>أمس</td></tr>
+                        <tr><td>Gamma</td><td><FkBadge>Draft</FkBadge></td><td class="fk-mono">—</td><td>قبل 3 أيام</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="design-section" id="states">
+    <div class="design-section__head">
+        <div><span>STATES</span><h2>Empty + Loading</h2></div>
+        <p>Orbit Nodes تصبح اللغة البصرية الخاصة بالتوليد والانتظار والحالات الفارغة بدل رسومات مالية أو 3D ثقيل.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-6">
+            <FkCard>
+                <FkEmptyState Title="لا توجد عناصر بعد"
+                              Description="ابدأ بإضافة أول عنصر؛ الواجهة تشرح الخطوة التالية بدل رسالة No data الجافة.">
+                    <Action><FkButton>+ إضافة عنصر</FkButton></Action>
+                </FkEmptyState>
+            </FkCard>
+        </div>
+        <div class="fk-col-6">
+            <FkCard>
+                <FkLoadingState Title="نبني المسار"
+                                Description="Project → API → Read Model → Client → UI" />
+            </FkCard>
+        </div>
+    </div>
+</section>
+
+<section class="design-section" id="rules">
+    <div class="design-section__head">
+        <div><span>GUARDRAILS</span><h2>Do / Don't</h2></div>
+        <p>نحافظ على اللطافة بالانضباط؛ ليس بإضافة مؤثرات أكثر.</p>
+    </div>
+
+    <div class="fk-design-grid">
+        <div class="fk-col-6">
+            <FkCard Class="do-card">
+                <FkBadge Tone="FoundationBadgeTone.Success">DO</FkBadge>
+                <ul><li>Neutral surfaces ومساحات تنفس.</li><li>Primary color للأهمية فقط.</li><li>Motion قصير وله معنى.</li><li>Read Models للتقارير بدل joins في المتصفح.</li><li>Responsive layout حقيقي، لا تكبير Mobile.</li></ul>
+            </FkCard>
+        </div>
+        <div class="fk-col-6">
+            <FkCard Class="dont-card">
+                <FkBadge Tone="FoundationBadgeTone.Danger">DON'T</FkBadge>
+                <ul><li>Neon / cyberpunk / gaming UI.</li><li>Glass وGradients في كل مكوّن.</li><li>Shadow ثقيل أو Radius واحد لكل شيء.</li><li>Business authorization داخل الـUI.</li><li>نسخ شعار أو ألوان JAIB أو Wallet-specific patterns.</li></ul>
+            </FkCard>
+        </div>
+    </div>
+</section>
+
+@code {
+    private static readonly IReadOnlyList<ColorToken> ColorTokens =
+    [
+        new("Primary", "var(--fk-color-primary)", "var(--fk-color-primary)", "#FFFFFF"),
+        new("Primary Soft", "var(--fk-color-primary-soft)", "var(--fk-color-primary-soft)", "var(--fk-text-primary)"),
+        new("Aqua", "var(--fk-color-aqua)", "var(--fk-color-aqua)", "#FFFFFF"),
+        new("Warm", "var(--fk-color-warm)", "var(--fk-color-warm)", "#252731"),
+        new("Canvas", "var(--fk-surface-canvas)", "var(--fk-surface-canvas)", "var(--fk-text-primary)"),
+        new("Surface", "var(--fk-surface-default)", "var(--fk-surface-default)", "var(--fk-text-primary)"),
+        new("Muted Surface", "var(--fk-surface-muted)", "var(--fk-surface-muted)", "var(--fk-text-primary)"),
+        new("Text", "var(--fk-text-primary)", "var(--fk-text-primary)", "var(--fk-surface-default)")
+    ];
+
+    private static readonly IReadOnlyList<SpacingToken> SpacingTokens =
+    [
+        new(4), new(8), new(12), new(16), new(20), new(24), new(32), new(40), new(48), new(64), new(80)
+    ];
+
+    private sealed record ColorToken(string Name, string Variable, string Value, string TextColor);
+    private sealed record SpacingToken(int Pixels);
+}
