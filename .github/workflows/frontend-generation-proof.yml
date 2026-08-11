@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   generated-frontend:
-    name: OpenAPI to deterministic Blazor application proof
+    name: OpenAPI to deterministic shared-design Blazor application proof
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
@@ -37,6 +37,13 @@ jobs:
           python3 -m py_compile scripts/generate-csharp-client-from-openapi.py
           python3 -m py_compile scripts/generate-blazor-app-from-openapi.py
           python3 -m json.tool tests/fixtures/frontend-proof.openapi.json >/dev/null
+          grep -Fq 'Microsoft.NET.Sdk.Razor' src/FoundationKit.Blazor/FoundationKit.Blazor.csproj
+          grep -Fq -- '--fk-color-primary' src/FoundationKit.Blazor/wwwroot/foundationkit.css
+          grep -Fq 'FoundationKitTheme' src/FoundationKit.Blazor/wwwroot/foundationkit.js
+          if grep -Fq 'MudBlazor' src/FoundationKit.Blazor/FoundationKit.Blazor.csproj; then
+            echo 'Reusable FoundationKit.Blazor must not depend on MudBlazor.'
+            exit 1
+          fi
 
       - name: Generate deterministic Blazor application
         shell: bash
@@ -82,7 +89,12 @@ jobs:
           grep -Fq 'class GeneratedApiClient' artifacts/frontend-generation-proof/app/Api/GeneratedApiClient.g.cs
           grep -Fq 'FoundationKit.Blazor.csproj' artifacts/frontend-generation-proof/app/FoundationGeneratedFrontend.csproj
           grep -Fq 'builder.Services.AddScoped<GeneratedApiClient>()' artifacts/frontend-generation-proof/app/Program.cs
-          grep -Fq 'backend authorization' artifacts/frontend-generation-proof/app/Pages/Home.razor
+          grep -Fq '@using FoundationKit.Blazor.Components' artifacts/frontend-generation-proof/app/_Imports.razor
+          grep -Fq '<FkAppShell' artifacts/frontend-generation-proof/app/Layout/MainLayout.razor
+          grep -Fq '_content/FoundationKit.Blazor/foundationkit.css' artifacts/frontend-generation-proof/app/wwwroot/index.html
+          grep -Fq '_content/FoundationKit.Blazor/foundationkit.js' artifacts/frontend-generation-proof/app/wwwroot/index.html
+          grep -Fq 'Backend authorization' artifacts/frontend-generation-proof/app/Pages/Home.razor
+          grep -Fq 'read models' artifacts/frontend-generation-proof/app/Pages/Contract.razor
 
       - name: Reject unsafe generated identifiers
         shell: bash
@@ -106,6 +118,8 @@ jobs:
             --output artifacts/frontend-generation-proof/publish
           test -f artifacts/frontend-generation-proof/publish/wwwroot/index.html
           test -f artifacts/frontend-generation-proof/publish/wwwroot/_framework/blazor.webassembly.js
+          test -f artifacts/frontend-generation-proof/publish/wwwroot/_content/FoundationKit.Blazor/foundationkit.css
+          test -f artifacts/frontend-generation-proof/publish/wwwroot/_content/FoundationKit.Blazor/foundationkit.js
 
       - name: Record proof summary
         shell: bash
@@ -114,11 +128,13 @@ jobs:
           Input contract: OpenAPI 3.x Foundation-shaped fixture
           Typed client generator: scripts/generate-csharp-client-from-openapi.py
           Blazor app generator: scripts/generate-blazor-app-from-openapi.py
+          Shared visual source: FoundationKit.Blazor Soft Orbit tokens/components
           Repeat generation SHA: identical
           --check drift verification: passed
           Unsafe identifier rejection: passed
           Restore/build/publish: passed
-          FoundationKit.Blazor project reference: verified
+          FoundationKit.Blazor project/static-assets reference: verified
+          MudBlazor dependency in reusable Core UI: absent
           Product authorization/business rules generated in browser: no
           EOF
 
