@@ -593,6 +593,9 @@ def render_path_expression(
     parameters: tuple[Parameter, ...],
     names: dict[tuple[str, str], str],
 ) -> str:
+    if any(character in path for character in ('"', "\\", "\r", "\n")):
+        raise GenerationError(f"Path {path!r} contains unsupported literal characters.")
+
     path_parameters = [parameter for parameter in parameters if parameter.location == "path"]
     path_tokens = re.findall(r"\{([^{}]+)\}", path)
     declared_tokens = [parameter.wire_name for parameter in path_parameters]
@@ -618,7 +621,7 @@ def render_path_expression(
         name = names[(parameter.location, parameter.wire_name)]
         replacement = path_value_expression(parameter.schema, name)
         expression = expression.replace(token, "{" + replacement + "}")
-    return '$"' + expression.replace('"', '\\"') + '"'
+    return '$"' + expression + '"'
 
 
 def path_value_expression(schema: dict[str, Any], name: str) -> str:
