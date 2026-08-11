@@ -148,6 +148,7 @@ app.UseStaticFiles();
 await DatabaseBootstrapper.MigrateAsync(app.Services, app.Logger, app.Lifetime.ApplicationStopping);
 
 app.MapSystemEndpoints();
+app.MapComposerStudioEndpoints();
 app.MapUserPortalEndpoints();
 app.MapAdminPortalEndpoints();
 var coreCrudModule = app.Services.GetRequiredService<FoundationModuleDefinition<CoreCrudRecord, Guid>>();

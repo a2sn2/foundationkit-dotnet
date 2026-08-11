@@ -1,0 +1,231 @@
+@page "/compose"
+@using System.Text.Json
+@inject WorkbenchApiClient Api
+
+<PageTitle>Visual Composer — FoundationKit</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-6 flex-wrap">
+        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">نظرة عامة</MudButton>
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">SCHEMA V2 COMPOSER</MudChip>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ValidateAsync" Disabled="_validating" StartIcon="@Icons.Material.Filled.Rule">
+            تحقق عبر Composer
+        </MudButton>
+    </MudStack>
+
+    <section class="portal-hero studio-hero">
+        <div>
+            <div class="eyebrow">ONE MANIFEST ENGINE</div>
+            <MudText Typo="Typo.h2">كوّن البداية بصريًا، ثم مرّرها إلى نفس Parser/Analyzer الذي يستخدمه Composer CLI.</MudText>
+            <MudText Typo="Typo.h6" Class="muted-text mt-3">
+                النموذج البصري لا يملك قواعد Manifest مستقلة. JSON الناتج مجرد إدخال؛ الحكم النهائي يأتي من Composer على السيرفر.
+            </MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Large" Color="Color.Primary" />
+    </section>
+
+    <MudGrid Class="mt-8">
+        <MudItem xs="12" lg="4">
+            <MudPaper Class="studio-panel" Elevation="0">
+                <MudText Typo="Typo.h4">Starter Model</MudText>
+                <MudText Class="muted-text mt-2">حقول bounded لتكوين نقطة بداية schema-v2 قابلة للتحرير.</MudText>
+
+                <MudTextField T="string" @bind-Value="_projectName" Label="Project name" Variant="Variant.Outlined" Class="mt-4" />
+                <MudTextField T="string" @bind-Value="_moduleName" Label="Module name" Variant="Variant.Outlined" Class="mt-3" />
+                <MudTextField T="string" @bind-Value="_resourceName" Label="Resource name" Variant="Variant.Outlined" Class="mt-3" />
+                <MudTextField T="string" @bind-Value="_route" Label="Resource route" Variant="Variant.Outlined" Class="mt-3" />
+
+                <MudButton FullWidth="true" Variant="Variant.Outlined" Class="mt-4" OnClick="BuildStarter" StartIcon="@Icons.Material.Filled.AutoFixHigh">
+                    أنشئ Starter JSON
+                </MudButton>
+
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                    هذا الـstarter لا يفترض search/sort أو read-model joins. أضفها صراحة في JSON ثم دع Composer يتحقق من القيود والفهارس والـViews.
+                </MudAlert>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="studio-panel" Elevation="0">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                    <div>
+                        <MudText Typo="Typo.h4">Manifest JSON</MudText>
+                        <MudText Class="muted-text">يمكن تعديل النص مباشرة؛ لا يتم تنفيذ أي SQL أو source منه داخل المتصفح.</MudText>
+                    </div>
+                    <MudSpacer />
+                    <MudChip T="string" Variant="Variant.Outlined">@_manifestJson.Length chars</MudChip>
+                </MudStack>
+
+                <MudTextField T="string"
+                              @bind-Value="_manifestJson"
+                              Variant="Variant.Outlined"
+                              Lines="24"
+                              Immediate="true"
+                              Class="manifest-editor" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <section class="section-block">
+        <div class="section-heading">
+            <div>
+                <div class="eyebrow">CANONICAL VALIDATION</div>
+                <MudText Typo="Typo.h3">نتيجة Composer الفعلية</MudText>
+            </div>
+        </div>
+
+        @if (_validating)
+        {
+            <div class="loading-panel" role="status" aria-live="polite">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                <MudText>ComposerManifestParser + CompositionAnalyzer يعملان...</MudText>
+            </div>
+        }
+        else if (_transportError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_transportError</MudAlert>
+        }
+        else if (_validation is null)
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.Rule" Size="Size.Large" />
+                <MudText>اضغط «تحقق عبر Composer» لعرض النتيجة.</MudText>
+            </div>
+        }
+        else if (!_validation.Valid)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                @_validation.Error
+            </MudAlert>
+        }
+        else
+        {
+            <div class="platform-grid">
+                <div><span>Schema</span><strong>v@_validation.SchemaVersion</strong><small>@_validation.ProjectName</small></div>
+                <div><span>Modules</span><strong>@_validation.ModuleCount</strong><small>@_validation.Profile</small></div>
+                <div><span>Resources</span><strong>@_validation.ResourceCount</strong><small>@_validation.ReadModelCount read model(s)</small></div>
+                <div><span>Maturity</span><strong>@(_validation.StableOnly ? "stable-only" : "mixed")</strong><small>resolved graph</small></div>
+            </div>
+
+            <MudGrid Class="mt-4">
+                <MudItem xs="12" lg="7">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudText Typo="Typo.h6">Resolved capabilities</MudText>
+                        <div class="capability-list mt-3">
+                            @foreach (var capability in _validation.Capabilities)
+                            {
+                                <article class="capability-row">
+                                    <div><strong>@capability.Id</strong><code>@capability.Maturity</code></div>
+                                    <span class="status-pill neutral">resolved</span>
+                                    <p>@string.Join(" · ", capability.Reasons)</p>
+                                </article>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" lg="5">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudText Typo="Typo.h6">Warnings</MudText>
+                        @if (_validation.Warnings.Count == 0)
+                        {
+                            <MudText Class="muted-text mt-3">لا توجد maturity warnings في هذا التحليل.</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true">
+                                @foreach (var warning in _validation.Warnings)
+                                {
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.WarningAmber">@warning</MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+    </section>
+</MudContainer>
+
+@code {
+    private string _projectName = "StudioGenerated";
+    private string _moduleName = "Customers";
+    private string _resourceName = "Customer";
+    private string _route = "customers";
+    private string _manifestJson = string.Empty;
+    private ComposerValidationResponse? _validation;
+    private string? _transportError;
+    private bool _validating;
+
+    protected override void OnInitialized() => BuildStarter();
+
+    private void BuildStarter()
+    {
+        var model = new
+        {
+            schemaVersion = 2,
+            name = _projectName.Trim(),
+            profile = "minimal",
+            includeCapabilities = new[] { "concurrency", "idempotency" },
+            excludeCapabilities = Array.Empty<string>(),
+            providers = new[] { "provider-sqlserver" },
+            modules = new[]
+            {
+                new
+                {
+                    name = _moduleName.Trim(),
+                    resources = new[]
+                    {
+                        new
+                        {
+                            name = _resourceName.Trim(),
+                            route = _route.Trim(),
+                            idType = "guid",
+                            behaviors = new[] { "crud", "auditing", "authorization", "concurrency" },
+                            fields = new object[]
+                            {
+                                new { name = "Name", type = "text", required = true, maximumLength = 120 },
+                                new { name = "Note", type = "text", required = false, maximumLength = 400 }
+                            },
+                            api = new
+                            {
+                                routePrefix = "api",
+                                idempotency = "required",
+                                concurrency = "require-if-match",
+                                maximumFilters = 0,
+                                maximumSorts = 0
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        _manifestJson = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
+        _validation = null;
+        _transportError = null;
+    }
+
+    private async Task ValidateAsync()
+    {
+        _validating = true;
+        _transportError = null;
+        _validation = null;
+        try
+        {
+            var result = await Api.ValidateComposerManifestAsync(_manifestJson);
+            if (result.IsSuccess)
+                _validation = result.Value;
+            else
+                _transportError = result.ErrorDetails?.Message ?? "تعذر استدعاء Composer validation endpoint.";
+        }
+        catch (ArgumentException exception)
+        {
+            _transportError = exception.Message;
+        }
+        finally
+        {
+            _validating = false;
+        }
+    }
+}

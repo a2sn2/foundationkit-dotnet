@@ -41,6 +41,19 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             new HttpRequestMessage(HttpMethod.Get, "/api/platform-reference"),
             cancellationToken);
 
+    public Task<ApiResult<ComposerValidationResponse>> ValidateComposerManifestAsync(
+        string manifestJson,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(manifestJson);
+        return SendAsync<ComposerValidationResponse>(
+            new HttpRequestMessage(HttpMethod.Post, "/api/composer/validate")
+            {
+                Content = JsonContent.Create(new ComposerValidationRequest(manifestJson))
+            },
+            cancellationToken);
+    }
+
     public Task<ApiResult<HealthResponse>> GetHealthAsync(
         CancellationToken cancellationToken = default) =>
         SendAsync<HealthResponse>(
