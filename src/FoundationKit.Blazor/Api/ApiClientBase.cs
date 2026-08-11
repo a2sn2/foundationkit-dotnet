@@ -8,6 +8,9 @@ public abstract class ApiClientBase(HttpClient httpClient)
 {
     protected HttpClient HttpClient { get; } = httpClient;
 
+    protected static JsonSerializerOptions JsonOptions { get; } =
+        new(JsonSerializerDefaults.Web);
+
     protected async Task<ApiResult> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken = default) =>
@@ -77,7 +80,7 @@ public abstract class ApiClientBase(HttpClient httpClient)
 
             successStatusCode = response.StatusCode;
             var value = await response.Content
-                .ReadFromJsonAsync<T>(cancellationToken: cancellationToken)
+                .ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
                 .ConfigureAwait(false);
             var result = value is null
                 ? ApiResult<T>.Failure(new ApiError(
