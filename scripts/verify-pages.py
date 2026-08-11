@@ -48,7 +48,7 @@ required_text = (
     "Core vNext",
     "ARCHITECTURE",
     "17 REUSABLE PACKAGES",
-    "Module / CRUD / API Engine",
+    "MODULE / CRUD / API ENGINE",
     "COMPOSER · SCHEMA V2",
     "MULTI-TABLE / REPORT READ",
     "TRANSPORT SOURCE OF TRUTH",
