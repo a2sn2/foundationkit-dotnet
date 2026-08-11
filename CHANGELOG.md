@@ -38,6 +38,10 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added Phase 15 reusable frontend presentation/query/display state in the existing `FoundationKit.Blazor` package without adding package #18 or a MudBlazor dependency to reusable Core.
 - Refocused the Workbench Blazor client into FoundationKit Core Studio for capability catalog, live module composition and contract-evidence inspection; removed the old product-style user/admin portal pages while retaining their backend workflow only as integration evidence.
 - Documented the browser boundary explicitly: UI state is presentation-only, backend authorization remains authoritative, and multi-table/report UI data comes from read models rather than browser-side relational logic.
+- Added Phase 16 visual schema-v2 composition in Core Studio with a bounded `/api/composer/validate` transport that delegates authoritative validation directly to `ComposerManifestParser` and `CompositionAnalyzer` rather than introducing a browser-side manifest engine.
+- Added Phase 16 deterministic OpenAPI → Blazor WebAssembly application scaffolding that validates safe identifiers, references exact-head `FoundationKit.Blazor`, and delegates all transport generation to the existing deterministic C# client generator.
+- Added `FoundationKit Frontend Generation Proof` for repeat-generation SHA identity, `--check` drift detection, unsafe identifier rejection, restore/build/publish evidence and canonical typed-client wiring.
+- Closed the Core vNext v1 repository tooling path from schema-v2 composition through SQL/read models, runtime OpenAPI, typed transport and generated frontend while retaining Production-governance separation under issue #35.
 - Strengthened Core-only repository verification and CI.
 
 ## 0.1.0
