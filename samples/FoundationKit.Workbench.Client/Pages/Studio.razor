@@ -1,0 +1,212 @@
+@page "/studio"
+@inject WorkbenchApiClient Api
+
+<PageTitle>Core Studio — FoundationKit</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-6 flex-wrap">
+        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">نظرة عامة</MudButton>
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">CORE STUDIO</MudChip>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" OnClick="LoadAsync" StartIcon="@Icons.Material.Filled.Refresh">تحديث الأدلة</MudButton>
+    </MudStack>
+
+    <section class="portal-hero studio-hero">
+        <div>
+            <div class="eyebrow">CAPABILITY + MODULE EXPLORER</div>
+            <MudText Typo="Typo.h2">افهم ما يعلنه الكور، وما يصبح فعالًا، وما يصل إلى الـAPI.</MudText>
+            <MudText Typo="Typo.h6" Class="muted-text mt-3">
+                الصفحة تقرأ الكتالوج وتركيب الموديولات من Workbench. لا تنشئ صلاحيات ولا تخزن أسرارًا ولا تحول metadata العرض إلى business rules.
+            </MudText>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" Color="Color.Primary" />
+    </section>
+
+    @if (_loading)
+    {
+        <div class="loading-panel" role="status" aria-live="polite">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText>جاري تحميل تركيب الكور...</MudText>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-6">
+            @_error
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Class="mt-8">
+            <MudItem xs="12" lg="7">
+                <MudPaper Class="studio-panel" Elevation="0">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-5 flex-wrap">
+                        <div>
+                            <MudText Typo="Typo.h4">Live Module Composition</MudText>
+                            <MudText Class="muted-text">Declared مقابل Effective مع عقد الـAPI لكل Module.</MudText>
+                        </div>
+                        <MudSpacer />
+                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">@_modules.Count module(s)</MudChip>
+                    </MudStack>
+
+                    @if (_modules.Count == 0)
+                    {
+                        <div class="empty-state" role="status">
+                            <MudIcon Icon="@Icons.Material.Filled.ExtensionOff" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">لا توجد module composition حية في هذا الوضع.</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var module in _modules)
+                        {
+                            <article class="module-card">
+                                <div class="module-card-head">
+                                    <div>
+                                        <MudText Typo="Typo.h5">@module.Name</MudText>
+                                        <code>@module.ApiRoute</code>
+                                    </div>
+                                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Text">@module.Route</MudChip>
+                                </div>
+
+                                <div class="module-capability-section">
+                                    <span>Declared</span>
+                                    <div class="chip-line">
+                                        @foreach (var capability in module.DeclaredCapabilities)
+                                        {
+                                            <span class="core-chip">@capability</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="module-capability-section">
+                                    <span>Effective</span>
+                                    <div class="chip-line">
+                                        @foreach (var capability in module.EffectiveCapabilities)
+                                        {
+                                            <span class="core-chip effective">@capability</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="api-contract-grid">
+                                    <div><span>Idempotency</span><strong>@module.Api.Idempotency</strong></div>
+                                    <div><span>Concurrency</span><strong>@module.Api.Concurrency</strong></div>
+                                    <div><span>Filters</span><strong>@module.Api.MaximumFilters</strong></div>
+                                    <div><span>Sorts</span><strong>@module.Api.MaximumSorts</strong></div>
+                                </div>
+                            </article>
+                        }
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" lg="5">
+                <MudPaper Class="studio-panel sticky-panel" Elevation="0">
+                    <MudText Typo="Typo.h4">Capability Catalog</MudText>
+                    <MudText Class="muted-text mt-2">ابحث في القدرات المنشورة دون تغيير العقود.</MudText>
+                    <MudTextField T="string"
+                                  @bind-Value="_search"
+                                  Placeholder="ابحث بالاسم أو المعرّف..."
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Immediate="true"
+                                  Class="mt-4" />
+
+                    <div class="capability-list mt-4">
+                        @foreach (var capability in FilteredCapabilities)
+                        {
+                            <article class="capability-row">
+                                <div>
+                                    <strong>@capability.TitleEn</strong>
+                                    <code>@capability.Id</code>
+                                </div>
+                                <span class="status-pill neutral">@capability.Status</span>
+                                <p>@capability.DescriptionAr</p>
+                            </article>
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">PLATFORM REFERENCE</div>
+                    <MudText Typo="Typo.h3">إعدادات العرض التي يثبتها Workbench</MudText>
+                </div>
+            </div>
+
+            @if (_platform is null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    لم يتم التحقق من Settings/Feature Management/Localization في هذا الوضع.
+                </MudAlert>
+            }
+            else
+            {
+                <div class="platform-grid">
+                    <div><span>Culture</span><strong>@_platform.DefaultCulture</strong><small>@_platform.CultureResolutionSource</small></div>
+                    <div><span>Direction</span><strong>@_platform.TextDirection</strong><small>presentation metadata</small></div>
+                    <div><span>Time Zone</span><strong>@_platform.DefaultTimeZone</strong><small>@_platform.TimeZoneSettingScope</small></div>
+                    <div><span>Catalog Preview</span><strong>@(_platform.CatalogPreviewEnabled ? "enabled" : "disabled")</strong><small>@_platform.FeatureDecisionSource</small></div>
+                </div>
+            }
+        </section>
+    }
+</MudContainer>
+
+@code {
+    private IReadOnlyList<ModuleCompositionResponse> _modules = Array.Empty<ModuleCompositionResponse>();
+    private CatalogResponse? _catalog;
+    private PlatformReferenceResponse? _platform;
+    private string _search = string.Empty;
+    private string? _error;
+    private bool _loading = true;
+
+    private IEnumerable<CapabilityContract> FilteredCapabilities
+    {
+        get
+        {
+            var capabilities = (_catalog?.Packages ?? [])
+                .SelectMany(package => package.Capabilities)
+                .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(item => item.TitleEn, StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(_search))
+                return capabilities;
+
+            var term = _search.Trim();
+            return capabilities.Where(item =>
+                item.Id.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                item.TitleEn.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                item.TitleAr.Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var catalog = await Api.GetCatalogAsync();
+        _catalog = catalog.IsSuccess ? catalog.Value : null;
+
+        var modules = await Api.GetModulesAsync();
+        _modules = modules.IsSuccess && modules.Value is not null
+            ? modules.Value
+            : Array.Empty<ModuleCompositionResponse>();
+
+        var platform = await Api.GetPlatformReferenceAsync();
+        _platform = platform.IsSuccess ? platform.Value : null;
+
+        if (_catalog is null && _modules.Count == 0)
+            _error = "تعذر تحميل الكتالوج وتركيب الموديولات. شغّل Workbench API أو تحقق من الكتالوج الثابت.";
+
+        _loading = false;
+    }
+}
