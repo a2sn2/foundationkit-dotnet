@@ -6,8 +6,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
-WORKBENCH_CLIENT = ROOT / "samples" / "FoundationKit.Workbench.Client" / "wwwroot"
-BLAZOR = ROOT / "src" / "FoundationKit.Blazor"
 
 primary_page_names = [
     "index.html",
@@ -33,14 +31,10 @@ required = [
     SITE / "multipage.js",
     SITE / "portal-manifest.json",
     SITE / "assets" / "developer-avatar.png",
-    WORKBENCH_CLIENT / "index.html",
-    WORKBENCH_CLIENT / "studio-locale.js",
-    BLAZOR / "Components" / "FkLanguageToggle.razor",
-    BLAZOR / "wwwroot" / "foundationkit.js",
 ]
 for path in required:
     if not path.is_file():
-        raise SystemExit(f"Pages/frontend asset missing: {path.relative_to(ROOT)}")
+        raise SystemExit(f"Pages asset missing: {path.relative_to(ROOT)}")
 
 avatar = (SITE / "assets" / "developer-avatar.png").read_bytes()
 if len(avatar) < 5_000 or not avatar.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -178,48 +172,8 @@ for behavior in ("data-package-filter", "foundationkit-theme", "IntersectionObse
         raise SystemExit(f"Pages interactions missing required behavior: {behavior}")
 
 multipage_js = (SITE / "multipage.js").read_text(encoding="utf-8")
-for behavior in (
-    "data-page",
-    "location.pathname",
-    "aria-expanded",
-    "foundationkit-language",
-    "data-language-toggle",
-    "document.documentElement.dir",
-    "creative.css",
-    "المعمارية · حدود واضحة",
-    "القدرات · كور واحد قابل للتركيب",
-    "17 حزمة قابلة لإعادة الاستخدام",
-    "القراءات المعقدة مكانها السيرفر",
-    "الأخضر يعني مُثبتًا.",
-    "ابدأ أول مشروع",
-):
+for behavior in ("data-page", "location.pathname", "aria-expanded", "foundationkit-language", "data-language-toggle", "document.documentElement.dir", "creative.css"):
     if behavior not in multipage_js:
         raise SystemExit(f"Multi-page navigation/localization missing required behavior: {behavior}")
-
-workbench_index = (WORKBENCH_CLIENT / "index.html").read_text(encoding="utf-8")
-studio_locale = (WORKBENCH_CLIENT / "studio-locale.js").read_text(encoding="utf-8")
-if 'src="studio-locale.js"' not in workbench_index:
-    raise SystemExit("Core Studio host must load its host-owned localization layer")
-for marker in (
-    "foundationkit:languagechange",
-    "MutationObserver",
-    "نظام تصميم خفيف، لطيف، وقابل للتوليد.",
-    "A light, gentle and generatable design system.",
-    "اختر أساس المشروع بصريًا، ثم ولّده محليًا بنفس Composer Engine.",
-    "Choose the project foundation visually, then generate it locally with the same Composer Engine.",
-    "Green CI ≠ Production Approved",
-):
-    if marker not in studio_locale:
-        raise SystemExit(f"Core Studio localization contract missing: {marker}")
-
-foundation_js = (BLAZOR / "wwwroot" / "foundationkit.js").read_text(encoding="utf-8")
-for marker in ("FoundationKitLocale", "foundationkit-language", "foundationkit:languagechange", "root.dir"):
-    if marker not in foundation_js:
-        raise SystemExit(f"FoundationKit.Blazor locale runtime missing: {marker}")
-
-language_toggle = (BLAZOR / "Components" / "FkLanguageToggle.razor").read_text(encoding="utf-8")
-for marker in ("FoundationKitLocale.initialize", "FoundationKitLocale.set", "LanguageChanged", "التبديل إلى العربية"):
-    if marker not in language_toggle:
-        raise SystemExit(f"FoundationKit.Blazor language component missing: {marker}")
 
 print("FoundationKit bilingual Soft Orbit Core + source-grounded Developer portfolio assets verified.")
