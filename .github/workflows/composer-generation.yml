@@ -25,6 +25,27 @@ jobs:
       - name: Apply bounded read-model patch and restore workflow
         shell: bash
         run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tools/FoundationKit.Composer/ComposerReadModelGenerator.cs')
+          text = path.read_text(encoding='utf-8')
+          old = '''        return $$"""
+                    migrationBuilder.Sql("""
+            {{sql.TrimEnd()}}
+                    """);
+            """;
+          '''
+          new = '''        return "        migrationBuilder.Sql(" +
+            JsonSerializer.Serialize(sql.TrimEnd()) +
+            ");";
+          '''
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'BuildCreateViewMigration raw-string anchor count was {count}, expected 1')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
           python3 -m py_compile scripts/phase14-composer-readmodels-patch.py
           python3 scripts/phase14-composer-readmodels-patch.py
           python3 -m json.tool catalog/foundationkit.project.schema.json >/dev/null
