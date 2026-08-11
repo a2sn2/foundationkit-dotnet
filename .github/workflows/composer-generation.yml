@@ -26,10 +26,11 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
-          path = Path('tools/FoundationKit.Composer/ComposerReadModelGenerator.cs')
-          lines = path.read_text(encoding='utf-8').splitlines()
+          generator_path = Path('tools/FoundationKit.Composer/ComposerReadModelGenerator.cs')
+          lines = generator_path.read_text(encoding='utf-8').splitlines()
           sql_index = next((i for i, line in enumerate(lines) if 'var sql = $$"""' in line), None)
           if sql_index is None:
               raise SystemExit('BuildCreateViewMigration SQL anchor was not found')
@@ -39,13 +40,39 @@ jobs:
           end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == '""";'), None)
           if end is None:
               raise SystemExit('BuildCreateViewMigration return end was not found')
-          replacement = [
+          lines[start:end + 1] = [
               '        return "        migrationBuilder.Sql(" +',
               '            JsonSerializer.Serialize(sql.TrimEnd()) +',
               '            ");";'
           ]
-          lines[start:end + 1] = replacement
-          path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          generator = '\n'.join(lines) + '\n'
+          if 'using System.Globalization;' not in generator:
+              generator = generator.replace(
+                  'using System.Security.Cryptography;\n',
+                  'using System.Globalization;\nusing System.Security.Cryptography;\n',
+                  1)
+          generator = generator.replace('ComposerReadModelFieldType.Guid', 'ComposerReadModelFieldType.Uuid')
+          generator = re.sub(
+              r'(registrations|mappings)\.AppendLine\(\n(\s+)(\$\")',
+              r'\1.AppendLine(CultureInfo.InvariantCulture,\n\2\3',
+              generator)
+          generator = re.sub(
+              r'(registrations|mappings)\.AppendLine\((\$\")',
+              r'\1.AppendLine(CultureInfo.InvariantCulture, \2',
+              generator)
+          generator_path.write_text(generator, encoding='utf-8')
+
+          manifest_path = Path('tools/FoundationKit.Composer/ComposerReadModelManifest.cs')
+          manifest = manifest_path.read_text(encoding='utf-8')
+          manifest = manifest.replace('    Guid = 1', '    Uuid = 1')
+          manifest = manifest.replace('ComposerReadModelFieldType.Guid', 'ComposerReadModelFieldType.Uuid')
+          manifest = manifest.replace(
+              'IReadOnlyDictionary<string, ComposerResourceDefinition> resources)',
+              'Dictionary<string, ComposerResourceDefinition> resources)')
+          manifest = manifest.replace(
+              'private static IReadOnlyList<ComposerReadModelField> NormalizeFields(',
+              'private static ComposerReadModelField[] NormalizeFields(')
+          manifest_path.write_text(manifest, encoding='utf-8')
           PY
 
           python3 -m py_compile scripts/phase14-composer-readmodels-patch.py
