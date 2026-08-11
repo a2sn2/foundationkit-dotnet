@@ -114,19 +114,19 @@
         <section class="section-block">
             <div class="section-heading">
                 <div>
-                    <div class="eyebrow">PHASE GATES</div>
-                    <MudText Typo="Typo.h3">ما أصبح أساسًا قبل الواجهة</MudText>
+                    <div class="eyebrow">PHASE 12 CLOSURE</div>
+                    <MudText Typo="Typo.h3">مسارات الإغلاق التي ثبّتت الأساس قبل الواجهة</MudText>
                 </div>
             </div>
 
             <MudGrid>
-                @foreach (var phase in Phases)
+                @foreach (var track in ClosureTracks)
                 {
                     <MudItem xs="12" md="6" lg="3">
                         <MudPaper Class="architecture-card" Elevation="0">
-                            <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">@phase.Id</MudChip>
-                            <MudText Typo="Typo.h6">@phase.Title</MudText>
-                            <MudText Class="muted-text">@phase.Description</MudText>
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">@track.Id</MudChip>
+                            <MudText Typo="Typo.h6">@track.Title</MudText>
+                            <MudText Class="muted-text">@track.Description</MudText>
                         </MudPaper>
                     </MudItem>
                 }
@@ -162,12 +162,12 @@
         new("05", "Core UI", "Presentation فقط؛ authorization يبقى على السيرفر")
     ];
 
-    private static readonly IReadOnlyList<PhaseCard> Phases =
+    private static readonly IReadOnlyList<ClosureTrackCard> ClosureTracks =
     [
-        new("P12", "Executable Composer", "A/B generated SQL + API + OpenAPI + Postman + isolation proof."),
-        new("P13", "Typed Client", "OpenAPI → deterministic C# client مع ETag/Location/Correlation metadata."),
-        new("P14", "Read Engine", "SQL-side filter/sort/page + indexed fields + view-backed multi-table/report reads."),
-        new("P15", "Frontend Foundation", "Reusable presentation state + Core Studio reference experience دون business logic في المتصفح.")
+        new("12.C1", "Typed Transport", "OpenAPI → deterministic C# client مع ETag/Location/Correlation metadata."),
+        new("12.C2", "SQL Read Engine", "SQL-side filter/sort/page + indexed fields + view-backed multi-table/report reads."),
+        new("12.C3", "Frontend Foundation", "Reusable presentation state + Core Studio reference experience دون business logic في المتصفح."),
+        new("12.C4", "Tooling Closure", "Canonical visual Composer validation + deterministic OpenAPI-wired Blazor shell generation.")
     ];
 
     protected override async Task OnInitializedAsync()
@@ -190,5 +190,5 @@
     }
 
     private sealed record FlowStep(string Number, string Title, string Description);
-    private sealed record PhaseCard(string Id, string Title, string Description);
+    private sealed record ClosureTrackCard(string Id, string Title, string Description);
 }
