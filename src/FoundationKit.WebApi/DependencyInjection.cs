@@ -26,7 +26,10 @@ public static class DependencyInjection
         services.AddOptions<FoundationIdempotencyOptions>();
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.Configure<SwaggerGenOptions>(options =>
-            options.OperationFilter<FoundationApiOperationFilter>());
+        {
+            options.OperationFilter<FoundationApiOperationFilter>();
+            options.SchemaFilter<FoundationRequiredPropertiesSchemaFilter>();
+        });
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IFoundationExceptionMapper, DefaultFoundationExceptionMapper>());
