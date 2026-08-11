@@ -21,7 +21,7 @@ public static class SystemEndpoints
                 "FoundationKitWorkbench",
                 "ALHassan ALShami")))
             .WithName("GetWorkbenchRuntime")
-            .WithSummary("Returns the shared runtime used by both full-stack portals.")
+            .WithSummary("Returns the runtime used by the FoundationKit Core Studio reference experience.")
             .Produces<RuntimeResponse>();
 
         api.MapGet("/platform-reference", async (
@@ -72,10 +72,27 @@ public static class SystemEndpoints
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         api.MapGet("/modules", (IFoundationModuleRegistry registry) =>
-                TypedResults.Ok(registry.Describe()))
+            {
+                var modules = registry.Describe()
+                    .Select(module => new ModuleCompositionResponse(
+                        module.Name,
+                        module.Route,
+                        module.ApiRoute,
+                        module.DeclaredCapabilities,
+                        module.EffectiveCapabilities,
+                        new ModuleApiContract(
+                            module.Api.RoutePrefix,
+                            module.Api.Idempotency.ToString(),
+                            module.Api.Concurrency.ToString(),
+                            module.Api.MaximumFilters,
+                            module.Api.MaximumSorts,
+                            module.Api.RateLimitPolicyName)))
+                    .ToArray();
+                return TypedResults.Ok<IReadOnlyList<ModuleCompositionResponse>>(modules);
+            })
             .WithName("GetFoundationKitModules")
-            .WithSummary("Returns deterministic declared/effective module capability composition evidence.")
-            .Produces<IReadOnlyList<FoundationModuleCompositionSnapshot>>();
+            .WithSummary("Returns a bounded transport projection of deterministic module composition evidence for Core Studio.")
+            .Produces<IReadOnlyList<ModuleCompositionResponse>>();
 
         api.MapGet("/catalog", async (
                 CatalogService catalog,
