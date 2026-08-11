@@ -1,8 +1,8 @@
 # FoundationKit Workbench / Core Studio
 
-Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting and composing against the Core, not a product portal.
+Workbench is the executable architecture/reference consumer for FoundationKit Core. It is not a production service and does not define universal business semantics. Its Blazor client is the **Core Studio reference experience**: a UI for inspecting, composing and visually validating against the Core, not a product portal.
 
-The approved Core vNext implementation roadmap ends at **Phase 12**. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are Phase 12 closure tracks rather than additional phases.
+The approved Core vNext implementation roadmap ends at **Phase 12**. Typed transport, SQL read hardening, frontend foundation, visual Composer and generated frontend scaffolding are Phase 12 closure tracks rather than additional phases. The Soft Orbit UI baseline is the final shared-design closure before the first real consumer project; it does not create a new backend phase.
 
 ## What it proves
 
@@ -20,7 +20,8 @@ The approved Core vNext implementation roadmap ends at **Phase 12**. Typed trans
 - read-only SQL-view-backed read models for multi-table/report projections in generated products;
 - a first-party frontend reference that presents Core state without moving authorization or relational join logic into the browser;
 - visual schema-v2 composition whose authoritative validation runs through the same `ComposerManifestParser` and `CompositionAnalyzer` as Composer tooling;
-- deterministic Blazor WebAssembly shell generation that wires the canonical generated C# client instead of creating another transport layer.
+- deterministic Blazor WebAssembly shell generation that wires the canonical generated C# client instead of creating another transport layer;
+- one shared Soft Orbit design system consumed by Core Studio and generated Blazor applications.
 
 The original connected user/admin workflow remains in the Workbench backend and integration smoke as historical vertical-slice evidence. It is deliberately **not** the active frontend framing.
 
@@ -30,6 +31,7 @@ The original connected user/admin workflow remains in the Workbench backend and 
 /           Core baseline, closure gates and contract flow
 /studio     live capability catalog + declared/effective module composition
 /compose    visual schema-v2 starter/editor + canonical Composer validation
+/design     living Soft Orbit tokens + real first-party reusable components
 /evidence   runtime and engineering proof boundaries
 /swagger    runtime OpenAPI/Swagger UI
 ```
@@ -55,43 +57,63 @@ The response returns validation status, schema/project/profile counts, resolved 
 
 Browser-side starter generation is convenience only. A manifest is valid only when the server-side Composer engine accepts it.
 
-## Reusable frontend boundary
+## Reusable frontend / design-system boundary
 
-`FoundationKit.Blazor` remains the reusable Core frontend package. The Phase 12 frontend closure adds framework-agnostic presentation/query/display state contracts there without adding a new package or a MudBlazor dependency to reusable Core.
+`FoundationKit.Blazor` remains the reusable Core frontend package and stays inside the 17-package baseline. It is now a Razor Class Library that owns transport/presentation helpers **and** the first-party product-neutral design system. It still has no MudBlazor dependency.
 
-MudBlazor remains a **Workbench sample dependency**. It is not silently promoted into the `FoundationKit.Blazor` package contract.
+MudBlazor remains a **Workbench sample dependency** for controls that have not been promoted into reusable first-party primitives. Workbench-specific Mud surfaces are visually mapped back to FoundationKit semantic tokens.
 
-The reusable presentation layer provides:
+Reusable FoundationKit.Blazor includes:
 
-- `PresentationState<T>` for idle/loading/ready/empty/error rendering;
-- bounded `PagedQueryState` for presentation query intent while the server still validates actual filter/sort policies;
-- `ResourceDisplayDescriptor` for safe display metadata without business-rule duplication.
+- `ApiResult` / response metadata handling;
+- `PresentationState<T>`, `PagedQueryState`, `ResourceDisplayDescriptor`;
+- semantic light/dark color tokens;
+- spacing, radius, elevation, motion, focus, status and responsive rules;
+- persistent theme behavior;
+- RTL/LTR-aware shell behavior;
+- temporary replaceable Orbit Nodes mark;
+- `FkButton`, `FkCard`, `FkBadge`, `FkPageHeader`, `FkEmptyState`, `FkLoadingState`, `FkThemeToggle`, `FkAppShell`, `FkNavItem`.
+
+The canonical stylesheet and behavior assets are:
+
+```text
+_content/FoundationKit.Blazor/foundationkit.css
+_content/FoundationKit.Blazor/foundationkit.js
+```
+
+The `/design` page renders those real components. It must not become a visually similar fork.
+
+See `docs/DESIGN-SYSTEM.md`.
 
 ## Generated frontend boundary
 
-The Phase 12 tooling closure adds:
+The generator:
 
 ```text
 scripts/generate-blazor-app-from-openapi.py
 ```
 
-The generator accepts an OpenAPI 3.x input, safe app/namespace/client identifiers and the FoundationKit root. It produces a buildable .NET 10 Blazor WebAssembly reference shell and delegates transport generation to:
+accepts an OpenAPI 3.x input, safe app/namespace/client identifiers and the FoundationKit root. It produces a buildable .NET 10 Blazor WebAssembly reference shell and delegates transport generation to:
 
 ```text
 scripts/generate-csharp-client-from-openapi.py
 ```
 
-So the chain remains:
+The full chain is:
 
 ```text
 runtime OpenAPI
     ↓
 canonical deterministic C# typed client
     ↓
-generated Blazor shell + FoundationKit.Blazor reference
+FoundationKit.Blazor Soft Orbit tokens/components
+    ↓
+generated product-neutral Blazor shell
 ```
 
-The generated shell is intentionally product-neutral. It does not synthesize authorization, relational joins, secrets or business workflows. Product screens consume typed client methods; backend policies and SQL-view-backed read models remain authoritative.
+The generated shell does not synthesize authorization, relational joins, secrets or business workflows. Product screens consume typed client methods; backend policies and SQL-view-backed read models remain authoritative.
+
+Generated applications may customize product name/logo and semantic brand tokens at their host boundary. They should not copy/fork the shared FoundationKit component stylesheet.
 
 ## Core CRUD reference
 
@@ -119,7 +141,7 @@ Workbench exposes bounded architecture evidence at:
 GET /api/modules
 ```
 
-The response distinguishes `declaredCapabilities` from `effectiveCapabilities`. Effective capabilities are the deterministic dependency closure used by FoundationKit composition. For example, Authorization contributes Identity/Security dependency intent and Feature Management contributes Settings. This does not claim that environment-specific identity, transport, or production providers have been provisioned.
+The response distinguishes `declaredCapabilities` from `effectiveCapabilities`. Effective capabilities are the deterministic dependency closure used by FoundationKit composition. This does not claim that environment-specific identity, transport, or production providers have been provisioned.
 
 ## Contract source of truth
 
@@ -135,7 +157,7 @@ The committed Postman collection is generated from that runtime document:
 postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The C# typed-client generator uses the same serialized transport source. The read closure proves generated read-model list operations; the tooling closure proves the typed client can be embedded into a deterministic Blazor application shell without a second API contract.
+Do not edit the collection by hand. `scripts/generate-postman-from-openapi.py` owns deterministic derivation/drift checking. The C# typed-client generator uses the same serialized transport source. The read closure proves generated read-model list operations; frontend generation proves the typed client and shared design system can be embedded into a deterministic Blazor application shell without a second API or visual contract.
 
 ## Run
 
@@ -151,6 +173,7 @@ Module composition: `/api/modules`
 Composer validation: `/api/composer/validate`  
 Core Studio: `/`  
 Visual Composer: `/compose`  
+Design System: `/design`  
 Swagger UI: `/swagger`
 
 ## Evidence boundary
