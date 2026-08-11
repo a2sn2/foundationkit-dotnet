@@ -69,4 +69,66 @@ window.FoundationKitTheme = (() => {
     };
 })();
 
+window.FoundationKitLocale = (() => {
+    const storageKey = 'foundationkit-language';
+    const validLanguages = new Set(['en', 'ar']);
+
+    function normalize(language) {
+        const value = String(language || '').toLowerCase();
+        return validLanguages.has(value) ? value : 'en';
+    }
+
+    function apply(language) {
+        const normalized = normalize(language);
+        const root = document.documentElement;
+        root.lang = normalized;
+        root.dir = normalized === 'ar' ? 'rtl' : 'ltr';
+        root.dataset.fkLanguage = normalized;
+        return normalized;
+    }
+
+    function notify(language) {
+        document.dispatchEvent(new CustomEvent('foundationkit:languagechange', {
+            detail: { language }
+        }));
+    }
+
+    function initialize(fallback = 'en') {
+        let stored = normalize(fallback);
+        try {
+            stored = normalize(localStorage.getItem(storageKey) || fallback);
+        } catch {
+            stored = normalize(fallback);
+        }
+        return apply(stored);
+    }
+
+    function current() {
+        return normalize(document.documentElement.dataset.fkLanguage || document.documentElement.lang || 'en');
+    }
+
+    function set(language) {
+        const normalized = apply(language);
+        try {
+            localStorage.setItem(storageKey, normalized);
+        } catch {
+            // Language persistence is best-effort; direction and rendering still update.
+        }
+        notify(normalized);
+        return normalized;
+    }
+
+    function toggle() {
+        return set(current() === 'ar' ? 'en' : 'ar');
+    }
+
+    return {
+        initialize,
+        current,
+        set,
+        toggle
+    };
+})();
+
 window.FoundationKitTheme.initialize();
+window.FoundationKitLocale.initialize(document.documentElement.lang || 'en');

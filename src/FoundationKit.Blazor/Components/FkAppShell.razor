@@ -1,6 +1,6 @@
 @namespace FoundationKit.Blazor.Components
 
-<div class="fk-shell @Class" dir="@NormalizedDirection">
+<div class="fk-shell @Class" dir="@NormalizedDirection" data-fk-shell-language="@NormalizedLanguage">
     <aside class="fk-shell__sidebar" aria-label="@NavigationLabel">
         @if (Brand is not null)
         {
@@ -28,6 +28,15 @@
         @if (TopbarActions is not null)
         {
             @TopbarActions
+        }
+        @if (ShowLanguageToggle)
+        {
+            <FkLanguageToggle Language="@NormalizedLanguage"
+                              LanguageChanged="@OnLanguageChangedAsync"
+                              EnglishLabel="@EnglishLabel"
+                              ArabicLabel="@ArabicLabel"
+                              EnglishAriaLabel="@EnglishAriaLabel"
+                              ArabicAriaLabel="@ArabicAriaLabel" />
         }
         <FkThemeToggle LightLabel="@DarkModeLabel" DarkLabel="@LightModeLabel" />
     </header>
@@ -60,6 +69,27 @@
     public string Direction { get; set; } = "ltr";
 
     [Parameter]
+    public string Language { get; set; } = "en";
+
+    [Parameter]
+    public EventCallback<string> LanguageChanged { get; set; }
+
+    [Parameter]
+    public bool ShowLanguageToggle { get; set; } = true;
+
+    [Parameter]
+    public string EnglishLabel { get; set; } = "EN";
+
+    [Parameter]
+    public string ArabicLabel { get; set; } = "ع";
+
+    [Parameter]
+    public string EnglishAriaLabel { get; set; } = "Switch to English";
+
+    [Parameter]
+    public string ArabicAriaLabel { get; set; } = "التبديل إلى العربية";
+
+    [Parameter]
     public string NavigationLabel { get; set; } = "Application navigation";
 
     [Parameter]
@@ -71,5 +101,10 @@
     [Parameter]
     public string? Class { get; set; }
 
-    private string NormalizedDirection => string.Equals(Direction, "rtl", StringComparison.OrdinalIgnoreCase) ? "rtl" : "ltr";
+    private string NormalizedLanguage => string.Equals(Language, "ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en";
+    private string NormalizedDirection => string.Equals(Direction, "auto", StringComparison.OrdinalIgnoreCase)
+        ? (NormalizedLanguage == "ar" ? "rtl" : "ltr")
+        : string.Equals(Direction, "rtl", StringComparison.OrdinalIgnoreCase) ? "rtl" : "ltr";
+
+    private Task OnLanguageChangedAsync(string language) => LanguageChanged.InvokeAsync(language);
 }

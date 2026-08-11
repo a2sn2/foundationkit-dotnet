@@ -26,6 +26,7 @@ required = [
     SITE / "styles.css",
     SITE / "pages.css",
     SITE / "developer.css",
+    SITE / "creative.css",
     SITE / "app.js",
     SITE / "multipage.js",
     SITE / "portal-manifest.json",
@@ -68,12 +69,12 @@ pages = {name: (SITE / name).read_text(encoding="utf-8") for name in page_names}
 all_html = "\n".join(pages.values())
 
 required_page_text = {
-    "index.html": ("FoundationKit", "CORE-ONLY REPOSITORY", "EXPLORE THE CORE", "Developer"),
+    "index.html": ("FoundationKit", "CORE-ONLY REPOSITORY", "EXPLORE THE CORE", "Developer", 'data-ar='),
     "architecture.html": ("ARCHITECTURE", "Reusable Core.", "Five explicit layers.", "Authorization is server-authoritative"),
     "capabilities.html": ("MODULE / CRUD / API ENGINE", "SQL-FIRST READS", "PROJECT ISOLATION + RELIABILITY", "SUPPORTING CAPABILITIES"),
     "packages.html": ("17 REUSABLE PACKAGES", "FoundationKit.Domain", "FoundationKit.Blazor", "FoundationKit.Caching"),
     "composer.html": ("COMPOSER · SCHEMA V2", "Seven canonical profiles", "Visual and CLI share the same engine", "Safe regeneration"),
-    "frontend.html": ("FOUNDATIONKIT.BLAZOR · SOFT ORBIT", "REUSABLE RAZOR LAYER", "RTL / LTR", "PRESENTATION STATES"),
+    "frontend.html": ("FOUNDATIONKIT.BLAZOR · SOFT ORBIT", "REUSABLE RAZOR LAYER", "RTL / LTR", "PRESENTATION STATES", "FkLanguageToggle"),
     "quality.html": ("ENGINEERING EVIDENCE", "EXACT-HEAD QUALITY", "CONTRACT DRIFT", "Repository Complete ≠ Production Approved"),
     "start.html": ("START THE FIRST PROJECT", ".\\foundationkit.ps1 start -Target Workbench", "generated\\MySystem\\MySystem.sln", "Choose → Validate → Generate"),
     "developer.html": (
@@ -84,6 +85,9 @@ required_page_text = {
         "B.Sc. in Computer Science",
         "Explore 16 projects",
         "assets/developer-avatar.png",
+        "dev-hero-v2",
+        "dev-orbit-scene",
+        'data-ar=',
     ),
     "developer-projects.html": (
         "CV-BACKED PROJECT CATALOG",
@@ -93,6 +97,7 @@ required_page_text = {
         "MikroTik Hotspot Portal",
         "Arduino Traffic Light Controller",
         "Object Tracking Algorithms",
+        'data-ar=',
     ),
 }
 for page, markers in required_page_text.items():
@@ -114,7 +119,11 @@ for page in ("developer.html", "developer-projects.html"):
         raise SystemExit(f"Pages {page} must load the Developer portfolio stylesheet")
     if 'assets/developer-avatar.png' not in pages[page]:
         raise SystemExit(f"Pages {page} must use the CV portrait as a small avatar/icon")
+    if pages[page].count('data-en=') < 15 or pages[page].count('data-ar=') < 15:
+        raise SystemExit(f"Pages {page} must expose a substantive EN/AR content contract")
 
+if pages["index.html"].count('data-en=') < 20 or pages["index.html"].count('data-ar=') < 20:
+    raise SystemExit("Core overview must expose a substantive EN/AR content contract")
 if "Waiting for the developer CV." in pages["developer.html"] or "CV content pending" in pages["developer.html"]:
     raise SystemExit("Developer page still contains the pre-CV placeholder")
 if "01/10/2002" in pages["developer.html"]:
@@ -152,14 +161,19 @@ for selector in (".dev-photo", ".dev-hero-layout", ".timeline", ".project-featur
     if selector not in developer_css:
         raise SystemExit(f"Developer stylesheet missing required selector: {selector}")
 
+creative_css = (SITE / "creative.css").read_text(encoding="utf-8")
+for selector in (".language-toggle", ".dev-hero-v2", ".dev-orbit-scene", ".dev-satellite", "prefers-reduced-motion"):
+    if selector not in creative_css:
+        raise SystemExit(f"Creative Pages layer missing required selector: {selector}")
+
 js = (SITE / "app.js").read_text(encoding="utf-8")
 for behavior in ("data-package-filter", "foundationkit-theme", "IntersectionObserver", "portal-manifest.json"):
     if behavior not in js:
         raise SystemExit(f"Pages interactions missing required behavior: {behavior}")
 
 multipage_js = (SITE / "multipage.js").read_text(encoding="utf-8")
-for behavior in ("data-page", "location.pathname", "aria-expanded"):
+for behavior in ("data-page", "location.pathname", "aria-expanded", "foundationkit-language", "data-language-toggle", "document.documentElement.dir", "creative.css"):
     if behavior not in multipage_js:
-        raise SystemExit(f"Multi-page navigation missing required behavior: {behavior}")
+        raise SystemExit(f"Multi-page navigation/localization missing required behavior: {behavior}")
 
-print("FoundationKit multi-page Core + source-grounded Developer portfolio assets verified.")
+print("FoundationKit bilingual Soft Orbit Core + source-grounded Developer portfolio assets verified.")
