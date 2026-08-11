@@ -1,4 +1,4 @@
-name: Patch Phase 14 generator once v2
+name: Patch Phase 14 generator once v3
 
 on:
   pull_request:
@@ -54,19 +54,11 @@ jobs:
               'entity index mapping')
 
           replace_once(
-              '''        foreach (var item in executable)
-        {
-            up.AppendLine(BuildResourceMigrationTable(manifest, item.Resource));
-            down.Insert(0, $"        migrationBuilder.DropTable(name: {JsonSerializer.Serialize(TableName(manifest, item.Resource))});\\n");
-        }
+              '''            up.AppendLine(BuildResourceMigrationTable(manifest, item.Resource));
 ''',
-              '''        foreach (var item in executable)
-        {
-            up.AppendLine(BuildResourceMigrationTable(manifest, item.Resource));
+              '''            up.AppendLine(BuildResourceMigrationTable(manifest, item.Resource));
             foreach (var field in item.Resource.Fields.Where(field => field.Indexed))
                 up.AppendLine(BuildResourceMigrationIndex(manifest, item.Resource, field));
-            down.Insert(0, $"        migrationBuilder.DropTable(name: {JsonSerializer.Serialize(TableName(manifest, item.Resource))});\\n");
-        }
 ''',
               'migration index loop')
 
@@ -155,14 +147,4 @@ jobs:
           text = text.replace(marker, helper + marker, 1)
 
           path.write_text(text, encoding='utf-8')
-          Path('.github/workflows/patch-phase14-generator-once.yml').unlink()
           PY
-
-          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
-          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
-          git diff --check
-          git config user.name "foundationkit-ci"
-          git config user.email "foundationkit-ci@users.noreply.github.com"
-          git add -A
-          git commit -m "feat: generate SQL query policies and indexes"
-          git push origin HEAD:core-vnext/read-engine-phase-14
