@@ -1,0 +1,133 @@
+name: FoundationKit Frontend Generation Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-frontend-generation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generated-frontend:
+    name: OpenAPI to deterministic Blazor application proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Validate frontend generation tooling
+        run: |
+          python3 -m py_compile scripts/generate-csharp-client-from-openapi.py
+          python3 -m py_compile scripts/generate-blazor-app-from-openapi.py
+          python3 -m json.tool tests/fixtures/frontend-proof.openapi.json >/dev/null
+
+      - name: Generate deterministic Blazor application
+        shell: bash
+        run: |
+          rm -rf artifacts/frontend-generation-proof
+          mkdir -p artifacts/frontend-generation-proof
+          python3 scripts/generate-blazor-app-from-openapi.py \
+            tests/fixtures/frontend-proof.openapi.json \
+            artifacts/frontend-generation-proof/app \
+            --app-name FoundationGeneratedFrontend \
+            --namespace FoundationKit.GeneratedFrontend \
+            --client-class GeneratedApiClient \
+            --foundation-root "$GITHUB_WORKSPACE"
+
+          find artifacts/frontend-generation-proof/app -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > /tmp/frontend-before.sha256
+
+          python3 scripts/generate-blazor-app-from-openapi.py \
+            tests/fixtures/frontend-proof.openapi.json \
+            artifacts/frontend-generation-proof/app \
+            --app-name FoundationGeneratedFrontend \
+            --namespace FoundationKit.GeneratedFrontend \
+            --client-class GeneratedApiClient \
+            --foundation-root "$GITHUB_WORKSPACE"
+
+          find artifacts/frontend-generation-proof/app -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > /tmp/frontend-after.sha256
+          diff -u /tmp/frontend-before.sha256 /tmp/frontend-after.sha256
+
+          python3 scripts/generate-blazor-app-from-openapi.py \
+            tests/fixtures/frontend-proof.openapi.json \
+            artifacts/frontend-generation-proof/app \
+            --app-name FoundationGeneratedFrontend \
+            --namespace FoundationKit.GeneratedFrontend \
+            --client-class GeneratedApiClient \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --check
+
+          grep -Fq 'class GeneratedApiClient' artifacts/frontend-generation-proof/app/Api/GeneratedApiClient.g.cs
+          grep -Fq 'FoundationKit.Blazor.csproj' artifacts/frontend-generation-proof/app/FoundationGeneratedFrontend.csproj
+          grep -Fq 'builder.Services.AddScoped<GeneratedApiClient>()' artifacts/frontend-generation-proof/app/Program.cs
+          grep -Fq 'backend authorization' artifacts/frontend-generation-proof/app/Pages/Home.razor
+
+      - name: Reject unsafe generated identifiers
+        shell: bash
+        run: |
+          if python3 scripts/generate-blazor-app-from-openapi.py \
+            tests/fixtures/frontend-proof.openapi.json \
+            artifacts/frontend-generation-proof/unsafe \
+            --app-name 'Bad;Name' \
+            --foundation-root "$GITHUB_WORKSPACE"; then
+            echo 'Unsafe app-name unexpectedly succeeded.'
+            exit 1
+          fi
+
+      - name: Restore build and publish generated frontend
+        shell: bash
+        run: |
+          project=artifacts/frontend-generation-proof/app/FoundationGeneratedFrontend.csproj
+          dotnet restore "$project"
+          dotnet build "$project" --configuration Release --no-restore
+          dotnet publish "$project" --configuration Release --no-build --no-restore \
+            --output artifacts/frontend-generation-proof/publish
+          test -f artifacts/frontend-generation-proof/publish/wwwroot/index.html
+          test -f artifacts/frontend-generation-proof/publish/wwwroot/_framework/blazor.webassembly.js
+
+      - name: Record proof summary
+        shell: bash
+        run: |
+          cat > artifacts/frontend-generation-proof/evidence.txt <<'EOF'
+          Input contract: OpenAPI 3.x Foundation-shaped fixture
+          Typed client generator: scripts/generate-csharp-client-from-openapi.py
+          Blazor app generator: scripts/generate-blazor-app-from-openapi.py
+          Repeat generation SHA: identical
+          --check drift verification: passed
+          Unsafe identifier rejection: passed
+          Restore/build/publish: passed
+          FoundationKit.Blazor project reference: verified
+          Product authorization/business rules generated in browser: no
+          EOF
+
+      - name: Upload generated frontend evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundationkit-frontend-generation-proof
+          path: |
+            artifacts/frontend-generation-proof/app
+            artifacts/frontend-generation-proof/evidence.txt
+          if-no-files-found: error
