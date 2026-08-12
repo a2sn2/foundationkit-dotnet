@@ -82,6 +82,7 @@ public static class ComposerFoundationBinding
             RewriteGeneratedProjectReferencesToVendoredCopy(
                 generatedProjects,
                 normalizedFoundationRoot,
+                outputDirectory,
                 vendoredRoot);
 
             solutionFoundationProjects = foundationProjects
@@ -304,6 +305,7 @@ public static class ComposerFoundationBinding
     private static void RewriteGeneratedProjectReferencesToVendoredCopy(
         IEnumerable<string> generatedProjects,
         string foundationRoot,
+        string outputDirectory,
         string vendoredRoot)
     {
         foreach (var generatedProject in generatedProjects)
@@ -318,7 +320,7 @@ public static class ComposerFoundationBinding
                     continue;
 
                 var target = ResolveProjectReference(generatedProject, include.Value);
-                if (!IsUnderDirectory(target, foundationRoot))
+                if (IsUnderDirectory(target, outputDirectory) || !IsUnderDirectory(target, foundationRoot))
                     continue;
 
                 var vendoredTarget = Path.Combine(vendoredRoot, Path.GetRelativePath(foundationRoot, target));
