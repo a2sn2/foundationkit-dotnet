@@ -2,41 +2,66 @@
 @using System.Text.Json
 @inject WorkbenchApiClient Api
 
-<PageTitle>Visual Composer — FoundationKit</PageTitle>
+<PageTitle>@T("المركب المرئي — FoundationKit", "Visual Composer — FoundationKit")</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-6 flex-wrap">
-        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">نظرة عامة</MudButton>
-        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">SCHEMA V2 COMPOSER</MudChip>
-        <MudSpacer />
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ValidateAsync" Disabled="@(_validating || _generating)" StartIcon="@Icons.Material.Filled.Rule">
-            تحقق
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="composer-page">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="composer-actionbar flex-wrap">
+        <MudButton Variant="Variant.Text" Href="/" StartIcon="@BackIcon">
+            @T("نظرة عامة", "Overview")
         </MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="GenerateAsync" Disabled="@(!CanGenerate)" StartIcon="@Icons.Material.Filled.RocketLaunch">
-            @(_generating ? "جاري التوليد..." : "Generate Project")
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">SCHEMA V2</MudChip>
+        <MudChip T="string" Color="@ValidationTone" Variant="Variant.Outlined">@ValidationLabel</MudChip>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   OnClick="ValidateAsync"
+                   Disabled="@(_validating || _generating)"
+                   StartIcon="@Icons.Material.Filled.Rule">
+            @(_validating ? T("جارٍ التحقق...", "Validating...") : T("تحقق", "Validate"))
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Success"
+                   OnClick="GenerateAsync"
+                   Disabled="@(!CanGenerate)"
+                   StartIcon="@Icons.Material.Filled.RocketLaunch">
+            @(_generating ? T("جارٍ التوليد...", "Generating...") : T("ولّد المشروع", "Generate Project"))
         </MudButton>
     </MudStack>
 
-    <section class="portal-hero studio-hero">
+    <section class="portal-hero studio-hero composer-hero">
         <div>
             <div class="eyebrow">CHOOSE → VALIDATE → GENERATE</div>
-            <MudText Typo="Typo.h2">اختر أساس المشروع بصريًا، ثم ولّده محليًا بنفس Composer Engine.</MudText>
-            <MudText Typo="Typo.h6" Class="muted-text mt-3">
-                لا يوجد Generator داخل المتصفح. الواجهة تبني Manifest فقط، والتحقق والتوليد الفعليان يمران عبر
-                ComposerManifestParser وCompositionAnalyzer وComposerProjectModelGenerator على السيرفر المحلي.
+            <MudText Typo="Typo.h3">
+                @T("اختر أساس المشروع، راجع الـManifest، ثم ولّده محليًا بنفس Composer Engine.",
+                   "Choose the project foundation, review the Manifest, then generate it locally with the same Composer Engine.")
+            </MudText>
+            <MudText Typo="Typo.body1" Class="muted-text mt-3">
+                @T("الواجهة لا تعيد تنفيذ منطق التوليد؛ هي تبني العقد فقط. التحقق والتوليد الفعليان يمران عبر ComposerManifestParser وCompositionAnalyzer وComposerProjectModelGenerator على السيرفر المحلي.",
+                   "The browser does not reimplement generation logic; it only builds the contract. Validation and generation run through ComposerManifestParser, CompositionAnalyzer and ComposerProjectModelGenerator on the local server.")
             </MudText>
         </div>
-        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Large" Color="Color.Primary" />
+        <div class="composer-hero__mark" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Large" Color="Color.Primary" />
+            <span>v2</span>
+        </div>
     </section>
 
-    <MudGrid Class="mt-8">
+    <MudGrid Class="composer-workspace">
         <MudItem xs="12" lg="4">
-            <MudPaper Class="studio-panel" Elevation="0">
-                <MudText Typo="Typo.h4">Project choices</MudText>
-                <MudText Class="muted-text mt-2">اختيارات bounded لبناء schema-v2 starter قبل التعديل المتقدم في JSON.</MudText>
+            <MudPaper Class="studio-panel composer-panel composer-choices" Elevation="0">
+                <div class="composer-panel__heading">
+                    <div>
+                        <MudText Typo="Typo.h5">@T("اختيارات المشروع", "Project choices")</MudText>
+                        <MudText Class="muted-text mt-1">
+                            @T("اختيارات محدودة لبناء starter آمن قبل التعديل المتقدم في JSON.",
+                               "Bounded choices for a safe starter before advanced JSON editing.")
+                        </MudText>
+                    </div>
+                    <span class="composer-step">01</span>
+                </div>
 
-                <MudTextField T="string" @bind-Value="_projectName" Label="Project name" Variant="Variant.Outlined" Class="mt-4" />
-                <MudSelect T="string" @bind-Value="_profile" Label="Profile" Variant="Variant.Outlined" Class="mt-3">
+                <MudTextField T="string" @bind-Value="_projectName" Label="@(T("اسم المشروع", "Project name"))" Variant="Variant.Outlined" Class="mt-4" />
+                <MudSelect T="string" @bind-Value="_profile" Label="@(T("النمط", "Profile"))" Variant="Variant.Outlined" Class="mt-3">
                     <MudSelectItem T="string" Value="@("minimal")">Minimal</MudSelectItem>
                     <MudSelectItem T="string" Value="@("standard")">Standard</MudSelectItem>
                     <MudSelectItem T="string" Value="@("enterprise")">Enterprise</MudSelectItem>
@@ -46,10 +71,10 @@
                     <MudSelectItem T="string" Value="@("public-portal")">Public Portal</MudSelectItem>
                 </MudSelect>
 
-                <MudTextField T="string" @bind-Value="_moduleName" Label="Module name" Variant="Variant.Outlined" Class="mt-3" />
-                <MudTextField T="string" @bind-Value="_resourceName" Label="Resource name" Variant="Variant.Outlined" Class="mt-3" />
-                <MudTextField T="string" @bind-Value="_route" Label="Resource route" Variant="Variant.Outlined" Class="mt-3" />
-                <MudSelect T="string" @bind-Value="_idType" Label="ID type" Variant="Variant.Outlined" Class="mt-3">
+                <MudTextField T="string" @bind-Value="_moduleName" Label="@(T("اسم الموديول", "Module name"))" Variant="Variant.Outlined" Class="mt-3" />
+                <MudTextField T="string" @bind-Value="_resourceName" Label="@(T("اسم المورد", "Resource name"))" Variant="Variant.Outlined" Class="mt-3" />
+                <MudTextField T="string" @bind-Value="_route" Label="@(T("مسار المورد", "Resource route"))" Variant="Variant.Outlined" Class="mt-3" />
+                <MudSelect T="string" @bind-Value="_idType" Label="@(T("نوع المعرّف", "ID type"))" Variant="Variant.Outlined" Class="mt-3">
                     <MudSelectItem T="string" Value="@("guid")">Guid</MudSelectItem>
                     <MudSelectItem T="string" Value="@("string")">String</MudSelectItem>
                     <MudSelectItem T="string" Value="@("long")">Long</MudSelectItem>
@@ -57,57 +82,77 @@
                 </MudSelect>
 
                 <MudDivider Class="my-4" />
-                <MudText Typo="Typo.subtitle2">Resource behavior</MudText>
-                <MudCheckBox T="bool" @bind-Value="_authorization" Label="Authorization" Color="Color.Primary" />
-                <MudCheckBox T="bool" @bind-Value="_auditing" Label="Auditing" Color="Color.Primary" />
-                <MudCheckBox T="bool" @bind-Value="_concurrency" Label="Optimistic concurrency / ETag" Color="Color.Primary" />
-                <MudCheckBox T="bool" @bind-Value="_idempotency" Label="Mutation idempotency" Color="Color.Primary" />
-                <MudCheckBox T="bool" @bind-Value="_blazor" Label="Include Blazor client project" Color="Color.Secondary" />
+                <MudText Typo="Typo.subtitle2">@T("سلوك المورد", "Resource behavior")</MudText>
+                <MudCheckBox T="bool" @bind-Value="_authorization" Label="@(T("الصلاحيات", "Authorization"))" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_auditing" Label="@(T("التدقيق", "Auditing"))" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_concurrency" Label="@(T("التزامن المتفائل / ETag", "Optimistic concurrency / ETag"))" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_idempotency" Label="@(T("Idempotency لعمليات التغيير", "Mutation idempotency"))" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_blazor" Label="@(T("تضمين مشروع Blazor", "Include Blazor client project"))" Color="Color.Secondary" />
 
-                <MudButton FullWidth="true" Variant="Variant.Outlined" Class="mt-4" OnClick="BuildStarter" StartIcon="@Icons.Material.Filled.AutoFixHigh">
-                    طبّق الاختيارات على Manifest
+                <MudButton FullWidth="true"
+                           Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Class="mt-4"
+                           OnClick="BuildStarter"
+                           Disabled="@(_validating || _generating)"
+                           StartIcon="@Icons.Material.Filled.AutoFixHigh">
+                    @T("طبّق الاختيارات على الـManifest", "Apply choices to Manifest")
                 </MudButton>
 
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
-                    للموديلات المتقدمة، عدّل JSON مباشرة لإضافة الحقول، search/sort/index intent، والـRead Models/Views ثم نفّذ التحقق قبل التوليد.
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4 composer-tip">
+                    @T("للموديلات المتقدمة عدّل JSON مباشرة لإضافة الحقول وsearch/sort/index intent والـRead Models/Views، ثم أعد التحقق قبل التوليد.",
+                       "For advanced models, edit JSON directly to add fields, search/sort/index intent and Read Models/Views, then validate again before generation.")
                 </MudAlert>
             </MudPaper>
         </MudItem>
 
         <MudItem xs="12" lg="8">
-            <MudPaper Class="studio-panel" Elevation="0">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudPaper Class="studio-panel composer-panel composer-manifest" Elevation="0">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3 flex-wrap">
                     <div>
-                        <MudText Typo="Typo.h4">Manifest JSON</MudText>
-                        <MudText Class="muted-text">هذا هو العقد الذي يستهلكه Composer؛ يمكنك تعديله يدويًا قبل Validate/Generate.</MudText>
+                        <div class="composer-panel__heading composer-panel__heading--inline">
+                            <div>
+                                <MudText Typo="Typo.h5">Manifest JSON</MudText>
+                                <MudText Class="muted-text mt-1">
+                                    @T("هذا هو العقد الذي يستهلكه Composer. أي تعديل يدوي يلغي التحقق السابق تلقائيًا.",
+                                       "This is the contract consumed by Composer. Any manual edit automatically invalidates the previous validation.")
+                                </MudText>
+                            </div>
+                            <span class="composer-step">02</span>
+                        </div>
                     </div>
                     <MudSpacer />
-                    <MudChip T="string" Variant="Variant.Outlined">@_manifestJson.Length chars</MudChip>
+                    <MudChip T="string" Variant="Variant.Outlined">@_manifestJson.Length @T("حرف", "chars")</MudChip>
                 </MudStack>
 
                 <MudTextField T="string"
-                              @bind-Value="_manifestJson"
+                              @bind-Value="ManifestJson"
                               Variant="Variant.Outlined"
-                              Lines="24"
+                              Lines="22"
                               Immediate="true"
-                              Class="manifest-editor" />
+                              Disabled="@_generating"
+                              Class="manifest-editor composer-editor" />
             </MudPaper>
         </MudItem>
     </MudGrid>
 
-    <section class="section-block">
-        <div class="section-heading">
+    <section class="composer-section" id="composer-validation">
+        <div class="section-heading composer-section__heading">
             <div>
                 <div class="eyebrow">CANONICAL VALIDATION</div>
-                <MudText Typo="Typo.h3">نتيجة Composer الفعلية</MudText>
+                <MudText Typo="Typo.h4">@T("نتيجة Composer الفعلية", "Canonical Composer result")</MudText>
             </div>
+            <span class="composer-step">03</span>
         </div>
 
         @if (_validating)
         {
-            <div class="loading-panel" role="status" aria-live="polite">
-                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                <MudText>ComposerManifestParser + CompositionAnalyzer يعملان...</MudText>
+            <div class="composer-inline-state" role="status" aria-live="polite">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+                <div>
+                    <strong>@T("جارٍ التحقق من العقد", "Validating the contract")</strong>
+                    <span>ComposerManifestParser + CompositionAnalyzer</span>
+                </div>
             </div>
         }
         else if (_transportError is not null)
@@ -116,9 +161,15 @@
         }
         else if (_validation is null)
         {
-            <div class="empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.Rule" Size="Size.Large" />
-                <MudText>اضغط «تحقق» قبل التوليد.</MudText>
+            <div class="composer-placeholder">
+                <MudIcon Icon="@Icons.Material.Filled.Rule" />
+                <div>
+                    <strong>@T("الـManifest يحتاج تحققًا", "Manifest needs validation")</strong>
+                    <span>@T("تحقق من النسخة الحالية قبل السماح بالتوليد.", "Validate the current content before generation is enabled.")</span>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ValidateAsync" StartIcon="@Icons.Material.Filled.Rule">
+                    @T("تحقق الآن", "Validate now")
+                </MudButton>
             </div>
         }
         else if (!_validation.Valid)
@@ -129,17 +180,17 @@
         }
         else
         {
-            <div class="platform-grid">
+            <div class="platform-grid composer-metrics">
                 <div><span>Schema</span><strong>v@_validation.SchemaVersion</strong><small>@_validation.ProjectName</small></div>
-                <div><span>Modules</span><strong>@_validation.ModuleCount</strong><small>@_validation.Profile</small></div>
-                <div><span>Resources</span><strong>@_validation.ResourceCount</strong><small>@_validation.ReadModelCount read model(s)</small></div>
-                <div><span>Maturity</span><strong>@(_validation.StableOnly ? "stable-only" : "mixed")</strong><small>resolved graph</small></div>
+                <div><span>@T("الموديولات", "Modules")</span><strong>@_validation.ModuleCount</strong><small>@_validation.Profile</small></div>
+                <div><span>@T("الموارد", "Resources")</span><strong>@_validation.ResourceCount</strong><small>@_validation.ReadModelCount read model(s)</small></div>
+                <div><span>@T("النضج", "Maturity")</span><strong>@(_validation.StableOnly ? "stable-only" : "mixed")</strong><small>resolved graph</small></div>
             </div>
 
             <MudGrid Class="mt-4">
                 <MudItem xs="12" lg="7">
-                    <MudPaper Class="architecture-card" Elevation="0">
-                        <MudText Typo="Typo.h6">Resolved capabilities</MudText>
+                    <MudPaper Class="architecture-card composer-result-card" Elevation="0">
+                        <MudText Typo="Typo.h6">@T("القدرات المحلولة", "Resolved capabilities")</MudText>
                         <div class="capability-list mt-3">
                             @foreach (var capability in _validation.Capabilities)
                             {
@@ -153,11 +204,11 @@
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12" lg="5">
-                    <MudPaper Class="architecture-card" Elevation="0">
-                        <MudText Typo="Typo.h6">Warnings</MudText>
+                    <MudPaper Class="architecture-card composer-result-card" Elevation="0">
+                        <MudText Typo="Typo.h6">@T("التحذيرات", "Warnings")</MudText>
                         @if (_validation.Warnings.Count == 0)
                         {
-                            <MudText Class="muted-text mt-3">لا توجد maturity warnings في هذا التحليل.</MudText>
+                            <MudText Class="muted-text mt-3">@T("لا توجد maturity warnings في هذا التحليل.", "No maturity warnings in this analysis.")</MudText>
                         }
                         else
                         {
@@ -174,26 +225,55 @@
         }
     </section>
 
-    <section class="section-block">
-        <div class="section-heading">
+    <section class="composer-section" id="composer-generation">
+        <div class="section-heading composer-section__heading">
             <div>
                 <div class="eyebrow">LOCAL GENERATION WORKSPACE</div>
-                <MudText Typo="Typo.h3">Generate إلى جهازك بدون Path حر من المتصفح</MudText>
+                <MudText Typo="Typo.h4">@T("ولّد المشروع إلى جهازك بأمان", "Generate safely to your machine")</MudText>
             </div>
+            <span class="composer-step">04</span>
         </div>
 
-        <MudPaper Class="studio-panel" Elevation="0">
-            <MudText>
-                المخرج مقيد دائمًا إلى <code>generated/&lt;ProjectName&gt;</code> داخل نسخة FoundationKit المحلية.
-                إذا كان المجلد موجودًا فلن يُستبدل افتراضيًا.
-            </MudText>
-            <MudCheckBox T="bool" @bind-Value="_forceGeneration" Label="Regenerate only if the existing folder is unchanged and FoundationKit-owned" Color="Color.Warning" Class="mt-3" />
+        <MudPaper Class="studio-panel composer-generation" Elevation="0">
+            <div class="composer-generation__head">
+                <div>
+                    <MudText Typo="Typo.h6">generated/&lt;ProjectName&gt;</MudText>
+                    <MudText Class="muted-text mt-1">
+                        @T("المخرج مقيد داخل نسخة FoundationKit المحلية، ولا يسمح المتصفح بأي Path حر.",
+                           "Output is restricted to the local FoundationKit workspace; the browser cannot choose an arbitrary path.")
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           OnClick="GenerateAsync"
+                           Disabled="@(!CanGenerate)"
+                           StartIcon="@Icons.Material.Filled.RocketLaunch">
+                    @(_generating ? T("جارٍ التوليد...", "Generating...") : T("ولّد المشروع", "Generate Project"))
+                </MudButton>
+            </div>
+
+            <MudCheckBox T="bool"
+                         @bind-Value="_forceGeneration"
+                         Label="@(T("أعد التوليد فقط إذا كان المجلد الحالي دون تغييرات ومملوكًا لـFoundationKit", "Regenerate only if the existing folder is unchanged and FoundationKit-owned"))"
+                         Color="Color.Warning"
+                         Class="mt-3" />
+
+            @if (!CanGenerate && !_generating && _generation is null)
+            {
+                <div class="composer-generation__hint">
+                    <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" />
+                    <span>@T("سيُفعّل زر التوليد بعد نجاح التحقق للنسخة الحالية من الـManifest.", "Generate unlocks only after the current Manifest validates successfully.")</span>
+                </div>
+            }
 
             @if (_generating)
             {
-                <div class="loading-panel" role="status" aria-live="polite">
-                    <MudProgressCircular Indeterminate="true" Color="Color.Success" />
-                    <MudText>يتم الآن إنشاء Solution والمشاريع والـSQL/API artifacts...</MudText>
+                <div class="composer-inline-state" role="status" aria-live="polite">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Success" Size="Size.Small" />
+                    <div>
+                        <strong>@T("جارٍ إنشاء المشروع", "Generating project")</strong>
+                        <span>@T("Solution + projects + SQL/API artifacts", "Solution + projects + SQL/API artifacts")</span>
+                    </div>
                 </div>
             }
             else if (_generation is not null)
@@ -201,9 +281,9 @@
                 @if (_generation.Generated)
                 {
                     <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">
-                        تم توليد <strong>@_generation.ProjectName</strong> بنجاح في <code>@_generation.RelativeOutputPath</code>.
+                        @T("تم توليد", "Generated") <strong>@_generation.ProjectName</strong> @T("بنجاح في", "successfully at") <code>@_generation.RelativeOutputPath</code>.
                     </MudAlert>
-                    <div class="platform-grid mt-4">
+                    <div class="platform-grid mt-4 composer-metrics">
                         <div><span>Output</span><strong>@_generation.RelativeOutputPath</strong><small>host workspace</small></div>
                         <div><span>Solution</span><strong>@_generation.SolutionFileName</strong><small>ready to open</small></div>
                         <div><span>References</span><strong>@_generation.ReferenceMode</strong><small>FoundationKit local source</small></div>
@@ -220,6 +300,9 @@
 </MudContainer>
 
 @code {
+    [CascadingParameter(Name = "FoundationLanguage")]
+    private string Language { get; set; } = "ar";
+
     private string _projectName = "StudioGenerated";
     private string _profile = "minimal";
     private string _moduleName = "Customers";
@@ -233,17 +316,56 @@
     private bool _blazor = true;
     private bool _forceGeneration;
     private string _manifestJson = string.Empty;
+    private string? _validatedManifestJson;
     private ComposerValidationResponse? _validation;
     private ComposerGenerationResponse? _generation;
     private string? _transportError;
     private bool _validating;
     private bool _generating;
 
+    private bool IsArabic => string.Equals(Language, "ar", StringComparison.OrdinalIgnoreCase);
+    private string T(string ar, string en) => IsArabic ? ar : en;
+    private string BackIcon => IsArabic ? Icons.Material.Filled.ArrowForward : Icons.Material.Filled.ArrowBack;
+
+    private string ManifestJson
+    {
+        get => _manifestJson;
+        set
+        {
+            var next = value ?? string.Empty;
+            if (string.Equals(_manifestJson, next, StringComparison.Ordinal))
+                return;
+
+            _manifestJson = next;
+            InvalidateValidationState();
+        }
+    }
+
+    private bool IsCurrentManifestValidated =>
+        _validation?.Valid == true &&
+        string.Equals(_validatedManifestJson, _manifestJson, StringComparison.Ordinal);
+
     private bool CanGenerate =>
         !_validating &&
         !_generating &&
-        _validation?.Valid == true &&
-        _validation.SchemaVersion == 2;
+        IsCurrentManifestValidated &&
+        _validation?.SchemaVersion == 2;
+
+    private Color ValidationTone => _validating
+        ? Color.Info
+        : IsCurrentManifestValidated
+            ? Color.Success
+            : _validation is not null
+                ? Color.Error
+                : Color.Default;
+
+    private string ValidationLabel => _validating
+        ? T("جارٍ التحقق", "Validating")
+        : IsCurrentManifestValidated
+            ? T("تم التحقق", "Validated")
+            : _validation is not null
+                ? T("غير صالح", "Invalid")
+                : T("يحتاج تحققًا", "Needs validation");
 
     protected override void OnInitialized() => BuildStarter();
 
@@ -305,7 +427,12 @@
             }
         };
 
-        _manifestJson = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
+        ManifestJson = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private void InvalidateValidationState()
+    {
+        _validatedManifestJson = null;
         _validation = null;
         _generation = null;
         _transportError = null;
@@ -313,17 +440,24 @@
 
     private async Task ValidateAsync()
     {
+        var manifest = _manifestJson;
         _validating = true;
         _transportError = null;
         _validation = null;
         _generation = null;
+        _validatedManifestJson = null;
         try
         {
-            var result = await Api.ValidateComposerManifestAsync(_manifestJson);
+            var result = await Api.ValidateComposerManifestAsync(manifest);
             if (result.IsSuccess)
+            {
                 _validation = result.Value;
+                _validatedManifestJson = manifest;
+            }
             else
-                _transportError = result.ErrorDetails?.Message ?? "تعذر استدعاء Composer validation endpoint.";
+            {
+                _transportError = result.ErrorDetails?.Message ?? T("تعذر استدعاء Composer validation endpoint.", "Could not call the Composer validation endpoint.");
+            }
         }
         catch (ArgumentException exception)
         {
@@ -340,16 +474,17 @@
         if (!CanGenerate)
             return;
 
+        var manifest = _manifestJson;
         _generating = true;
         _transportError = null;
         _generation = null;
         try
         {
-            var result = await Api.GenerateComposerProjectAsync(_manifestJson, _forceGeneration);
+            var result = await Api.GenerateComposerProjectAsync(manifest, _forceGeneration);
             if (result.IsSuccess)
                 _generation = result.Value;
             else
-                _transportError = result.ErrorDetails?.Message ?? "تعذر استدعاء Composer generation endpoint.";
+                _transportError = result.ErrorDetails?.Message ?? T("تعذر استدعاء Composer generation endpoint.", "Could not call the Composer generation endpoint.");
         }
         catch (ArgumentException exception)
         {
