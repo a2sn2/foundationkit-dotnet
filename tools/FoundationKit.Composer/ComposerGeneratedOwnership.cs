@@ -58,7 +58,6 @@ internal static class ComposerGeneratedOwnership
         var ownership = ReadMarker(outputDirectory);
         var actualFiles = Directory
             .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
-            .Where(path => !IsTransientDevelopmentArtifact(outputDirectory, path))
             .Select(path => NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path)))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -83,18 +82,6 @@ internal static class ComposerGeneratedOwnership
                     $"Refusing to force-regenerate because generated file '{expectedHash.Key}' was modified after generation.");
             }
         }
-    }
-
-    internal static bool IsTransientDevelopmentArtifact(string outputDirectory, string path)
-    {
-        var relativePath = NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path));
-        return relativePath
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Any(segment =>
-                segment.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("TestResults", StringComparison.OrdinalIgnoreCase));
     }
 
     private static GeneratedOwnership ReadMarker(string outputDirectory)
