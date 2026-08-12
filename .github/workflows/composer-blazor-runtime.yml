@@ -72,7 +72,7 @@ jobs:
           ! grep -Fq 'FrameworkReference Include="Microsoft.AspNetCore.App"' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
           ! grep -R -F 'MudBlazor' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client
           grep -Fq 'GeneratedLocalClient' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Api/Program.cs
-          grep -Fq 'Uri.IsLoopback' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Api/Program.cs
+          grep -Fq 'uri.IsLoopback' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Api/Program.cs
           grep -Fq '_content/FoundationKit.Blazor/foundationkit.css' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
           grep -Fq '_content/FoundationKit.Blazor/foundationkit.js' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
 
