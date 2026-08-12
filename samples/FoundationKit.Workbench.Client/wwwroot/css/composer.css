@@ -1,0 +1,285 @@
+/* Visual Composer workspace — Workbench-only presentation over the canonical Composer engine. */
+.composer-page {
+    padding-block: var(--fk-space-5) var(--fk-space-12) !important;
+}
+
+.composer-actionbar {
+    position: sticky;
+    top: calc(var(--fk-topbar-height) + var(--fk-space-2));
+    z-index: 12;
+    min-height: 3.5rem;
+    padding: .55rem .65rem;
+    border: 1px solid var(--fk-border-default);
+    border-radius: var(--fk-radius-card);
+    background: var(--fk-surface-overlay);
+    box-shadow: var(--fk-shadow-sm);
+    backdrop-filter: blur(16px);
+}
+
+.composer-hero {
+    min-height: 12.5rem;
+    margin-top: var(--fk-space-5);
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.composer-hero > div:first-child {
+    max-width: 58rem;
+}
+
+.composer-hero__mark {
+    width: 5rem;
+    height: 5rem;
+    flex: 0 0 5rem;
+    display: grid;
+    place-items: center;
+    position: relative;
+    border: 1px solid var(--fk-color-primary-border);
+    border-radius: 1.45rem;
+    background: var(--fk-color-primary-soft);
+    color: var(--fk-color-primary);
+    box-shadow: 0 14px 36px var(--fk-orbit-glow);
+}
+
+.composer-hero__mark span {
+    position: absolute;
+    inset-inline-end: -.45rem;
+    inset-block-end: -.4rem;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    display: grid;
+    place-items: center;
+    padding-inline: .35rem;
+    border: 1px solid var(--fk-border-default);
+    border-radius: var(--fk-radius-pill);
+    background: var(--fk-surface-elevated);
+    color: var(--fk-text-secondary);
+    font-family: var(--fk-font-mono);
+    font-size: .68rem;
+}
+
+.composer-workspace {
+    margin-top: var(--fk-space-5) !important;
+}
+
+.composer-panel {
+    height: 100%;
+}
+
+.composer-panel__heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--fk-space-4);
+}
+
+.composer-panel__heading--inline {
+    min-width: min(34rem, 100%);
+}
+
+.composer-step {
+    width: 2.15rem;
+    height: 2.15rem;
+    flex: 0 0 2.15rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--fk-color-primary-border);
+    border-radius: .72rem;
+    background: var(--fk-color-primary-soft);
+    color: var(--fk-color-primary);
+    font-family: var(--fk-font-mono);
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+/* MudBlazor remains a Workbench implementation detail; its outlined-label surface must
+   follow FoundationKit semantic surfaces instead of the default light Mud palette. */
+.composer-page .mud-input-label,
+.composer-page .mud-input-label-outlined,
+.composer-page .mud-input-control .mud-input-label {
+    background-color: var(--fk-surface-default) !important;
+    color: var(--fk-text-secondary) !important;
+}
+
+.composer-page .mud-input-label-outlined {
+    padding-inline: .28rem !important;
+}
+
+.mud-popover,
+.mud-popover .mud-list,
+.mud-popover .mud-list-item {
+    background-color: var(--fk-surface-elevated) !important;
+    color: var(--fk-text-primary) !important;
+}
+
+.composer-editor textarea {
+    min-height: 31rem;
+    resize: vertical;
+}
+
+.composer-tip {
+    font-size: .82rem;
+    line-height: 1.75;
+}
+
+.composer-section {
+    padding: var(--fk-space-8) 0 0;
+    scroll-margin-top: calc(var(--fk-topbar-height) + 5rem);
+}
+
+.composer-section__heading {
+    align-items: center;
+    margin-bottom: var(--fk-space-4);
+}
+
+.composer-inline-state,
+.composer-placeholder,
+.composer-generation__hint {
+    border: 1px solid var(--fk-border-default);
+    border-radius: var(--fk-radius-card);
+    background: var(--fk-surface-default);
+    color: var(--fk-text-secondary);
+}
+
+.composer-inline-state {
+    min-height: 5.75rem;
+    display: flex;
+    align-items: center;
+    gap: var(--fk-space-4);
+    padding: var(--fk-space-4) var(--fk-space-5);
+}
+
+.composer-inline-state > div {
+    display: grid;
+    gap: .2rem;
+}
+
+.composer-inline-state strong,
+.composer-placeholder strong {
+    color: var(--fk-text-primary);
+}
+
+.composer-inline-state span,
+.composer-placeholder span,
+.composer-generation__hint span {
+    color: var(--fk-text-secondary);
+    font-size: .82rem;
+}
+
+.composer-placeholder {
+    min-height: 5.75rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--fk-space-4);
+    padding: var(--fk-space-4) var(--fk-space-5);
+}
+
+.composer-placeholder > .mud-icon-root {
+    color: var(--fk-color-primary);
+}
+
+.composer-placeholder > div {
+    display: grid;
+    gap: .2rem;
+}
+
+.composer-result-card {
+    min-height: 10rem;
+}
+
+.composer-metrics {
+    margin-top: 0;
+}
+
+.composer-generation {
+    display: grid;
+    gap: var(--fk-space-3);
+}
+
+.composer-generation__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fk-space-5);
+}
+
+.composer-generation__head code,
+.composer-generation code {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-family: var(--fk-font-mono);
+}
+
+.composer-generation__hint {
+    min-height: 3.6rem;
+    display: flex;
+    align-items: center;
+    gap: var(--fk-space-3);
+    padding: var(--fk-space-3) var(--fk-space-4);
+    background: var(--fk-surface-muted);
+}
+
+.composer-generation__hint .mud-icon-root {
+    color: var(--fk-color-aqua);
+}
+
+@media (max-width: 68.75rem) {
+    .composer-actionbar {
+        top: calc(var(--fk-topbar-height) + .25rem);
+    }
+
+    .composer-hero {
+        min-height: auto;
+    }
+
+    .composer-hero__mark {
+        width: 4.25rem;
+        height: 4.25rem;
+        flex-basis: 4.25rem;
+    }
+
+    .composer-editor textarea {
+        min-height: 26rem;
+    }
+}
+
+@media (max-width: 47.5rem) {
+    .composer-page {
+        padding-block-start: var(--fk-space-3) !important;
+    }
+
+    .composer-actionbar {
+        position: static;
+        box-shadow: var(--fk-shadow-xs);
+    }
+
+    .composer-actionbar .mud-button-root {
+        flex: 1 1 auto;
+    }
+
+    .composer-hero__mark {
+        display: none;
+    }
+
+    .composer-placeholder {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .composer-placeholder .mud-button-root {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .composer-generation__head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .composer-generation__head .mud-button-root {
+        width: 100%;
+    }
+
+    .composer-editor textarea {
+        min-height: 22rem;
+    }
+}
