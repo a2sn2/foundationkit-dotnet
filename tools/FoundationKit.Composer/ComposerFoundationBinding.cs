@@ -65,7 +65,8 @@ public static class ComposerFoundationBinding
 
         var directFoundationProjects = DiscoverExternalFoundationReferences(
             generatedProjects,
-            normalizedFoundationRoot);
+            normalizedFoundationRoot,
+            outputDirectory);
         var foundationProjects = DiscoverFoundationProjectClosure(
             directFoundationProjects,
             normalizedFoundationRoot);
@@ -136,7 +137,8 @@ public static class ComposerFoundationBinding
 
     private static FoundationProject[] DiscoverExternalFoundationReferences(
         IEnumerable<string> generatedProjects,
-        string foundationRoot)
+        string foundationRoot,
+        string outputDirectory)
     {
         var projects = new SortedDictionary<string, FoundationProject>(StringComparer.OrdinalIgnoreCase);
         foreach (var generatedProject in generatedProjects)
@@ -144,7 +146,7 @@ public static class ComposerFoundationBinding
             foreach (var reference in ReadProjectReferences(generatedProject))
             {
                 var target = ResolveProjectReference(generatedProject, reference);
-                if (!IsUnderDirectory(target, foundationRoot))
+                if (IsUnderDirectory(target, outputDirectory) || !IsUnderDirectory(target, foundationRoot))
                     continue;
 
                 ValidateFoundationProjectPath(target, foundationRoot);
