@@ -58,6 +58,7 @@ internal static class ComposerGeneratedOwnership
         var ownership = ReadMarker(outputDirectory);
         var actualFiles = Directory
             .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
+            .Where(path => !IsTransientDevelopmentArtifact(outputDirectory, path))
             .Select(path => NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path)))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -160,6 +161,18 @@ internal static class ComposerGeneratedOwnership
         {
             throw new ComposerGenerationException("The FoundationKit generated marker is invalid.", exception);
         }
+    }
+
+    private static bool IsTransientDevelopmentArtifact(string outputDirectory, string path)
+    {
+        var relativePath = NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path));
+        return relativePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment =>
+                segment.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("TestResults", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string HashText(string value)
