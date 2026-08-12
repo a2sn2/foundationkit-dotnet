@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using FoundationKit.Workbench.Endpoints;
 
 namespace FoundationKit.Workbench.Tests;
@@ -5,7 +6,7 @@ namespace FoundationKit.Workbench.Tests;
 public sealed class ComposerStudioGeneratorTests
 {
     [Fact]
-    public async Task Generate_writes_schema_v2_project_inside_bounded_workspace()
+    public async Task Generate_writes_linked_schema_v2_project_inside_bounded_workspace_and_solution_includes_core_closure()
     {
         var foundationRoot = ComposerStudioGenerator.ResolveFoundationRoot(AppContext.BaseDirectory, null);
         var workspace = Path.Combine(Path.GetTempPath(), $"foundationkit-studio-{Guid.NewGuid():N}");
@@ -17,7 +18,8 @@ public sealed class ComposerStudioGeneratorTests
                 ValidManifest(),
                 generationRoot,
                 foundationRoot,
-                force: false);
+                force: false,
+                foundationMode: "linked");
 
             Assert.True(result.Generated, result.Error);
             Assert.Equal("StudioProof", result.ProjectName);
@@ -25,8 +27,85 @@ public sealed class ComposerStudioGeneratorTests
             Assert.Equal("StudioProof.sln", result.SolutionFileName);
             Assert.Equal("project", result.ReferenceMode);
             Assert.True(result.GeneratedFileCount > 0);
-            Assert.True(File.Exists(Path.Combine(generationRoot, "StudioProof", "StudioProof.sln")));
-            Assert.True(File.Exists(Path.Combine(generationRoot, "StudioProof", ".foundationkit-generated.json")));
+
+            var projectRoot = Path.Combine(generationRoot, "StudioProof");
+            var solutionPath = Path.Combine(projectRoot, "StudioProof.sln");
+            Assert.True(File.Exists(solutionPath));
+            Assert.True(File.Exists(Path.Combine(projectRoot, ".foundationkit-generated.json")));
+            Assert.True(File.Exists(Path.Combine(projectRoot, "FOUNDATION-BINDING.md")));
+
+            var solution = await File.ReadAllTextAsync(solutionPath);
+            Assert.Contains("FoundationKit.Blazor", solution, StringComparison.Ordinal);
+            Assert.Contains("FoundationKit.Authorization", solution, StringComparison.Ordinal);
+            Assert.Contains("FoundationKit.Identity", solution, StringComparison.Ordinal);
+            Assert.Contains("FoundationKit local source", await File.ReadAllTextAsync(Path.Combine(projectRoot, "README.md")), StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(workspace))
+                Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Generate_source_copy_vendors_required_core_dependency_closure_and_keeps_all_project_references_inside_workspace()
+    {
+        var foundationRoot = ComposerStudioGenerator.ResolveFoundationRoot(AppContext.BaseDirectory, null);
+        var workspace = Path.Combine(Path.GetTempPath(), $"foundationkit-studio-copy-{Guid.NewGuid():N}");
+        var generationRoot = Path.Combine(workspace, "generated");
+
+        try
+        {
+            var result = await ComposerStudioGenerator.GenerateAsync(
+                ValidManifest(),
+                generationRoot,
+                foundationRoot,
+                force: false,
+                foundationMode: "source-copy");
+
+            Assert.True(result.Generated, result.Error);
+            Assert.Equal("source-copy", result.ReferenceMode);
+
+            var projectRoot = Path.Combine(generationRoot, "StudioProof");
+            var vendoredRoot = Path.Combine(projectRoot, "foundation");
+            Assert.True(File.Exists(Path.Combine(vendoredRoot, "Directory.Build.props")));
+            Assert.True(File.Exists(Path.Combine(vendoredRoot, "Directory.Packages.props")));
+            Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Blazor", "FoundationKit.Blazor.csproj")));
+            Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Authorization", "FoundationKit.Authorization.csproj")));
+            Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Identity", "FoundationKit.Identity.csproj")));
+
+            var solution = await File.ReadAllTextAsync(Path.Combine(projectRoot, "StudioProof.sln"));
+            Assert.Contains("foundation\\src\\FoundationKit.Blazor\\FoundationKit.Blazor.csproj", solution, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("source-copy", await File.ReadAllTextAsync(Path.Combine(projectRoot, ".foundationkit-generated.json")), StringComparison.Ordinal);
+
+            AssertProjectReferencesStayInside(projectRoot);
+        }
+        finally
+        {
+            if (Directory.Exists(workspace))
+                Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Generate_rejects_unknown_foundation_mode()
+    {
+        var foundationRoot = ComposerStudioGenerator.ResolveFoundationRoot(AppContext.BaseDirectory, null);
+        var workspace = Path.Combine(Path.GetTempPath(), $"foundationkit-studio-mode-{Guid.NewGuid():N}");
+        var generationRoot = Path.Combine(workspace, "generated");
+
+        try
+        {
+            var result = await ComposerStudioGenerator.GenerateAsync(
+                ValidManifest(),
+                generationRoot,
+                foundationRoot,
+                force: false,
+                foundationMode: "mystery");
+
+            Assert.False(result.Generated);
+            Assert.Contains("linked", result.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("source-copy", result.Error, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -92,6 +171,33 @@ public sealed class ComposerStudioGeneratorTests
             if (Directory.Exists(workspace))
                 Directory.Delete(workspace, recursive: true);
         }
+    }
+
+    private static void AssertProjectReferencesStayInside(string projectRoot)
+    {
+        foreach (var projectPath in Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.AllDirectories))
+        {
+            var document = XDocument.Load(projectPath);
+            foreach (var reference in document.Descendants().Where(element => element.Name.LocalName == "ProjectReference"))
+            {
+                var include = reference.Attributes().First(attribute => attribute.Name.LocalName == "Include").Value;
+                var target = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projectPath)!, include));
+                Assert.True(
+                    IsUnderDirectory(target, projectRoot),
+                    $"ProjectReference escaped standalone workspace: {projectPath} -> {target}");
+            }
+        }
+    }
+
+    private static bool IsUnderDirectory(string candidate, string root)
+    {
+        var normalizedCandidate = Path.GetFullPath(candidate);
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return normalizedCandidate.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison) ||
+               string.Equals(Path.TrimEndingDirectorySeparator(normalizedCandidate), normalizedRoot, comparison);
     }
 
     private static string ValidManifest() =>
