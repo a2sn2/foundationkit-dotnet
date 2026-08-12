@@ -1,5 +1,4 @@
 using System.Security;
-using System.Text;
 using System.Text.Json;
 using FoundationKit.Application.Capabilities;
 
@@ -81,7 +80,7 @@ internal static class ComposerBlazorRuntimeGenerator
 
     private static string BuildRunnableClientProject(string source)
     {
-        var project = NormalizeLineEndingsWithoutTrim(source)
+        var project = NormalizeLineEndings(source)
             .Replace(
                 "<Project Sdk=\"Microsoft.NET.Sdk.Razor\">",
                 "<Project Sdk=\"Microsoft.NET.Sdk.BlazorWebAssembly\">",
@@ -288,7 +287,7 @@ internal static class ComposerBlazorRuntimeGenerator
             """;
 
         overlay[$"{root}/Pages/Runtime.razor"] = BuildRuntimePage(hasExecutableRuntime);
-        overlay[$"{root}/Api/GeneratedApiProbe.cs"] = BuildApiProbe(hasExecutableRuntime);
+        overlay[$"{root}/Api/GeneratedApiProbe.cs"] = BuildApiProbe(projectPrefix, hasExecutableRuntime);
 
         overlay[$"{root}/wwwroot/index.html"] = $$"""
             <!DOCTYPE html>
@@ -466,12 +465,12 @@ internal static class ComposerBlazorRuntimeGenerator
             """;
     }
 
-    private static string BuildApiProbe(bool hasExecutableRuntime)
+    private static string BuildApiProbe(string projectPrefix, bool hasExecutableRuntime)
     {
         if (!hasExecutableRuntime)
         {
-            return """
-                namespace Generated.Client.Api;
+            return $$"""
+                namespace {{projectPrefix}}.Client.Api;
 
                 public sealed class GeneratedApiProbe
                 {
@@ -479,13 +478,13 @@ internal static class ComposerBlazorRuntimeGenerator
                 """;
         }
 
-        return """
+        return $$"""
             #nullable enable
 
             using System.Net.Http.Json;
             using System.Text.Json;
 
-            namespace Generated.Client.Api;
+            namespace {{projectPrefix}}.Client.Api;
 
             public sealed class GeneratedApiProbe(HttpClient httpClient)
             {
@@ -597,7 +596,7 @@ internal static class ComposerBlazorRuntimeGenerator
         return (5200 + seed, 7200 + seed);
     }
 
-    private static string NormalizeLineEndingsWithoutTrim(string value) =>
+    private static string NormalizeLineEndings(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\r", "\n", StringComparison.Ordinal);
 
