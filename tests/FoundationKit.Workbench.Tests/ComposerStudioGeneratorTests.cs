@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Xml.Linq;
 using FoundationKit.Workbench.Endpoints;
 
@@ -39,6 +40,8 @@ public sealed class ComposerStudioGeneratorTests
             Assert.Contains("FoundationKit.Authorization", solution, StringComparison.Ordinal);
             Assert.Contains("FoundationKit.Identity", solution, StringComparison.Ordinal);
             Assert.Contains("FoundationKit local source", await File.ReadAllTextAsync(Path.Combine(projectRoot, "README.md")), StringComparison.Ordinal);
+
+            await AssertBuildSucceedsWhenRequested(projectRoot, solutionPath);
         }
         finally
         {
@@ -68,17 +71,19 @@ public sealed class ComposerStudioGeneratorTests
 
             var projectRoot = Path.Combine(generationRoot, "StudioProof");
             var vendoredRoot = Path.Combine(projectRoot, "foundation");
+            var solutionPath = Path.Combine(projectRoot, "StudioProof.sln");
             Assert.True(File.Exists(Path.Combine(vendoredRoot, "Directory.Build.props")));
             Assert.True(File.Exists(Path.Combine(vendoredRoot, "Directory.Packages.props")));
             Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Blazor", "FoundationKit.Blazor.csproj")));
             Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Authorization", "FoundationKit.Authorization.csproj")));
             Assert.True(File.Exists(Path.Combine(vendoredRoot, "src", "FoundationKit.Identity", "FoundationKit.Identity.csproj")));
 
-            var solution = await File.ReadAllTextAsync(Path.Combine(projectRoot, "StudioProof.sln"));
+            var solution = await File.ReadAllTextAsync(solutionPath);
             Assert.Contains("foundation\\src\\FoundationKit.Blazor\\FoundationKit.Blazor.csproj", solution, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("source-copy", await File.ReadAllTextAsync(Path.Combine(projectRoot, ".foundationkit-generated.json")), StringComparison.Ordinal);
 
             AssertProjectReferencesStayInside(projectRoot);
+            await AssertBuildSucceedsWhenRequested(projectRoot, solutionPath);
         }
         finally
         {
@@ -171,6 +176,43 @@ public sealed class ComposerStudioGeneratorTests
             if (Directory.Exists(workspace))
                 Directory.Delete(workspace, recursive: true);
         }
+    }
+
+    private static async Task AssertBuildSucceedsWhenRequested(string projectRoot, string solutionPath)
+    {
+        if (!string.Equals(
+                Environment.GetEnvironmentVariable("FOUNDATIONKIT_COMPOSER_BINDING_BUILD_PROOF"),
+                "1",
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var startInfo = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = projectRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("build");
+        startInfo.ArgumentList.Add(solutionPath);
+        startInfo.ArgumentList.Add("--configuration");
+        startInfo.ArgumentList.Add("Release");
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start dotnet build for Composer binding proof.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        await process.WaitForExitAsync(timeout.Token);
+        var output = await stdout;
+        var error = await stderr;
+
+        Assert.True(
+            process.ExitCode == 0,
+            $"Generated solution build failed.{Environment.NewLine}STDOUT:{Environment.NewLine}{output}{Environment.NewLine}STDERR:{Environment.NewLine}{error}");
     }
 
     private static void AssertProjectReferencesStayInside(string projectRoot)
