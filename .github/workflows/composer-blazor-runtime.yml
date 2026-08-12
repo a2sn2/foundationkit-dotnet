@@ -1,0 +1,128 @@
+name: FoundationKit Composer Runnable Blazor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-composer-blazor-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runnable-blazor:
+    name: Generate, build, and smoke-test runnable Composer Blazor client
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Validate proof manifest JSON
+        run: python3 -m json.tool docs/examples/foundationkit.project.blazor-runtime.json >/dev/null
+
+      - name: Restore and build Composer
+        run: |
+          dotnet restore tools/FoundationKit.Composer/FoundationKit.Composer.csproj
+          dotnet build tools/FoundationKit.Composer/FoundationKit.Composer.csproj --configuration Release --no-restore
+
+      - name: Run runnable Blazor generator unit proof
+        run: >-
+          dotnet test tests/FoundationKit.Tests/FoundationKit.Tests.csproj
+          --configuration Release
+          --filter "FullyQualifiedName~ComposerBlazorRuntimeGenerationTests"
+
+      - name: Generate repository-local runnable Blazor project
+        run: >-
+          dotnet run
+          --project tools/FoundationKit.Composer
+          --configuration Release
+          --no-build
+          -- new docs/examples/foundationkit.project.blazor-runtime.json
+          --output artifacts/composer-blazor-runtime
+          --foundation-root "$GITHUB_WORKSPACE"
+
+      - name: Verify runnable client contract
+        shell: bash
+        run: |
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Program.cs
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/App.razor
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Layout/MainLayout.razor
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Pages/Home.razor
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Pages/Runtime.razor
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Api/GeneratedApiProbe.cs
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
+          test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/appsettings.json
+          test -f artifacts/composer-blazor-runtime/GENERATED-FRONTEND.md
+          grep -Fq 'Microsoft.NET.Sdk.BlazorWebAssembly' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
+          grep -Fq 'Microsoft.AspNetCore.Components.WebAssembly.DevServer' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
+          ! grep -Fq 'FrameworkReference Include="Microsoft.AspNetCore.App"' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
+          ! grep -R -F 'MudBlazor' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client
+          grep -Fq 'GeneratedLocalClient' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Api/Program.cs
+          grep -Fq 'uri.IsLoopback' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Api/Program.cs
+          grep -Fq '_content/FoundationKit.Blazor/foundationkit.css' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
+          grep -Fq '_content/FoundationKit.Blazor/foundationkit.js' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
+
+      - name: Prove deterministic runnable Blazor regeneration
+        shell: bash
+        run: |
+          find artifacts/composer-blazor-runtime -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/blazor-before.sha256
+          dotnet run \
+            --project tools/FoundationKit.Composer \
+            --configuration Release \
+            --no-build \
+            -- new docs/examples/foundationkit.project.blazor-runtime.json \
+            --output artifacts/composer-blazor-runtime \
+            --foundation-root "$GITHUB_WORKSPACE" \
+            --force
+          find artifacts/composer-blazor-runtime -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/blazor-after.sha256
+          diff -u /tmp/blazor-before.sha256 /tmp/blazor-after.sha256
+
+      - name: Restore, build, and test generated solution
+        run: |
+          dotnet restore artifacts/composer-blazor-runtime/ComposerBlazorRuntime.sln
+          dotnet build artifacts/composer-blazor-runtime/ComposerBlazorRuntime.sln --configuration Release --no-restore
+          dotnet test artifacts/composer-blazor-runtime/ComposerBlazorRuntime.sln --configuration Release --no-build
+
+      - name: Smoke-test generated Client static host and FoundationKit assets
+        shell: bash
+        run: |
+          export ASPNETCORE_URLS=http://127.0.0.1:5099
+          dotnet run \
+            --project artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj \
+            --configuration Release \
+            --no-build \
+            --no-launch-profile \
+            >/tmp/composer-blazor-client.log 2>&1 &
+          pid=$!
+          cleanup() { kill "$pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5099/ >/tmp/generated-client-index.html; then
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat /tmp/composer-blazor-client.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          grep -Fq 'ComposerBlazorRuntime' /tmp/generated-client-index.html
+          curl -fsS http://127.0.0.1:5099/_content/FoundationKit.Blazor/foundationkit.css >/dev/null
+          curl -fsS http://127.0.0.1:5099/_content/FoundationKit.Blazor/foundationkit.js >/dev/null
+          curl -fsS http://127.0.0.1:5099/_framework/blazor.webassembly.js >/dev/null
