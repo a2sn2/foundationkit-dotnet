@@ -25,7 +25,7 @@ public sealed class ComposerWorkspaceRegressionTests
     }
 
     [Fact]
-    public void Compose_uses_shared_language_cascade_and_dedicated_workspace_styles()
+    public void Compose_uses_shared_language_cascade_dedicated_workspace_styles_and_both_foundation_modes()
     {
         var repositoryRoot = FindRepositoryRoot();
         var composePath = Path.Combine(
@@ -58,8 +58,15 @@ public sealed class ComposerWorkspaceRegressionTests
         Assert.Contains("اختيارات المشروع", compose, StringComparison.Ordinal);
         Assert.Contains("Generate Project", compose, StringComparison.Ordinal);
         Assert.Contains("ولّد المشروع", compose, StringComparison.Ordinal);
+        Assert.Contains("Foundation binding mode", compose, StringComparison.Ordinal);
+        Assert.Contains("طريقة استخدام الكور", compose, StringComparison.Ordinal);
+        Assert.Contains("Value=\"@(\"linked\")\"", compose, StringComparison.Ordinal);
+        Assert.Contains("Value=\"@(\"source-copy\")\"", compose, StringComparison.Ordinal);
+        Assert.Contains("_foundationMode = \"linked\"", compose, StringComparison.Ordinal);
+        Assert.Contains("_foundationMode);", compose, StringComparison.Ordinal);
         Assert.Contains("css/composer.css", index, StringComparison.Ordinal);
         Assert.Contains(".composer-actionbar", styles, StringComparison.Ordinal);
+        Assert.Contains(".composer-binding-choice", styles, StringComparison.Ordinal);
         Assert.Contains(".composer-page .mud-input-label-outlined", styles, StringComparison.Ordinal);
         Assert.Contains("background-color: var(--fk-surface-default) !important;", styles, StringComparison.Ordinal);
     }

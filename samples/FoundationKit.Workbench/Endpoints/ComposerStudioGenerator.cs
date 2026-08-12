@@ -13,6 +13,7 @@ public static class ComposerStudioGenerator
         string generationRoot,
         string foundationRoot,
         bool force,
+        string foundationMode = "linked",
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(manifestJson))
@@ -33,6 +34,7 @@ public static class ComposerStudioGenerator
             if (manifest.SchemaVersion != 2 || manifest.ProjectModel is null)
                 return Failed("Core Studio project generation requires a schemaVersion 2 manifest with modules/resources.");
 
+            var bindingMode = ParseFoundationMode(foundationMode);
             var projectDirectoryName = ValidateProjectDirectoryName(manifest.Name);
             var normalizedGenerationRoot = Path.GetFullPath(generationRoot);
             var normalizedFoundationRoot = Path.GetFullPath(foundationRoot);
@@ -42,13 +44,19 @@ public static class ComposerStudioGenerator
             EnsureChildPath(normalizedGenerationRoot, outputDirectory);
 
             var analysis = CompositionAnalyzer.Analyze(manifest);
-            var result = await ComposerProjectModelGenerator.GenerateAsync(
+            var generated = await ComposerProjectModelGenerator.GenerateAsync(
                 analysis,
                 new ProjectGenerationOptions(
                     outputDirectory,
                     normalizedFoundationRoot,
                     force),
                 cancellationToken).ConfigureAwait(false);
+
+            var result = ComposerFoundationBinding.FinalizeLocalSourceBinding(
+                generated,
+                manifest.Name,
+                normalizedFoundationRoot,
+                bindingMode);
 
             return new ComposerGenerationResponse(
                 Generated: true,
@@ -112,6 +120,18 @@ public static class ComposerStudioGenerator
         string.IsNullOrWhiteSpace(configuredGenerationRoot)
             ? Path.Combine(Path.GetFullPath(foundationRoot), "generated")
             : Path.GetFullPath(configuredGenerationRoot);
+
+    private static ComposerFoundationBindingMode ParseFoundationMode(string? foundationMode)
+    {
+        var normalized = foundationMode?.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            null or "" or "linked" or "reference" or "project" => ComposerFoundationBindingMode.Linked,
+            "copy" or "source-copy" or "standalone" => ComposerFoundationBindingMode.SourceCopy,
+            _ => throw new ComposerGenerationException(
+                "Foundation mode must be 'linked' or 'source-copy'.")
+        };
+    }
 
     private static string ValidateProjectDirectoryName(string projectName)
     {

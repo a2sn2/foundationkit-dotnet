@@ -57,13 +57,15 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
     public Task<ApiResult<ComposerGenerationResponse>> GenerateComposerProjectAsync(
         string manifestJson,
         bool force = false,
+        string foundationMode = "linked",
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(manifestJson);
+        ArgumentException.ThrowIfNullOrWhiteSpace(foundationMode);
         return SendAsync<ComposerGenerationResponse>(
             new HttpRequestMessage(HttpMethod.Post, "/api/composer/generate")
             {
-                Content = JsonContent.Create(new ComposerGenerationRequest(manifestJson, force))
+                Content = JsonContent.Create(new ComposerGenerationRequest(manifestJson, force, foundationMode))
             },
             cancellationToken);
     }
