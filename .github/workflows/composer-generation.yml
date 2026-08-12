@@ -48,13 +48,25 @@ jobs:
           --configuration Release
           --no-restore
 
-      - name: Prove Studio linked and standalone Foundation binding solutions build
+      - name: Generate Studio linked and standalone Foundation binding proof workspaces
         env:
-          FOUNDATIONKIT_COMPOSER_BINDING_BUILD_PROOF: "1"
+          FOUNDATIONKIT_COMPOSER_BINDING_PROOF_ROOT: ${{ github.workspace }}/artifacts/composer-binding-proof
         run: >-
           dotnet test tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj
           --configuration Release
           --filter "FullyQualifiedName~ComposerStudioGeneratorTests"
+
+      - name: Restore and build Studio linked solution directly
+        run: >-
+          dotnet build
+          artifacts/composer-binding-proof/linked/generated/StudioProof/StudioProof.sln
+          --configuration Release
+
+      - name: Restore and build Studio standalone source-copy solution directly
+        run: >-
+          dotnet build
+          artifacts/composer-binding-proof/source-copy/generated/StudioProof/StudioProof.sln
+          --configuration Release
 
       - name: Generate repository-local v1 golden project
         run: >-
