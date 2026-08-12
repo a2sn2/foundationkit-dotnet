@@ -46,6 +46,39 @@
     </main>
 </div>
 
+<style>
+    /*
+       The shell itself owns dir. CSS Grid already mirrors its explicit tracks when
+       direction is RTL, so the generic ancestor RTL rules in the shared stylesheet
+       would otherwise reverse the layout a second time. These same-element rules are
+       intentionally colocated with the shell so every consumer, including generated
+       apps, gets the correct physical sidebar placement without project-specific CSS.
+    */
+    .fk-shell[dir="rtl"] {
+        grid-template-columns: var(--fk-sidebar-width) minmax(0, 1fr);
+        grid-template-areas:
+            "sidebar topbar"
+            "sidebar content";
+    }
+
+    .fk-shell[dir="rtl"] .fk-shell__sidebar {
+        border-inline-start: 0;
+        border-inline-end: 1px solid var(--fk-border-default);
+    }
+
+    @@media (max-width: 68.75rem) {
+        .fk-shell[dir="rtl"] {
+            grid-template-columns: var(--fk-sidebar-compact) minmax(0, 1fr);
+        }
+    }
+
+    @@media (max-width: 47.5rem) {
+        .fk-shell[dir="rtl"] {
+            display: block;
+        }
+    }
+</style>
+
 @code {
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
