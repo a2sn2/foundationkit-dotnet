@@ -575,7 +575,7 @@ internal static class ComposerBlazorRuntimeGenerator
     }
 
     private static string ReadOverlayOrFile(
-        IReadOnlyDictionary<string, string> overlay,
+        SortedDictionary<string, string> overlay,
         string outputDirectory,
         string relativePath)
     {
