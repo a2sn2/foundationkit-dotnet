@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Xml.Linq;
 using FoundationKit.Workbench.Endpoints;
 
@@ -6,11 +5,13 @@ namespace FoundationKit.Workbench.Tests;
 
 public sealed class ComposerStudioGeneratorTests
 {
+    private const string ProofRootEnvironmentVariable = "FOUNDATIONKIT_COMPOSER_BINDING_PROOF_ROOT";
+
     [Fact]
     public async Task Generate_writes_linked_schema_v2_project_inside_bounded_workspace_and_solution_includes_core_closure()
     {
         var foundationRoot = ComposerStudioGenerator.ResolveFoundationRoot(AppContext.BaseDirectory, null);
-        var workspace = Path.Combine(Path.GetTempPath(), $"foundationkit-studio-{Guid.NewGuid():N}");
+        var workspace = CreateWorkspace("linked");
         var generationRoot = Path.Combine(workspace, "generated");
 
         try
@@ -40,13 +41,10 @@ public sealed class ComposerStudioGeneratorTests
             Assert.Contains("FoundationKit.Authorization", solution, StringComparison.Ordinal);
             Assert.Contains("FoundationKit.Identity", solution, StringComparison.Ordinal);
             Assert.Contains("- Mode: `project`", await File.ReadAllTextAsync(Path.Combine(projectRoot, "README.md")), StringComparison.Ordinal);
-
-            await AssertBuildSucceedsWhenRequested(projectRoot, solutionPath);
         }
         finally
         {
-            if (Directory.Exists(workspace))
-                Directory.Delete(workspace, recursive: true);
+            CleanupWorkspace(workspace);
         }
     }
 
@@ -54,7 +52,7 @@ public sealed class ComposerStudioGeneratorTests
     public async Task Generate_source_copy_vendors_required_core_dependency_closure_and_keeps_all_project_references_inside_workspace()
     {
         var foundationRoot = ComposerStudioGenerator.ResolveFoundationRoot(AppContext.BaseDirectory, null);
-        var workspace = Path.Combine(Path.GetTempPath(), $"foundationkit-studio-copy-{Guid.NewGuid():N}");
+        var workspace = CreateWorkspace("source-copy");
         var generationRoot = Path.Combine(workspace, "generated");
 
         try
@@ -83,12 +81,10 @@ public sealed class ComposerStudioGeneratorTests
             Assert.Contains("source-copy", await File.ReadAllTextAsync(Path.Combine(projectRoot, ".foundationkit-generated.json")), StringComparison.Ordinal);
 
             AssertProjectReferencesStayInside(projectRoot);
-            await AssertBuildSucceedsWhenRequested(projectRoot, solutionPath);
         }
         finally
         {
-            if (Directory.Exists(workspace))
-                Directory.Delete(workspace, recursive: true);
+            CleanupWorkspace(workspace);
         }
     }
 
@@ -178,41 +174,26 @@ public sealed class ComposerStudioGeneratorTests
         }
     }
 
-    private static async Task AssertBuildSucceedsWhenRequested(string projectRoot, string solutionPath)
+    private static string CreateWorkspace(string mode)
     {
-        if (!string.Equals(
-                Environment.GetEnvironmentVariable("FOUNDATIONKIT_COMPOSER_BINDING_BUILD_PROOF"),
-                "1",
-                StringComparison.Ordinal))
-        {
+        var proofRoot = Environment.GetEnvironmentVariable(ProofRootEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(proofRoot))
+            return Path.Combine(Path.GetTempPath(), $"foundationkit-studio-{mode}-{Guid.NewGuid():N}");
+
+        var workspace = Path.GetFullPath(Path.Combine(proofRoot, mode));
+        if (Directory.Exists(workspace))
+            Directory.Delete(workspace, recursive: true);
+        Directory.CreateDirectory(workspace);
+        return workspace;
+    }
+
+    private static void CleanupWorkspace(string workspace)
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(ProofRootEnvironmentVariable)))
             return;
-        }
 
-        var startInfo = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = projectRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("build");
-        startInfo.ArgumentList.Add(solutionPath);
-        startInfo.ArgumentList.Add("--configuration");
-        startInfo.ArgumentList.Add("Release");
-
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Could not start dotnet build for Composer binding proof.");
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        await process.WaitForExitAsync(timeout.Token);
-        var output = await stdout;
-        var error = await stderr;
-
-        Assert.True(
-            process.ExitCode == 0,
-            $"Generated solution build failed.{Environment.NewLine}STDOUT:{Environment.NewLine}{output}{Environment.NewLine}STDERR:{Environment.NewLine}{error}");
+        if (Directory.Exists(workspace))
+            Directory.Delete(workspace, recursive: true);
     }
 
     private static void AssertProjectReferencesStayInside(string projectRoot)
