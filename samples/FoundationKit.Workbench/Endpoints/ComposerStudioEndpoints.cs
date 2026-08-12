@@ -35,11 +35,12 @@ public static class ComposerStudioEndpoints
                     generationRoot,
                     foundationRoot,
                     request.Force,
+                    request.FoundationMode,
                     cancellationToken);
                 return Results.Ok(result);
             })
             .WithName("GenerateFoundationKitComposerProject")
-            .WithSummary("Generates a validated schema-v2 FoundationKit project inside the configured local Studio workspace.")
+            .WithSummary("Generates a validated schema-v2 FoundationKit project inside the configured local Studio workspace using linked or standalone source-copy Foundation binding.")
             .Produces<ComposerGenerationResponse>();
 
         return endpoints;
