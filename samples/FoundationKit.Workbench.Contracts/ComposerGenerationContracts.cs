@@ -2,7 +2,8 @@ namespace FoundationKit.Workbench.Contracts;
 
 public sealed record ComposerGenerationRequest(
     string ManifestJson,
-    bool Force = false);
+    bool Force = false,
+    string FoundationMode = "linked");
 
 public sealed record ComposerGenerationResponse(
     bool Generated,
