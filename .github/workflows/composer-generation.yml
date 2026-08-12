@@ -48,6 +48,14 @@ jobs:
           --configuration Release
           --no-restore
 
+      - name: Prove Studio linked and standalone Foundation binding solutions build
+        env:
+          FOUNDATIONKIT_COMPOSER_BINDING_BUILD_PROOF: "1"
+        run: >-
+          dotnet test tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj
+          --configuration Release
+          --filter "FullyQualifiedName~ComposerStudioGeneratorTests"
+
       - name: Generate repository-local v1 golden project
         run: >-
           dotnet run
