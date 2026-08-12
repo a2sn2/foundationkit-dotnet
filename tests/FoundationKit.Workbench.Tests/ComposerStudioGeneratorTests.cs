@@ -39,7 +39,7 @@ public sealed class ComposerStudioGeneratorTests
             Assert.Contains("FoundationKit.Blazor", solution, StringComparison.Ordinal);
             Assert.Contains("FoundationKit.Authorization", solution, StringComparison.Ordinal);
             Assert.Contains("FoundationKit.Identity", solution, StringComparison.Ordinal);
-            Assert.Contains("FoundationKit local source", await File.ReadAllTextAsync(Path.Combine(projectRoot, "README.md")), StringComparison.Ordinal);
+            Assert.Contains("- Mode: `project`", await File.ReadAllTextAsync(Path.Combine(projectRoot, "README.md")), StringComparison.Ordinal);
 
             await AssertBuildSucceedsWhenRequested(projectRoot, solutionPath);
         }
