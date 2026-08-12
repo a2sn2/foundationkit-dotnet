@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 2,
+  "name": "ComposerBlazorRuntime",
+  "profile": "minimal",
+  "includeCapabilities": [
+    "concurrency",
+    "idempotency",
+    "blazor"
+  ],
+  "excludeCapabilities": [],
+  "providers": [
+    "provider-sqlserver"
+  ],
+  "modules": [
+    {
+      "name": "Customers",
+      "resources": [
+        {
+          "name": "Customer",
+          "route": "customers",
+          "idType": "guid",
+          "behaviors": [
+            "crud",
+            "auditing",
+            "authorization",
+            "concurrency"
+          ],
+          "fields": [
+            {
+              "name": "Name",
+              "type": "text",
+              "required": true,
+              "maximumLength": 120
+            },
+            {
+              "name": "Note",
+              "type": "text",
+              "required": false,
+              "maximumLength": 400
+            }
+          ],
+          "api": {
+            "routePrefix": "api",
+            "idempotency": "required",
+            "concurrency": "require-if-match",
+            "maximumFilters": 0,
+            "maximumSorts": 0
+          }
+        }
+      ]
+    }
+  ]
+}
