@@ -252,6 +252,24 @@
                 </MudButton>
             </div>
 
+            <div class="composer-binding-choice mt-4">
+                <MudSelect T="string"
+                           @bind-Value="FoundationMode"
+                           Label="@(T("طريقة استخدام الكور", "Foundation binding mode"))"
+                           Variant="Variant.Outlined"
+                           Disabled="@_generating">
+                    <MudSelectItem T="string" Value="@("linked")">
+                        @T("مرتبط — استدعاء الكور المحلي", "Linked — reference local Core")
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("source-copy")">
+                        @T("مستقل — انسخ الكور المطلوب", "Standalone — copy required Core source")
+                    </MudSelectItem>
+                </MudSelect>
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="composer-binding-note">
+                    @FoundationModeDescription
+                </MudAlert>
+            </div>
+
             <MudCheckBox T="bool"
                          @bind-Value="_forceGeneration"
                          Label="@(T("أعد التوليد فقط إذا كان المجلد الحالي دون تغييرات ومملوكًا لـFoundationKit", "Regenerate only if the existing folder is unchanged and FoundationKit-owned"))"
@@ -286,7 +304,7 @@
                     <div class="platform-grid mt-4 composer-metrics">
                         <div><span>Output</span><strong>@_generation.RelativeOutputPath</strong><small>host workspace</small></div>
                         <div><span>Solution</span><strong>@_generation.SolutionFileName</strong><small>ready to open</small></div>
-                        <div><span>References</span><strong>@_generation.ReferenceMode</strong><small>FoundationKit local source</small></div>
+                        <div><span>@T("وضع الكور", "Core mode")</span><strong>@GenerationModeLabel(_generation.ReferenceMode)</strong><small>@GenerationModeHint(_generation.ReferenceMode)</small></div>
                         <div><span>Files</span><strong>@_generation.GeneratedFileCount</strong><small>deterministic generated set</small></div>
                     </div>
                 }
@@ -315,6 +333,7 @@
     private bool _idempotency = true;
     private bool _blazor = true;
     private bool _forceGeneration;
+    private string _foundationMode = "linked";
     private string _manifestJson = string.Empty;
     private string? _validatedManifestJson;
     private ComposerValidationResponse? _validation;
@@ -326,6 +345,29 @@
     private bool IsArabic => string.Equals(Language, "ar", StringComparison.OrdinalIgnoreCase);
     private string T(string ar, string en) => IsArabic ? ar : en;
     private string BackIcon => IsArabic ? Icons.Material.Filled.ArrowForward : Icons.Material.Filled.ArrowBack;
+
+    private string FoundationMode
+    {
+        get => _foundationMode;
+        set
+        {
+            var next = string.IsNullOrWhiteSpace(value) ? "linked" : value;
+            if (string.Equals(_foundationMode, next, StringComparison.Ordinal))
+                return;
+
+            _foundationMode = next;
+            _generation = null;
+            _transportError = null;
+        }
+    }
+
+    private string FoundationModeDescription => _foundationMode == "source-copy"
+        ? T(
+            "ينسخ Composer فقط مشاريع FoundationKit المطلوبة واعتمادياتها إلى مجلد foundation داخل المشروع الناتج. يصبح الـSolution مستقلاً، لكن تحديثات الكور اللاحقة لا تصل إليه تلقائيًا.",
+            "Composer copies only the required FoundationKit projects and their dependency closure into a foundation folder. The solution becomes standalone, but later Core updates are not inherited automatically.")
+        : T(
+            "يبقى المشروع مرتبطًا بنسخة FoundationKit المحلية. الـSolution يضم مشاريع الكور المطلوبة حتى يعمل Restore/Build مباشرة، وتصل تحديثات الكور إلى المشروع عند تحديث النسخة المحلية.",
+            "The product stays linked to the local FoundationKit source. The solution includes the required Core projects so Restore/Build works directly, and local Core updates remain available to the product.");
 
     private string ManifestJson
     {
@@ -480,7 +522,10 @@
         _generation = null;
         try
         {
-            var result = await Api.GenerateComposerProjectAsync(manifest, _forceGeneration);
+            var result = await Api.GenerateComposerProjectAsync(
+                manifest,
+                _forceGeneration,
+                _foundationMode);
             if (result.IsSuccess)
                 _generation = result.Value;
             else
@@ -495,4 +540,20 @@
             _generating = false;
         }
     }
+
+    private string GenerationModeLabel(string? mode) => mode switch
+    {
+        "source-copy" => T("مستقل / منسوخ", "Standalone / copied"),
+        "project" => T("مرتبط", "Linked"),
+        "package" => T("حزم", "Packages"),
+        _ => mode ?? "—"
+    };
+
+    private string GenerationModeHint(string? mode) => mode switch
+    {
+        "source-copy" => T("الكور المطلوب داخل المشروع", "required Core inside workspace"),
+        "project" => T("FoundationKit local source", "FoundationKit local source"),
+        "package" => T("NuGet package references", "NuGet package references"),
+        _ => T("وضع التوليد", "generation mode")
+    };
 }
