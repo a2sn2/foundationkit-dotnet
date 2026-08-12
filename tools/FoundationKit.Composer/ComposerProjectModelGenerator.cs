@@ -42,6 +42,12 @@ public static class ComposerProjectModelGenerator
                 overlay[file.Key] = file.Value;
         }
 
+        ComposerBlazorRuntimeGenerator.Apply(
+            analysis,
+            baseResult.OutputDirectory,
+            projectPrefix,
+            overlay);
+
         foreach (var file in overlay)
         {
             cancellationToken.ThrowIfCancellationRequested();
