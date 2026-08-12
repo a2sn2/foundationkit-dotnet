@@ -191,7 +191,7 @@ public static class ComposerFoundationBinding
             .ToArray();
     }
 
-    private static IEnumerable<string> ReadProjectReferences(string projectPath)
+    private static string[] ReadProjectReferences(string projectPath)
     {
         XDocument document;
         try
