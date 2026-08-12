@@ -210,6 +210,20 @@
     font-family: var(--fk-font-mono);
 }
 
+.composer-binding-choice {
+    display: grid;
+    grid-template-columns: minmax(15rem, .8fr) minmax(0, 1.2fr);
+    align-items: start;
+    gap: var(--fk-space-3);
+}
+
+.composer-binding-note {
+    min-height: 3.5rem;
+    display: flex;
+    align-items: center;
+    line-height: 1.7;
+}
+
 .composer-generation__hint {
     min-height: 3.6rem;
     display: flex;
@@ -240,6 +254,10 @@
 
     .composer-editor textarea {
         min-height: 26rem;
+    }
+
+    .composer-binding-choice {
+        grid-template-columns: 1fr;
     }
 }
 
