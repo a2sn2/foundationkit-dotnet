@@ -201,7 +201,7 @@ internal static class ComposerGeneratedOwnership
     private static void DeleteTransientGeneratedArtifacts(
         string outputDirectory,
         IEnumerable<string> actualFiles,
-        IReadOnlySet<string> generatedFiles)
+        HashSet<string> generatedFiles)
     {
         foreach (var relativePath in actualFiles.Where(path =>
                      !generatedFiles.Contains(path) && IsTransientGeneratedArtifact(path)))
