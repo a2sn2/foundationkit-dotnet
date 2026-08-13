@@ -73,7 +73,27 @@ public sealed class ComposerBlazorRuntimeGenerationTests
             Assert.True(File.Exists(Path.Combine(clientRoot, "wwwroot", "css", "app.css")));
             Assert.True(File.Exists(Path.Combine(clientRoot, "wwwroot", "appsettings.json")));
             Assert.True(File.Exists(Path.Combine(clientRoot, "Properties", "launchSettings.json")));
+            Assert.False(File.Exists(Path.Combine(clientRoot, "GeneratedProduct.razor")));
+            Assert.DoesNotContain(
+                "src/Runtime.Ui.Proof.Client/GeneratedProduct.razor",
+                result.GeneratedFiles,
+                StringComparer.Ordinal);
             Assert.True(File.Exists(Path.Combine(destination, "GENERATED-FRONTEND.md")));
+
+            var solutionLaunchPath = Path.Combine(destination, "Runtime.Ui.Proof.slnLaunch");
+            Assert.True(File.Exists(solutionLaunchPath));
+            Assert.Contains("Runtime.Ui.Proof.slnLaunch", result.GeneratedFiles, StringComparer.Ordinal);
+            using (var solutionLaunch = JsonDocument.Parse(await File.ReadAllTextAsync(solutionLaunchPath)))
+            {
+                var profile = solutionLaunch.RootElement.EnumerateArray().Single();
+                Assert.Equal("FoundationKit Local", profile.GetProperty("Name").GetString());
+                var projects = profile.GetProperty("Projects").EnumerateArray().ToArray();
+                Assert.Equal(2, projects.Length);
+                Assert.Equal("src\\Runtime.Ui.Proof.Api\\Runtime.Ui.Proof.Api.csproj", projects[0].GetProperty("Path").GetString());
+                Assert.Equal("Start", projects[0].GetProperty("Action").GetString());
+                Assert.Equal("src\\Runtime.Ui.Proof.Client\\Runtime.Ui.Proof.Client.csproj", projects[1].GetProperty("Path").GetString());
+                Assert.Equal("Start", projects[1].GetProperty("Action").GetString());
+            }
 
             var packages = await File.ReadAllTextAsync(Path.Combine(destination, "Directory.Packages.props"));
             Assert.Contains("Microsoft.AspNetCore.Components.WebAssembly", packages, StringComparison.Ordinal);

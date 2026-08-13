@@ -38,6 +38,7 @@ internal static class ComposerBlazorRuntimeGenerator
         var hasExecutableRuntime = analysis.Manifest.ProjectModel?.Resources.Any(resource => resource.IsExecutable) == true;
         var ports = StableLocalPorts(projectPrefix);
 
+        RemoveLegacyClientBoundary(outputDirectory, projectPrefix);
         AddWebAssemblyPackageVersions(overlay, outputDirectory);
         overlay[clientProjectRelativePath] = BuildRunnableClientProject(File.ReadAllText(clientProjectPath));
         AddClientFiles(
@@ -47,9 +48,61 @@ internal static class ComposerBlazorRuntimeGenerator
             ports.ApiPort,
             ports.ClientPort,
             hasExecutableRuntime);
+        overlay[$"{projectPrefix}.slnLaunch"] = BuildSolutionLaunchProfile(projectPrefix, hasExecutableRuntime);
 
         if (hasExecutableRuntime)
             EnableLocalRuntimeConnectivity(overlay, outputDirectory, projectPrefix, ports.ApiPort);
+    }
+
+    private static void RemoveLegacyClientBoundary(string outputDirectory, string projectPrefix)
+    {
+        var path = Path.Combine(
+            outputDirectory,
+            "src",
+            $"{projectPrefix}.Client",
+            "GeneratedProduct.razor");
+        if (File.Exists(path))
+            File.Delete(path);
+    }
+
+    private static string BuildSolutionLaunchProfile(string projectPrefix, bool hasExecutableRuntime)
+    {
+        var clientPath = $"src\\{projectPrefix}.Client\\{projectPrefix}.Client.csproj";
+        if (!hasExecutableRuntime)
+        {
+            return $$"""
+                [
+                  {
+                    "Name": "FoundationKit Local",
+                    "Projects": [
+                      {
+                        "Path": "{{clientPath.Replace("\\", "\\\\", StringComparison.Ordinal)}}",
+                        "Action": "Start"
+                      }
+                    ]
+                  }
+                ]
+                """;
+        }
+
+        var apiPath = $"src\\{projectPrefix}.Api\\{projectPrefix}.Api.csproj";
+        return $$"""
+            [
+              {
+                "Name": "FoundationKit Local",
+                "Projects": [
+                  {
+                    "Path": "{{apiPath.Replace("\\", "\\\\", StringComparison.Ordinal)}}",
+                    "Action": "Start"
+                  },
+                  {
+                    "Path": "{{clientPath.Replace("\\", "\\\\", StringComparison.Ordinal)}}",
+                    "Action": "Start"
+                  }
+                ]
+              }
+            ]
+            """;
     }
 
     private static void AddWebAssemblyPackageVersions(
@@ -368,7 +421,7 @@ internal static class ComposerBlazorRuntimeGenerator
 
             The client probes the backend health endpoint and, when executable resources exist, reads `/swagger/v1/swagger.json` as the runtime transport source of truth. It deliberately does not recreate authorization rules, relational joins, or product business logic in browser code.
 
-            Run the API and Client as separate startup projects. Development CORS is restricted to loopback origins and is emitted only for the generated local runtime proof.
+            Visual Studio receives a shared `{{projectPrefix}}.slnLaunch` profile named `FoundationKit Local`. Select that profile to start the generated API and Client together. Development CORS is restricted to loopback origins and is emitted only for the generated local runtime proof.
             """;
     }
 
