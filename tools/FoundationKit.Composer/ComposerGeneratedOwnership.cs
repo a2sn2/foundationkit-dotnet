@@ -8,6 +8,14 @@ internal static class ComposerGeneratedOwnership
 {
     private const string MarkerFile = ".foundationkit-generated.json";
 
+    private static readonly HashSet<string> TransientDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bin",
+        "obj",
+        ".vs",
+        "TestResults"
+    };
+
     private static readonly JsonSerializerOptions IndentedJsonOptions = new()
     {
         WriteIndented = true
@@ -56,13 +64,18 @@ internal static class ComposerGeneratedOwnership
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
 
         var ownership = ReadMarker(outputDirectory);
+        var generatedFiles = ownership.GeneratedFiles.ToHashSet(StringComparer.Ordinal);
         var actualFiles = Directory
             .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
             .Select(path => NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path)))
             .Order(StringComparer.Ordinal)
             .ToArray();
+        var comparableFiles = actualFiles
+            .Where(path => generatedFiles.Contains(path) || !IsTransientGeneratedArtifact(path))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
-        if (!ownership.GeneratedFiles.SequenceEqual(actualFiles, StringComparer.Ordinal))
+        if (!ownership.GeneratedFiles.SequenceEqual(comparableFiles, StringComparer.Ordinal))
         {
             throw new ComposerGenerationException(
                 "Refusing to force-regenerate because the destination contains files that are not part of the previous FoundationKit generation set.");
@@ -82,6 +95,8 @@ internal static class ComposerGeneratedOwnership
                     $"Refusing to force-regenerate because generated file '{expectedHash.Key}' was modified after generation.");
             }
         }
+
+        DeleteTransientGeneratedArtifacts(outputDirectory, actualFiles, generatedFiles);
     }
 
     private static GeneratedOwnership ReadMarker(string outputDirectory)
@@ -175,6 +190,28 @@ internal static class ComposerGeneratedOwnership
             .TrimEnd() + "\n";
 
     private static string NormalizeRelativePath(string value) => value.Replace('\\', '/');
+
+    private static bool IsTransientGeneratedArtifact(string path)
+    {
+        var normalized = NormalizeRelativePath(path);
+        return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Any(TransientDirectoryNames.Contains);
+    }
+
+    private static void DeleteTransientGeneratedArtifacts(
+        string outputDirectory,
+        IEnumerable<string> actualFiles,
+        HashSet<string> generatedFiles)
+    {
+        foreach (var relativePath in actualFiles.Where(path =>
+                     !generatedFiles.Contains(path) && IsTransientGeneratedArtifact(path)))
+        {
+            var path = Path.Combine(
+                outputDirectory,
+                relativePath.Replace('/', Path.DirectorySeparatorChar));
+            File.Delete(path);
+        }
+    }
 
     private static bool IsUnsafeRelativePath(string path)
     {
