@@ -18,15 +18,8 @@ jobs:
           ref: fix/composer-runtime-cors-order
           fetch-depth: 0
 
-      - name: Apply exact patch
-        shell: bash
-        run: |
-          if grep -Fq 'const string pipelineNeedle = "app.UseSwagger();";' tools/FoundationKit.Composer/ComposerBlazorRuntimeGenerator.cs; then
-            echo "Patch already applied."
-            exit 0
-          fi
-          git apply --check scripts/runtime-cors-order.patch
-          git apply scripts/runtime-cors-order.patch
+      - name: Apply exact source patch
+        run: python3 scripts/apply-runtime-cors-order.py
 
       - name: Commit source fix
         shell: bash
