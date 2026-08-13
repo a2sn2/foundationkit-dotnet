@@ -64,6 +64,10 @@ public sealed class ComposerWorkspaceRegressionTests
         Assert.Contains("Value=\"@(\"source-copy\")\"", compose, StringComparison.Ordinal);
         Assert.Contains("_foundationMode = \"linked\"", compose, StringComparison.Ordinal);
         Assert.Contains("_foundationMode);", compose, StringComparison.Ordinal);
+        Assert.Contains("CurrentGenerationTarget", compose, StringComparison.Ordinal);
+        Assert.Contains("GeneratedSolutionTarget", compose, StringComparison.Ordinal);
+        Assert.Contains("No other generated folder with a different name", compose, StringComparison.Ordinal);
+        Assert.Contains("Open this exact solution after generation", compose, StringComparison.Ordinal);
         Assert.Contains("css/composer.css", index, StringComparison.Ordinal);
         Assert.Contains(".composer-actionbar", styles, StringComparison.Ordinal);
         Assert.Contains(".composer-binding-choice", styles, StringComparison.Ordinal);
