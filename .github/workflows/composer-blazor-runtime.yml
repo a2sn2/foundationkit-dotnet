@@ -182,7 +182,11 @@ jobs:
             -D /tmp/openapi-loopback.headers \
             http://127.0.0.1:5100/swagger/v1/swagger.json \
             -o /tmp/openapi-loopback.json
-          grep -Eiq '^access-control-allow-origin: http://localhost:7560\r?$' /tmp/openapi-loopback.headers
+          if ! tr -d '\r' < /tmp/openapi-loopback.headers | grep -Eiq '^access-control-allow-origin: http://localhost:7560$'; then
+            echo "Expected browser loopback CORS header was not returned."
+            cat /tmp/openapi-loopback.headers
+            exit 1
+          fi
           python3 - <<'PY'
           import json
           with open('/tmp/openapi-loopback.json', encoding='utf-8') as handle:
