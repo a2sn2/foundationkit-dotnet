@@ -2,7 +2,8 @@ name: Apply runtime CORS ordering fix
 
 on:
   push:
-    branches: [fix/composer-runtime-cors-order]
+    branches:
+      - fix/composer-runtime-cors-order
 
 permissions:
   contents: write
@@ -11,66 +12,27 @@ jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: fix/composer-runtime-cors-order
-      - name: Apply exact source and regression patches
+          fetch-depth: 0
+
+      - name: Apply exact patch
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          if grep -Fq 'const string pipelineNeedle = "app.UseSwagger();";' tools/FoundationKit.Composer/ComposerBlazorRuntimeGenerator.cs; then
+            echo "Patch already applied."
+            exit 0
+          fi
+          git apply --check scripts/runtime-cors-order.patch
+          git apply scripts/runtime-cors-order.patch
 
-          generator = Path('tools/FoundationKit.Composer/ComposerBlazorRuntimeGenerator.cs')
-          text = generator.read_text(encoding='utf-8')
-          old = '''            const string pipelineNeedle = "app.UseFoundationRequestDiagnostics();";
-            if (!program.Contains(pipelineNeedle, StringComparison.Ordinal))
-                throw new ComposerGenerationException("Generated API Program.cs has an unexpected middleware shape.");
-
-            var pipelineReplacement = $$"""
-                {{pipelineNeedle}}
-                if (app.Environment.IsDevelopment())
-                    app.UseCors("{{LocalCorsPolicy}}");
-                """;
-            program = program.Replace(pipelineNeedle, pipelineReplacement, StringComparison.Ordinal);
-'''
-          new = '''            const string pipelineNeedle = "app.UseSwagger();";
-            if (!program.Contains(pipelineNeedle, StringComparison.Ordinal))
-                throw new ComposerGenerationException("Generated API Program.cs has an unexpected middleware shape.");
-
-            var pipelineReplacement = $$"""
-                if (app.Environment.IsDevelopment())
-                    app.UseCors("{{LocalCorsPolicy}}");
-                {{pipelineNeedle}}
-                """;
-            program = program.Replace(pipelineNeedle, pipelineReplacement, StringComparison.Ordinal);
-'''
-          if old not in text:
-              if new not in text:
-                  raise SystemExit('Expected CORS pipeline block was not found')
-          else:
-              generator.write_text(text.replace(old, new, 1), encoding='utf-8')
-
-          tests = Path('tests/FoundationKit.Tests/ComposerBlazorRuntimeGenerationTests.cs')
-          text = tests.read_text(encoding='utf-8')
-          needle = '''            Assert.Contains("GeneratedLocalClient", apiProgram, StringComparison.Ordinal);
-            Assert.Contains("uri.IsLoopback", apiProgram, StringComparison.Ordinal);
-            Assert.Contains("app.UseCors", apiProgram, StringComparison.Ordinal);
-'''
-          replacement = needle + '''            var corsIndex = apiProgram.IndexOf("app.UseCors", StringComparison.Ordinal);
-            var swaggerIndex = apiProgram.IndexOf("app.UseSwagger();", StringComparison.Ordinal);
-            Assert.True(corsIndex >= 0 && swaggerIndex >= 0 && corsIndex < swaggerIndex,
-                "Development CORS must run before Swagger so browser clients can read runtime OpenAPI cross-origin.");
-'''
-          if replacement not in text:
-              if needle not in text:
-                  raise SystemExit('Expected Blazor runtime test assertion block was not found')
-              tests.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
-          PY
-      - name: Commit patch
+      - name: Commit source fix
         shell: bash
         run: |
           if git diff --quiet; then
-            echo "Patch already applied."
+            echo "No source changes to commit."
             exit 0
           fi
           git config user.name foundationkit-ci
