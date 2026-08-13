@@ -66,7 +66,14 @@ jobs:
           test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/Api/GeneratedApiProbe.cs
           test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/index.html
           test -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/wwwroot/appsettings.json
+          test ! -f artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/GeneratedProduct.razor
+          test -f artifacts/composer-blazor-runtime/ComposerBlazorRuntime.slnLaunch
           test -f artifacts/composer-blazor-runtime/GENERATED-FRONTEND.md
+          python3 -m json.tool artifacts/composer-blazor-runtime/ComposerBlazorRuntime.slnLaunch >/dev/null
+          grep -Fq 'FoundationKit Local' artifacts/composer-blazor-runtime/ComposerBlazorRuntime.slnLaunch
+          grep -Fq 'ComposerBlazorRuntime.Api.csproj' artifacts/composer-blazor-runtime/ComposerBlazorRuntime.slnLaunch
+          grep -Fq 'ComposerBlazorRuntime.Client.csproj' artifacts/composer-blazor-runtime/ComposerBlazorRuntime.slnLaunch
+          ! grep -Fq 'GeneratedProduct.razor' artifacts/composer-blazor-runtime/.foundationkit-generated.json
           grep -Fq 'Microsoft.NET.Sdk.BlazorWebAssembly' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
           grep -Fq 'Microsoft.AspNetCore.Components.WebAssembly.DevServer' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
           ! grep -Fq 'FrameworkReference Include="Microsoft.AspNetCore.App"' artifacts/composer-blazor-runtime/src/ComposerBlazorRuntime.Client/ComposerBlazorRuntime.Client.csproj
