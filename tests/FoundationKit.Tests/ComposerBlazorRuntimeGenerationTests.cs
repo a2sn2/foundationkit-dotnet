@@ -105,6 +105,10 @@ public sealed class ComposerBlazorRuntimeGenerationTests
             Assert.Contains("GeneratedLocalClient", apiProgram, StringComparison.Ordinal);
             Assert.Contains("uri.IsLoopback", apiProgram, StringComparison.Ordinal);
             Assert.Contains("app.UseCors", apiProgram, StringComparison.Ordinal);
+            var corsIndex = apiProgram.IndexOf("app.UseCors", StringComparison.Ordinal);
+            var swaggerIndex = apiProgram.IndexOf("app.UseSwagger();", StringComparison.Ordinal);
+            Assert.True(corsIndex >= 0 && swaggerIndex >= 0 && corsIndex < swaggerIndex,
+                "Development CORS must run before Swagger so browser clients can read runtime OpenAPI cross-origin.");
 
             var probe = await File.ReadAllTextAsync(Path.Combine(clientRoot, "Api", "GeneratedApiProbe.cs"));
             Assert.Contains("namespace Runtime.Ui.Proof.Client.Api;", probe, StringComparison.Ordinal);

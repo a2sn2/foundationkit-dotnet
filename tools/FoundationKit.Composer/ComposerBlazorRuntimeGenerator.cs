@@ -596,14 +596,14 @@ internal static class ComposerBlazorRuntimeGenerator
                 """;
             program = program.Replace(serviceNeedle, serviceReplacement, StringComparison.Ordinal);
 
-            const string pipelineNeedle = "app.UseFoundationRequestDiagnostics();";
+            const string pipelineNeedle = "app.UseSwagger();";
             if (!program.Contains(pipelineNeedle, StringComparison.Ordinal))
                 throw new ComposerGenerationException("Generated API Program.cs has an unexpected middleware shape.");
 
             var pipelineReplacement = $$"""
-                {{pipelineNeedle}}
                 if (app.Environment.IsDevelopment())
                     app.UseCors("{{LocalCorsPolicy}}");
+                {{pipelineNeedle}}
                 """;
             program = program.Replace(pipelineNeedle, pipelineReplacement, StringComparison.Ordinal);
         }
