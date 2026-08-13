@@ -1,0 +1,170 @@
+name: Apply Composer transient regeneration fix
+
+on:
+  push:
+    branches:
+      - fix/composer-regeneration-transient-artifacts
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/composer-regeneration-transient-artifacts
+          fetch-depth: 0
+
+      - name: Apply source and regression-test patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f'Expected source block not found in {path}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          replace_once(
+              'tools/FoundationKit.Composer/ComposerGeneratedOwnership.cs',
+              '''        var actualFiles = Directory
+              .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
+              .Select(path => NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path)))
+              .Order(StringComparer.Ordinal)
+              .ToArray();
+''',
+              '''        var actualFiles = Directory
+              .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
+              .Select(path => NormalizeRelativePath(Path.GetRelativePath(outputDirectory, path)))
+              .Where(path => !IsTransientGeneratedArtifact(path))
+              .Order(StringComparer.Ordinal)
+              .ToArray();
+''')
+
+          replace_once(
+              'tools/FoundationKit.Composer/ComposerGeneratedOwnership.cs',
+              '''    private static string NormalizeRelativePath(string value) => value.Replace('\\\\', '/');
+
+    private static bool IsUnsafeRelativePath(string path)
+''',
+              '''    private static string NormalizeRelativePath(string value) => value.Replace('\\\\', '/');
+
+    private static bool IsTransientGeneratedArtifact(string path)
+    {
+        var normalized = NormalizeRelativePath(path);
+        return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment =>
+                segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("TestResults", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsUnsafeRelativePath(string path)
+''')
+
+          replace_once(
+              'tools/FoundationKit.Composer/ComposerProjectGenerator.cs',
+              '''        var actualFiles = Directory
+            .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
+            .Select(path => NormalizeProjectPath(Path.GetRelativePath(outputDirectory, path)))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+''',
+              '''        var actualFiles = Directory
+            .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
+            .Select(path => NormalizeProjectPath(Path.GetRelativePath(outputDirectory, path)))
+            .Where(path => !IsTransientGeneratedArtifact(path))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+''')
+
+          replace_once(
+              'tools/FoundationKit.Composer/ComposerProjectGenerator.cs',
+              '''    private static bool IsUnsafeRelativePath(string path)
+''',
+              '''    private static bool IsTransientGeneratedArtifact(string path)
+    {
+        var normalized = NormalizeProjectPath(path);
+        return normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment =>
+                segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+                segment.Equals("TestResults", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsUnsafeRelativePath(string path)
+''')
+
+          test_marker = '''    [Fact]
+    public async Task Generator_force_refuses_modified_generated_content()
+'''
+          test_insert = '''    [Fact]
+    public async Task Generator_force_allows_transient_build_and_ide_artifacts()
+    {
+        var manifest = MinimalManifest("Built.Product");
+        var destination = NewTempDirectory();
+
+        try
+        {
+            await ComposerProjectGenerator.GenerateAsync(
+                manifest,
+                new ProjectGenerationOptions(destination));
+
+            var binFile = Path.Combine(destination, "src", "Built.Product.Domain", "bin", "Debug", "net10.0", "Built.Product.Domain.dll");
+            var objFile = Path.Combine(destination, "src", "Built.Product.Domain", "obj", "project.assets.json");
+            var vsFile = Path.Combine(destination, ".vs", "Built.Product", "v17", ".suo");
+            var testResult = Path.Combine(destination, "tests", "Built.Product.Tests", "TestResults", "result.trx");
+
+            foreach (var artifact in new[] { binFile, objFile, vsFile, testResult })
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(artifact)!);
+                await File.WriteAllTextAsync(artifact, "transient tool output");
+            }
+
+            await ComposerProjectGenerator.GenerateAsync(
+                manifest,
+                new ProjectGenerationOptions(destination, Force: true));
+
+            Assert.True(File.Exists(Path.Combine(destination, "README.md")));
+            Assert.False(File.Exists(binFile));
+            Assert.False(File.Exists(objFile));
+            Assert.False(File.Exists(vsFile));
+            Assert.False(File.Exists(testResult));
+        }
+        finally
+        {
+            DeleteDirectory(destination);
+        }
+    }
+
+    [Fact]
+    public async Task Generator_force_refuses_modified_generated_content()
+'''
+          replace_once('tests/FoundationKit.Tests/ComposerGenerationTests.cs', test_marker, test_insert)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name foundationkit-ci
+          git config user.email foundationkit-ci@users.noreply.github.com
+          git add \
+            tools/FoundationKit.Composer/ComposerGeneratedOwnership.cs \
+            tools/FoundationKit.Composer/ComposerProjectGenerator.cs \
+            tests/FoundationKit.Tests/ComposerGenerationTests.cs
+          git commit -m "Allow safe regeneration after build artifacts"
+          git push origin HEAD:fix/composer-regeneration-transient-artifacts
