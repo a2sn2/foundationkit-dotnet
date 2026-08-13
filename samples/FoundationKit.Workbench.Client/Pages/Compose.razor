@@ -237,10 +237,10 @@
         <MudPaper Class="studio-panel composer-generation" Elevation="0">
             <div class="composer-generation__head">
                 <div>
-                    <MudText Typo="Typo.h6">generated/&lt;ProjectName&gt;</MudText>
+                    <MudText Typo="Typo.h6"><code>@CurrentGenerationTarget</code></MudText>
                     <MudText Class="muted-text mt-1">
-                        @T("المخرج مقيد داخل نسخة FoundationKit المحلية، ولا يسمح المتصفح بأي Path حر.",
-                           "Output is restricted to the local FoundationKit workspace; the browser cannot choose an arbitrary path.")
+                        @T("يعرض هذا السطر الهدف الفعلي للـManifest الذي تم التحقق منه. المخرج مقيد داخل نسخة FoundationKit المحلية ولا يسمح المتصفح بأي Path حر.",
+                           "This line shows the exact target of the validated Manifest. Output is restricted to the local FoundationKit workspace; the browser cannot choose an arbitrary path.")
                     </MudText>
                 </div>
                 <MudButton Variant="Variant.Filled"
@@ -276,6 +276,14 @@
                          Color="Color.Warning"
                          Class="mt-3" />
 
+            @if (IsCurrentManifestValidated)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-3">
+                    @T("الهدف الفعلي الحالي:", "Exact current target:") <code>@CurrentGenerationTarget</code>.
+                    @T("لن يتم إنشاء أو تحديث أي مجلد generated آخر باسم مختلف.", "No other generated folder with a different name will be created or updated.")
+                </MudAlert>
+            }
+
             @if (!CanGenerate && !_generating && _generation is null)
             {
                 <div class="composer-generation__hint">
@@ -300,6 +308,10 @@
                 {
                     <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">
                         @T("تم توليد", "Generated") <strong>@_generation.ProjectName</strong> @T("بنجاح في", "successfully at") <code>@_generation.RelativeOutputPath</code>.
+                    </MudAlert>
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-3">
+                        @T("افتح هذا الحل تحديدًا بعد التوليد:", "Open this exact solution after generation:") <code>@GeneratedSolutionTarget</code>.
+                        @T("إذا كان لديك Solution مولد آخر مفتوحًا فأغلقه حتى لا تختبر نسخة قديمة بالخطأ.", "If another generated solution is open, close it so you do not accidentally test an older generated copy.")
                     </MudAlert>
                     <div class="platform-grid mt-4 composer-metrics">
                         <div><span>Output</span><strong>@_generation.RelativeOutputPath</strong><small>host workspace</small></div>
@@ -392,6 +404,16 @@
         !_generating &&
         IsCurrentManifestValidated &&
         _validation?.SchemaVersion == 2;
+
+    private string CurrentGenerationTarget =>
+        IsCurrentManifestValidated && !string.IsNullOrWhiteSpace(_validation?.ProjectName)
+            ? $"generated/{_validation!.ProjectName}"
+            : "generated/<ProjectName>";
+
+    private string GeneratedSolutionTarget =>
+        _generation?.Generated == true
+            ? $"{_generation.RelativeOutputPath}/{_generation.SolutionFileName}"
+            : "—";
 
     private Color ValidationTone => _validating
         ? Color.Info
