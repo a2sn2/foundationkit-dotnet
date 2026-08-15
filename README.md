@@ -2,6 +2,8 @@
 
 FoundationKit is a composable **.NET 10 full-stack system-building foundation**. The active repository boundary is reusable Core packages, deterministic Composer tooling, runtime API contracts, SQL-first read models, typed clients, and an executable Workbench/Core Studio that proves the architecture against real SQL Server paths.
 
+**Current engineering state:** **Consumer-ready Core baseline — Pre-production.** The approved Core vNext repository roadmap is closed at Phase 12. Further reusable Core work should be driven by a concrete consumer requirement rather than by adding speculative phases, packages, providers, or abstractions.
+
 ## Current reusable surface
 
 FoundationKit ships exactly **17 NuGet packages + 17 symbol packages**:
@@ -178,7 +180,9 @@ These are closure tracks, not Phase 13–16.
 
 The Soft Orbit UI baseline and local Studio generation workflow are final developer-experience closures required before the first real consumer project; they do not create another backend phase.
 
-The final baseline requires one coherent exact-head on `main`: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, shared design system, local project generation, generated frontend scaffolding, documentation, security and the 17-package boundary.
+The current `main` baseline has repository evidence for the complete closure path: backend generation, SQL/read engine, OpenAPI/Postman/typed transport, Core Studio composition tooling, shared design system, local project generation, generated frontend scaffolding, documentation, security and the 17-package boundary.
+
+The next engineering step is therefore a **real consumer project**. New reusable Core work should only reopen when consumer evidence identifies a gap that belongs in FoundationKit rather than in product-owned code.
 
 This is **repository completion**, not Production approval. Protected-main enforcement, independent approval and real operational go-live controls remain environment/process governance under issue #35.
 
