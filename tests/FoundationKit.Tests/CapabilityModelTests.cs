@@ -29,8 +29,8 @@ public sealed class CapabilityModelTests
         var resolved = resolver.Resolve(
             [FoundationCapabilityIds.Approvals, FoundationCapabilityIds.Documents]);
 
-        Assert.Single(resolved.Where(capability => capability.Id == FoundationCapabilityIds.Auditing));
-        Assert.Single(resolved.Where(capability => capability.Id == FoundationCapabilityIds.Authorization));
+        Assert.Single(resolved, capability => capability.Id == FoundationCapabilityIds.Auditing);
+        Assert.Single(resolved, capability => capability.Id == FoundationCapabilityIds.Authorization);
     }
 
     [Fact]

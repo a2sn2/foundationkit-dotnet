@@ -109,13 +109,13 @@ Derived artifacts flow one way:
 C# contracts/config/metadata
         ↓
 runtime OpenAPI
-        ↓
-Postman (deterministic generated artifact)
-        ↓
-future typed clients
+       ↙         ↘
+Postman        typed C# client
+                  ↓
+           generated Blazor/client consumers
 ```
 
-Workbench CI rejects drift between runtime OpenAPI and its committed generated Postman collection. The Phase 12 generated-project workflow independently captures live A/B OpenAPI and derives A/B Postman collections with the same deterministic generator and `--check` gate.
+Postman and the typed C# client are deterministic derived artifacts; neither is an independent transport source of truth. Workbench and generated-project CI reject contract drift, and the generated Blazor path consumes the same typed transport rather than maintaining a parallel client contract.
 
 Generated reference authentication is represented in OpenAPI by security schemes, but requirements are attached per operation from authorization endpoint metadata. Anonymous health operations therefore stay anonymous in both runtime behavior and OpenAPI.
 
@@ -150,6 +150,7 @@ Project
       → optional executable Fields
       → Overrides
       → API
+    → Read Models
   → Profile / Capabilities / Providers
 ```
 
@@ -171,19 +172,19 @@ schema v2 with bounded executable fields
 → same model + generated product-owned full-stack overlay
 ```
 
-The executable overlay currently supports a deliberately narrow first contract: Guid IDs, explicit bounded text fields, SQL Server, CRUD, DataAnnotations validation, authorization/audit/concurrency/idempotency where declared, generic API Engine routes, runtime OpenAPI, and deterministic Postman derivation. Unsupported manager/rate-limit/query/behavior combinations fail closed rather than producing partial code.
+The executable overlay supports a deliberately bounded contract: Guid IDs, explicit bounded text fields, SQL Server, CRUD, DataAnnotations validation, authorization/audit/concurrency/idempotency where declared, explicit exact/prefix filtering and sorting intent, deterministic product-owned indexes, generic API Engine routes, SQL-side paging/filter/order, SQL view-backed read models, runtime OpenAPI, deterministic Postman and typed C# client derivation, and generated Blazor consumers. Unsupported manager/rate-limit/field/query combinations fail closed rather than producing partial code.
 
-The v1 generator is not silently redefined. CI independently proves v1, descriptor-only v2, executable A, and executable B generation, force-regeneration determinism, restore, build, and tests on the same repository head.
+The v1 generator is not silently redefined. CI independently proves v1, descriptor-only v2, executable generation, force-regeneration determinism, restore, build, tests, SQL/read-model behavior, typed transport, and generated frontend behavior on the same repository head.
 
 ## Workbench and generated proof roles
 
 Workbench remains the executable hand-authored Core/SQL reference. It proves database → domain/application → API → client/reference behavior, module composition, API Engine behavior, OpenAPI/Postman contract derivation, and durable idempotency replay through consumer-owned migrations.
 
-Generated Project A/B are a separate Composer adoption proof. They establish that the platform can emit an inspectable product-owned backend vertical slice and that two independently generated products remain isolated on shared SQL infrastructure.
+Generated projects are a separate Composer adoption proof. They establish that the platform can emit inspectable product-owned backend/read/frontend vertical slices and that independently generated products remain isolated on shared SQL infrastructure.
 
 Neither Workbench nor generated reference authentication is a universal production deployment or production Identity system.
 
-A future visual Workbench/Studio composer must author the same Composer schema-v2 manifest and call the same deterministic analyzer/generator. It must not introduce a parallel capability or project model.
+Core Studio provides the visual Composer experience over the same schema-v2 project model, analyzer, and deterministic generator. It does not introduce a parallel capability graph or hidden project format.
 
 ## Production boundary
 

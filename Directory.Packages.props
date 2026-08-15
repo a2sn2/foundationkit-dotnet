@@ -26,8 +26,8 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="MudBlazor" Version="7.15.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageVersion Include="xunit" Version="2.6.1" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
 
     <!-- Security floors for transitive dependencies exercised by the image gate. -->
     <PackageVersion Include="Azure.Identity" Version="1.17.2" />

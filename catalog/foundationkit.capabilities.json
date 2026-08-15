@@ -418,7 +418,7 @@
       "kind": "tooling",
       "maturity": "referenceOnly",
       "category": "Tooling",
-      "description": "Composer tooling for strict manifest validation, capability/profile discovery, dependency explanation, contract compatibility, deterministic project generation, and the interactive questionnaire; the visual Workbench composer remains future work.",
+      "description": "Composer tooling for strict manifest validation, capability/profile discovery, dependency explanation, contract compatibility, deterministic project generation, and the interactive questionnaire; Core Studio reuses the same canonical Composer model, analyzer, and generator for visual composition.",
       "dependencies": [
         "kernel"
       ]
@@ -429,7 +429,7 @@
       "kind": "tooling",
       "maturity": "referenceOnly",
       "category": "Tooling",
-      "description": "Executable Core architecture and SQL reference consumer; a visual project composer remains a future UX layer.",
+      "description": "Executable Core architecture and SQL reference consumer with Core Studio surfaces for visual composition, design-system reference, runtime proof, and evidence over the canonical Composer pipeline.",
       "dependencies": [
         "kernel"
       ]

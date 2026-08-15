@@ -52,8 +52,19 @@ Complex reports/statements should not require deeply nested application joins ju
 - Avoid hidden N+1 fallbacks after reading a view.
 - Do not expose arbitrary client-provided SQL or dynamic column expressions; API query intent is parsed into bounded typed policies and expressions.
 
-## Acceptance direction
+## Current proof
 
-Before the visual UI phase, FoundationKit should prove indexed server-side filter/sort/page for a generated resource, one generated multi-table read model, and one report/statement read model on SQL Server, with deterministic schema/view DDL ownership, EF read-only mapping, OpenAPI/Postman/typed-client contracts, authorization, and direct SQL evidence.
+The Phase 12.C2 baseline now proves the read-side contract that was originally tracked by issues #134 and #135; both issues are closed as completed.
 
-Execution is tracked by GitHub issue **#135**. Declarative SQL-side searchable/sortable/indexed field work is tracked separately by **#134**; the two contracts must converge before visual UI generation begins.
+The SQL Server proof includes:
+
+- explicit searchable/sortable/indexed field intent for generated resources;
+- server-side filter/sort/count/page execution without materialize-then-query fallbacks;
+- deterministic product-owned index generation and direct SQL evidence;
+- generated multi-table and report/statement read models backed by product-owned SQL views;
+- deterministic view DDL/migration ownership;
+- EF keyless/read-only mapping;
+- authorization/project-isolation boundaries;
+- runtime OpenAPI, deterministic Postman, and typed-client contract alignment.
+
+This proves the first-party SQL Server read path. It does not claim that every relational provider shares identical view/index semantics, and it does not convert a database view into an authorization or production-readiness boundary.
