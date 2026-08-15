@@ -51,6 +51,8 @@ All notable FoundationKit Core changes are recorded here. Repository history bef
 - Added explicit **Linked** and **Standalone source-copy** Foundation binding modes for Core Studio generation. Linked mode keeps product `ProjectReference`s on the canonical local FoundationKit source and adds the complete required Core project dependency closure to the generated solution so it opens/restores/builds directly; Standalone mode copies only that required Core project closure plus its build/package props into `generated/<ProjectName>/foundation/`, rewrites Core references into the workspace, and verifies that no `ProjectReference` escapes the generated project.
 - Added direct CI build proof for both generated binding modes, while preserving Composer's existing package-reference fallback for CLI generation without a Foundation root and preserving the 17-package reusable baseline.
 - Preserved Composer ownership/hash protections for optional safe regeneration and added Workbench tests proving initial generation, non-force refusal, safe force regeneration, refusal after a user-added file, and binding-mode evidence in the finalized ownership marker/README.
+- Completed a repository-coherence and dependency-baseline sweep: synchronized delivered Core Studio/read-engine/typed-client/generated-Blazor documentation, aligned CodeQL pins, adopted current xUnit tooling, and kept generated catalog/package/security gates green.
+- Declared the resulting engineering state **Consumer-ready Core baseline — Pre-production**. Further reusable Core changes are expected to be driven by concrete consumer evidence rather than speculative roadmap expansion.
 - Retained Production-governance separation under issue #35.
 - Strengthened Core-only repository verification and CI.
 
