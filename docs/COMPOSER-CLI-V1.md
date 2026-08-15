@@ -1,8 +1,8 @@
 # FoundationKit Composer CLI and Project Model
 
-`COMPOSER-CLI-V1.md` remains at this path for existing links, but Composer now supports both manifest schema v1 and schema v2.
+`COMPOSER-CLI-V1.md` remains at this path for existing links, but Composer supports both manifest schema v1 and schema v2.
 
-FoundationKit Composer is the developer-facing deterministic layer over the canonical capability model. It validates project intent, explains dependency/maturity/contract decisions, and generates inspectable project scaffolds without introducing a second capability graph.
+FoundationKit Composer is the developer-facing deterministic layer over the canonical capability model. It validates project intent, explains dependency/maturity/contract decisions, and generates inspectable product-owned scaffolds and bounded executable full-stack overlays without introducing a second capability graph.
 
 ## Commands
 
@@ -17,11 +17,11 @@ dotnet run --project tools/FoundationKit.Composer -- new <manifest.json> --outpu
 dotnet run --project tools/FoundationKit.Composer -- new --interactive --output <directory> [--foundation-root <directory>] [--force] [--require-stable]
 ```
 
-`validate`, `explain`, and `new` inspect `schemaVersion` and use the correct compatible path automatically. There is no separate `new-v2` command.
+`validate`, `explain`, and `new` inspect `schemaVersion` and use the compatible path automatically. There is no separate `new-v2` command.
 
 ## Manifest schema v1
 
-Schema v1 remains supported unchanged for project/profile/capability/provider composition:
+Schema v1 remains supported for project/profile/capability/provider composition:
 
 ```json
 {
@@ -45,9 +45,15 @@ A v1 manifest does not accept `modules`. Existing v1 manifests require no migrat
 Schema v2 adds the bounded project model:
 
 ```text
-Project → Modules → Resources → Behaviors → Overrides → API
-                    ↓
-              canonical capability graph
+Project
+  → Modules
+    → Resources
+      → Behaviors
+      → optional executable Fields
+      → Overrides
+      → API
+    → Read Models
+  → canonical capability/profile/provider graph
 ```
 
 Example:
@@ -61,33 +67,27 @@ dotnet run --project tools/FoundationKit.Composer -- \
   --output ./generated/ComposerProjectModel
 ```
 
-The full schema, field boundaries, compatibility rules, security model, and generated artifacts are documented in `COMPOSER-PROJECT-MODEL-V2.md`. The machine-readable schema is `catalog/foundationkit.project.schema.json`.
+The full schema, field/query/read-model boundaries, compatibility rules, security model, and generated artifacts are documented in `COMPOSER-PROJECT-MODEL-V2.md`. The machine-readable schema is `catalog/foundationkit.project.schema.json`.
 
 ### Why `behaviors` is not the global capability list
 
 Top-level Foundation capability IDs describe canonical platform/runtime/provider/tooling composition. Resource `behaviors` describe module intent such as `crud`, `authorization`, and `concurrency`.
 
-Where an existing Core capability corresponds to a behavior, Composer feeds it into the same canonical capability resolver. This means resource authorization still resolves through the established Authorization → Identity → Security graph. Composer does not maintain a parallel dependency model.
+Where an existing Core capability corresponds to a behavior, Composer feeds it into the same canonical capability resolver. Resource authorization therefore resolves through the established Authorization → Identity → Security graph. Composer does not maintain a parallel dependency model.
 
-Schema v2 currently requires `crud` for every resource because the proven executable Module Engine is CRUD-based. It does not accept unsupported non-CRUD resource semantics merely to make the manifest look broader than the runtime.
+Schema v2 requires supported resource semantics and fails closed when executable intent exceeds the generator's proven surface.
 
 ### Safe project-model inputs
 
-Schema v2 uses bounded, closed inputs:
+Schema v2 uses bounded, closed inputs. The descriptor model supports ID types `guid`, `string`, `long`, and `int`; executable generated resources currently use the proven Guid-based path. Names and routes are bounded safe identifiers/segments, behavior/API modes come from closed vocabularies, and executable fields/query intent are explicitly modeled rather than accepting arbitrary source or SQL.
 
-- ID type: `guid`, `string`, `long`, or `int`;
-- module/resource/manager names: safe C# identifiers, not arbitrary source;
-- routes: bounded ASCII route segments;
-- behaviors: closed FoundationKit vocabulary;
-- API idempotency: `disabled`, `optional`, `required`;
-- API concurrency: `application-policy`, `require-if-match`;
-- filter/sort counts: bounded integers.
+For the current executable SQL Server path, explicit text fields can declare bounded query/index intent including exact/prefix filtering, sorting, indexing, and uniqueness where supported. Filter/sort counts remain bounded. Read-model declarations are explicit and generate read-only SQL-view-backed projections under the documented read-model policy.
 
-Duplicate module/resource names and duplicate effective API routes fail closed. Resource-required capabilities cannot be globally excluded.
+Duplicate module/resource names, fields, read-model identities, and effective API routes fail closed. Resource-required capabilities cannot be globally excluded.
 
 ## Validation and explanation
 
-`validate` performs strict JSON parsing, profile/capability/provider validation, canonical dependency resolution, capability-contract compatibility, and project-model validation. With v2 it also reports module/resource counts.
+`validate` performs strict JSON parsing, profile/capability/provider validation, canonical dependency resolution, capability-contract compatibility, and project-model validation. With v2 it also validates modules/resources, executable fields/query intent, and read-model declarations where present.
 
 `explain` prints the dependency-first resolved composition and v2 resource intent. A resource-driven reason appears explicitly, for example:
 
@@ -103,7 +103,7 @@ Maturity remains independent from structural validity and contract compatibility
 
 ### Schema v1
 
-The v1 generator creates the existing bounded structural scaffold:
+The v1 generator creates the compatible bounded structural scaffold:
 
 ```text
 <Product>.sln
@@ -123,16 +123,21 @@ tests/<Product>.Tests
 
 ### Schema v2
 
-The v2 generator reuses that proven structural scaffold and adds inspectable project-model artifacts:
+Schema v2 has two compatible resource modes:
 
 ```text
-PROJECT-MODEL.md
-src/<Product>.Application/GeneratedModules/<Module>/<Resource>Definition.g.cs
+resource without explicit executable fields
+→ descriptor-only project intent
+
+resource with supported executable fields
+→ bounded executable full-stack generation
 ```
 
-The normalized `foundationkit.project.json` retains the full schema-v2 project model, and `.foundationkit-generated.json` records `generatorContractVersion: "2"` plus SHA-256 ownership for the complete generated file set.
+The normalized `foundationkit.project.json` retains the full project model, and `.foundationkit-generated.json` records generator contract 2 plus SHA-256 ownership for the complete generated file set.
 
-The resource descriptors contain configuration intent only. They do not synthesize domain fields, database schemas, role semantics, external integration code, or project business rules.
+Descriptor-only resources remain configuration/intent and do not invent a domain/database model. Executable resources add inspectable product-owned Domain/Application/Infrastructure/API/SQL migration source. Proven query declarations generate server-side filtering/sorting/index mappings, and read models generate SQL-view-backed read-only projections. Runtime OpenAPI then drives deterministic Postman and typed C# client artifacts; generated Blazor applications consume the typed client path.
+
+Business rules, production identity, deployment policy, secrets, environment-specific rate limits, and unsupported integrations remain consumer-owned. Unsupported intent fails closed instead of producing partially wired code.
 
 ## `--foundation-root`
 
@@ -152,11 +157,11 @@ A user-added file or any edit to a generated file blocks destructive regeneratio
 
 Schema v1 and v2 use the same ownership safety model. v1 retains generator contract 1; v2 stamps generator contract 2.
 
-## Interactive mode
+## Interactive and visual composition
 
-The current interactive CLI questionnaire still produces schema v1. It asks for a project name, canonical profile, optional additional runtime capabilities/providers, shows the resolved dependency/maturity preview, and requires confirmation before writing files.
+The interactive CLI questionnaire remains a compatible schema-v1 entry point. It asks for project name, canonical profile, optional additional runtime capabilities/providers, shows the resolved dependency/maturity preview, and requires confirmation before writing files.
 
-It does not yet collect Modules/Resources. The future visual Workbench/Studio composer should author schema v2, serialize the same manifest, and call the same deterministic analyzer/generator rather than creating another project model.
+Core Studio supplies the visual schema-v2 composition experience. It serializes the same canonical project model and invokes the same parser/analyzer/generator rather than maintaining a second graph, hidden project format, or alternate scaffold engine.
 
 ## Contract-version compatibility
 
@@ -164,11 +169,11 @@ Capability contract versions remain independent from NuGet package versions, Com
 
 Manifest `capabilityContracts` requirements are exact positive integers. Unknown, unresolved, or incompatible requirements fail closed. Omitting the field preserves previous manifest behavior.
 
-Composer manifest versioning is separate:
+Composer manifest versioning remains separate:
 
 ```text
 schema v1 → original composition model
-schema v2 → additive module/resource project model
+schema v2 → additive module/resource/read-model executable project model
 ```
 
 A future breaking change to accepted v2 semantics requires a new manifest schema version; FoundationKit must not silently reinterpret an existing v2 document.
@@ -177,36 +182,27 @@ A future breaking change to accepted v2 semantics requires a new manifest schema
 
 Composer never executes manifest content. It does not support arbitrary source/script/template hooks, does not infer package names from user text, does not write secrets, refuses unsafe output locations, and keeps package/project bindings owned by FoundationKit's canonical mapping.
 
-Schema v2 manager overrides are safe identifiers only. Generated descriptors are inspectable configuration artifacts, not opaque runtime magic.
+Schema-v2 identifiers and overrides are safe bounded values only. Generated code remains inspectable product source, not opaque runtime magic.
 
 ## CI evidence
 
-The dedicated `FoundationKit Composer Generation` workflow proves both generations on one exact head:
+Repository workflows prove compatible schema-v1 and schema-v2 generation plus the delivered executable path. The proof includes deterministic generate/force-regenerate behavior, restore/build/test, SQL Server migrations/runtime behavior, API/OpenAPI contract checks, read-engine behavior, typed-client generation/build, generated Blazor build/runtime, security gates, and the fixed 17-package reusable boundary.
+
+## Current baseline
+
+Composer is no longer only a structural scaffolder. The consumer-ready Core baseline proves:
 
 ```text
-v1 generate
-→ hash
-→ force-regenerate
-→ byte-identical files
-→ restore
-→ build
-→ test
-
-v2 validate
-→ generate
-→ hash
-→ force-regenerate
-→ byte-identical files
-→ verify project-model artifacts
-→ restore
-→ build
-→ test
+Project → Modules → Resources/Fields/Query Intent
+                   + Read Models
+        ↓
+product-owned generated Domain/Application/Infrastructure/SQL/API
+        ↓
+runtime OpenAPI
+       ↙         ↘
+Postman        typed C# client
+                  ↓
+           generated Blazor application
 ```
 
-This is the compatibility gate that allows FoundationKit to evolve Composer without breaking existing v1 users.
-
-## Current boundary before frontend
-
-Phase 11 gives FoundationKit a real deterministic Project → Modules → Resources model, but it does not yet claim that a schema-v2 resource automatically becomes a complete SQL-backed CRUD/API/OpenAPI/Postman application.
-
-That executable generated-resource proof is the next pre-frontend phase and must be validated independently before the platform moves into the frontend/UI system.
+Both Linked and Standalone/source-copy consumption paths have been exercised. This is a pre-production consumer baseline, not a claim that every future business capability or production environment is already implemented.
