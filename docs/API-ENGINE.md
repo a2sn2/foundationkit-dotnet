@@ -151,18 +151,17 @@ Durable replay is inside the standard Foundation response pipeline so security h
 
 Generated endpoints expose ApiExplorer metadata for request/response schemas, route/query parameters, headers, requiredness, and Problem Details outcomes.
 
-Workbench CI captures the **running** Swagger document and verifies it structurally. That runtime OpenAPI document is the canonical serialized transport contract. Phase 8 derives the committed Postman collection deterministically from it and CI proves:
+Workbench CI captures the **running** Swagger document and verifies it structurally. That runtime OpenAPI document is the canonical serialized transport contract. Phase 8 established deterministic Postman derivation; Phase 12.C1 added deterministic typed C# client generation from the same contract.
 
 ```text
 runtime OpenAPI
-→ generate Postman A
-→ generate Postman B
-→ A == B byte-for-byte
-→ A == committed generated artifact
-→ --check synchronized
+       ↙         ↘
+Postman        typed C# client
+                  ↓
+           generated Blazor/client
 ```
 
-Postman is therefore a derived representation, not an independent source of request truth. A future typed frontend client must use the same one-way contract path.
+Postman and typed clients are derived representations, not independent sources of request truth. Generated Blazor consumers use the typed client path rather than maintaining a parallel transport model. Contract generators are deterministic and fail closed on unsupported shapes.
 
 ## Compatibility and migration
 
@@ -214,6 +213,7 @@ Repository verification
 → Workbench SQL Server startup/migrations
 → runtime OpenAPI verification
 → deterministic Postman drift gate
+→ typed-client generation/build proof
 → API/SQL positive and negative smoke
 ```
 
