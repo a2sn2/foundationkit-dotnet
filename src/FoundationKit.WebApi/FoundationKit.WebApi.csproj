@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>ASP.NET Core result mapping, correlation IDs, baseline security middleware, and FoundationKit OpenAPI metadata for API hosts.</Description>
+    <Description>ASP.NET Core result mapping, correlation IDs, baseline security middleware, and dual first-party/canonical FoundationKit OpenAPI support for API hosts.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FoundationKit.Application\FoundationKit.Application.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 </Project>
