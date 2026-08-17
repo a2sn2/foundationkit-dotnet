@@ -1,6 +1,6 @@
+using System.Text.Json.Nodes;
 using FoundationKit.Application.Crud;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace FoundationKit.WebApi.Api;
@@ -18,10 +18,11 @@ public sealed class FoundationApiOperationFilter : IOperationFilter
         if (metadata is null)
             return;
 
+        operation.Extensions ??= new Dictionary<string, IOpenApiExtension>();
         operation.Extensions["x-foundation-module"] =
-            new OpenApiString(metadata.ModuleName);
+            new JsonNodeExtension(JsonValue.Create(metadata.ModuleName)!);
         operation.Extensions["x-foundation-operation"] =
-            new OpenApiString(ToContractOperation(metadata.Operation));
+            new JsonNodeExtension(JsonValue.Create(ToContractOperation(metadata.Operation))!);
     }
 
     private static string ToContractOperation(CrudOperation operation) => operation switch
