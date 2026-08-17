@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Provider-neutral account policy, notification ports, and step-up requirements for FoundationKit identity consumers.</Description>
+    <Description>Provider-neutral account policy, current-user integration, notification ports, and step-up requirements for FoundationKit identity consumers.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Application\FoundationKit.Application.csproj" />
     <ProjectReference Include="..\FoundationKit.Security\FoundationKit.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Security" />
   </ItemGroup>
 </Project>
