@@ -33,34 +33,18 @@ jobs:
           assert text.count("using Microsoft.OpenApi.Models;") == 2, "Unexpected legacy OpenAPI namespace count"
           text = text.replace("using Microsoft.OpenApi.Models;", "using Microsoft.OpenApi;")
 
-          old_security = '''                    operation.Security ??= new List<OpenApiSecurityRequirement>();
-                    operation.Security.Add(new OpenApiSecurityRequirement
-                    {
-                        [new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "FoundationGeneratedUser"
-                            }
-                        }] = Array.Empty<string>(),
-                        [new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "FoundationGeneratedRoles"
-                            }
-                        }] = Array.Empty<string>()
-                    });'''
+          start_marker = "                    operation.Security ??= new List<OpenApiSecurityRequirement>();"
+          end_marker = "                    });"
+          start = text.index(start_marker)
+          end = text.index(end_marker, start) + len(end_marker)
           new_security = '''                    operation.Security ??= [];
                     operation.Security.Add(new OpenApiSecurityRequirement
                     {
                         [new OpenApiSecuritySchemeReference("FoundationGeneratedUser", context.Document)] = [],
                         [new OpenApiSecuritySchemeReference("FoundationGeneratedRoles", context.Document)] = []
                     });'''
-          assert old_security in text, "Expected legacy security requirement block was not found"
-          executable.write_text(text.replace(old_security, new_security, 1), encoding="utf-8")
+          text = text[:start] + new_security + text[end:]
+          executable.write_text(text, encoding="utf-8")
 
           # This workflow is intentionally ephemeral. Remove it in the same generated patch commit.
           Path(".github/workflows/platform-leverage-selfpatch.yml").unlink()
