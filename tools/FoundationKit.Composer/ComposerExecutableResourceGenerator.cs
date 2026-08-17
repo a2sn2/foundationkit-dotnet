@@ -579,7 +579,7 @@ internal static class ComposerExecutableResourceGenerator
 
             using FoundationKit.WebApi.Api;
             using Microsoft.AspNetCore.Authorization;
-            using Microsoft.OpenApi.Models;
+            using Microsoft.OpenApi;
             using Swashbuckle.AspNetCore.SwaggerGen;
 
             namespace {{projectPrefix}}.Api.GeneratedPlatform;
@@ -598,26 +598,12 @@ internal static class ComposerExecutableResourceGenerator
                     if (!requiresAuthorization)
                         return;
 
-                    operation.Security ??= new List<OpenApiSecurityRequirement>();
-                    operation.Security.Add(new OpenApiSecurityRequirement
-                    {
-                        [new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "FoundationGeneratedUser"
-                            }
-                        }] = Array.Empty<string>(),
-                        [new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "FoundationGeneratedRoles"
-                            }
-                        }] = Array.Empty<string>()
-                    });
+                    operation.Security ??= [];
+          operation.Security.Add(new OpenApiSecurityRequirement
+          {
+              [new OpenApiSecuritySchemeReference("FoundationGeneratedUser", context.Document)] = [],
+              [new OpenApiSecuritySchemeReference("FoundationGeneratedRoles", context.Document)] = []
+          });
                 }
             }
             """;
@@ -785,7 +771,7 @@ internal static class ComposerExecutableResourceGenerator
             using {{projectPrefix}}.Infrastructure.GeneratedPlatform;
             using Microsoft.AspNetCore.Authentication;
             using Microsoft.EntityFrameworkCore;
-            using Microsoft.OpenApi.Models;
+            using Microsoft.OpenApi;
 
             var builder = WebApplication.CreateBuilder(args);
 

@@ -8,7 +8,7 @@ public static class ComposerProjectModelGenerator
     public const string GeneratorContractVersion = "2";
 
     private const string MarkerFile = ".foundationkit-generated.json";
-    private const string SwashbuckleVersion = "6.5.0";
+    private const string SwashbuckleVersion = "10.2.3";
     private static readonly JsonSerializerOptions IndentedJsonOptions = new() { WriteIndented = true };
 
     public static async Task<GeneratedProjectResult> GenerateAsync(
