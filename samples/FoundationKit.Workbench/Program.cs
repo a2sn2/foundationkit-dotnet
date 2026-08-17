@@ -28,7 +28,7 @@ using FoundationKit.Workbench.Domain;
 using FoundationKit.Workbench.Endpoints;
 using FoundationKit.Workbench.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
