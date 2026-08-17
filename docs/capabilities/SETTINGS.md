@@ -17,10 +17,11 @@ Current maturity: **ReferenceOnly**.
 - `CompositeSettingSource` — deterministic source precedence within the same scope.
 - `InMemorySettingSource` — immutable reference/development source.
 - `ResolvedSetting` — resolved value plus matched scope.
+- `AbpSettingReader` — optional ABP OSS bridge that resolves through ABP's current tenant/user setting context while preserving the FoundationKit reader contract.
 
 ## Resolution semantics
 
-Resolution is deliberate and stable:
+FoundationKit-owned resolution is deliberate and stable:
 
 1. the consumer supplies non-global scopes in most-specific-first order;
 2. global is appended automatically;
@@ -29,6 +30,8 @@ Resolution is deliberate and stable:
 5. no match returns `null`; FoundationKit does not invent a value.
 
 This means scope specificity is evaluated before source priority. A user-scoped value in a later source therefore wins over a global value in an earlier source.
+
+When `AbpSettingReader` is selected, scope resolution is intentionally delegated to ABP's current provider context. FoundationKit reports a synthetic `provider:abp-current-context` matched scope rather than pretending that ABP's internal provider order is the same as the explicit FoundationKit hierarchy.
 
 ## Validation and safety
 
@@ -45,24 +48,25 @@ These diagnostics constraints reduce accidental leakage, but they do **not** mak
 
 ## Explicit non-goals
 
-v1 does not provide:
+FoundationKit does not provide:
 
 - secret/password/API-key storage;
 - encryption or key management;
-- a SQL/Redis/cloud configuration provider;
+- a mandatory SQL/Redis/cloud configuration provider;
 - writes, optimistic concurrency, administration UI, or change approval;
-- cache invalidation or realtime configuration refresh;
-- a built-in tenant, organization, department, or user identity model;
+- a mandatory built-in tenant, organization, department, or user identity model;
 - policy deciding which scope kinds a product is allowed to use.
 
-Secrets must stay in the product's approved secret/KMS mechanism. Scope semantics remain consumer-owned until Organization/Multi-Tenancy capabilities have concrete requirements.
+ABP is an optional provider integration, not a mandatory FoundationKit runtime. Secrets must stay in the product's approved secret/KMS mechanism. Scope semantics remain consumer-owned unless the chosen provider owns them explicitly.
 
 ## Workbench consumer evidence
 
 Workbench registers an `InMemorySettingSource`, resolves `workbench.experience.default-culture`, and exposes the resolved value/scope through `GET /api/platform-reference`. The SQL Server integration smoke flow asserts the runtime value and the global resolution scope.
 
-No database migration or product schema is introduced for Settings v1.
+No database migration or product schema is introduced by the ABP setting bridge.
 
 ## Dependency direction
 
-`FoundationKit.Settings` has no dependency on another FoundationKit package. The Capability Model records it above the FoundationKit kernel, and lower layers do not depend back on it.
+`FoundationKit.Settings` has no dependency on another FoundationKit package. It may optionally delegate provider behavior to ABP OSS. Lower FoundationKit layers do not depend back on Settings.
+
+See `docs/PLATFORM-LEVERAGE-AUDIT.md`.
