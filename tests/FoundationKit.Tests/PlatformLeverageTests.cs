@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using FoundationKit.Application.Abstractions;
 using FoundationKit.Authorization;
 using FoundationKit.Caching;
 using FoundationKit.FeatureManagement;
@@ -11,6 +10,7 @@ using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Features;
 using Volo.Abp.Settings;
 using AbpCurrentUser = Volo.Abp.Users.ICurrentUser;
+using FoundationFeatureDefinition = FoundationKit.FeatureManagement.FeatureDefinition;
 using Xunit;
 
 namespace FoundationKit.Tests;
@@ -91,7 +91,7 @@ public sealed class PlatformLeverageTests
             }));
 
         var result = await evaluator.EvaluateAsync(
-            new FeatureDefinition("catalog.preview"),
+            new FoundationFeatureDefinition("catalog.preview"),
             FeatureEvaluationContext.Global);
 
         Assert.True(result.IsEnabled);
@@ -116,7 +116,7 @@ public sealed class PlatformLeverageTests
     public void Abp_current_user_maps_into_minimal_foundation_user_contract()
     {
         var userId = Guid.NewGuid();
-        ICurrentUser currentUser = new AbpCurrentUserAdapter(
+        var currentUser = new AbpCurrentUserAdapter(
             new FakeAbpCurrentUser(userId, "dev@example.test", ["admin"]));
 
         Assert.True(currentUser.IsAuthenticated);
