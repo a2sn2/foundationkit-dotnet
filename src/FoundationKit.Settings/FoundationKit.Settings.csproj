@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Provider-neutral hierarchical settings resolution contracts and in-memory reference source for FoundationKit consumers.</Description>
+    <Description>Provider-neutral hierarchical settings resolution contracts with ABP current-context integration and an in-memory reference source.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Settings" />
+  </ItemGroup>
 </Project>

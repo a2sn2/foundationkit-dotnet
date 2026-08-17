@@ -72,7 +72,8 @@ public enum FeatureDecisionSource
 {
     Default,
     Setting,
-    InvalidSetting
+    InvalidSetting,
+    Provider
 }
 
 public sealed record FeatureDecision(

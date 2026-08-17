@@ -1,7 +1,11 @@
 # Caching Capability
 
-`FoundationKit.Caching` defines a bounded byte-cache contract with explicit hit/miss/remove/TTL semantics and an in-memory reference provider.
+`FoundationKit.Caching` keeps its bounded byte-cache compatibility contract with explicit hit/miss/remove/TTL semantics and an in-memory reference provider, and now also exposes a typed `IValueCache` backed by the native .NET `HybridCache` implementation.
 
-Serialization, encryption, distributed coherence, eviction topology, Redis and cross-region consistency remain provider/application decisions.
+Use `AddFoundationHybridCache()` when the consumer wants the native typed cache path. FoundationKit delegates HybridCache serialization/provider composition, stampede protection and tag invalidation mechanics to .NET instead of maintaining a competing cache engine.
 
-Workbench uses this boundary for a reference catalog-read path. Current maturity: `ReferenceOnly`.
+The existing `ICacheStore` remains a small provider-neutral compatibility/reference seam. Encryption, distributed topology, Redis selection and cross-region consistency remain application/provider decisions.
+
+Workbench registers both the reference store and the native HybridCache path. Current maturity remains `ReferenceOnly`; adding the native provider does not by itself expand production/provider claims.
+
+See `docs/PLATFORM-LEVERAGE-AUDIT.md`.

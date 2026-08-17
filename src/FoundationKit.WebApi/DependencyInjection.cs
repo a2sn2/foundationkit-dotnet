@@ -25,6 +25,11 @@ public static class DependencyInjection
 
         services.AddOptions<FoundationIdempotencyOptions>();
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+
+        // Native ASP.NET Core OpenAPI is exposed as a parallel contract surface while
+        // Swagger remains the canonical serialized transport used by deterministic
+        // Postman and typed-client generation until parity is proven.
+        services.AddOpenApi();
         services.Configure<SwaggerGenOptions>(options =>
         {
             options.OperationFilter<FoundationApiOperationFilter>();

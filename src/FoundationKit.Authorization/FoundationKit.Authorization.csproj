@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Provider-neutral permission, role-grant, and ownership authorization primitives for FoundationKit consumers.</Description>
+    <Description>Provider-neutral permission, role-grant, ownership authorization primitives, and optional ABP permission integration for FoundationKit consumers.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FoundationKit.Identity\FoundationKit.Identity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Authorization.Abstractions" />
   </ItemGroup>
 </Project>

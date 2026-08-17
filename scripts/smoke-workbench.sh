@@ -5,6 +5,22 @@ base_url="${WORKBENCH_URL:-http://localhost:8080}"
 
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
 
+# The native ASP.NET Core OpenAPI document is an additive platform-leverage surface.
+# Canonical Swagger remains the deterministic transport SSOT until parity is separately proven.
+curl --fail --silent "$base_url/openapi/v1.json" > /tmp/foundationkit-native-openapi.json
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+document = json.loads(Path("/tmp/foundationkit-native-openapi.json").read_text(encoding="utf-8"))
+paths = document.get("paths", {})
+if not paths:
+    raise SystemExit("Native ASP.NET Core OpenAPI document has no paths")
+if "/api/core-crud" not in paths:
+    raise SystemExit("Native ASP.NET Core OpenAPI is missing /api/core-crud")
+print("Native ASP.NET Core OpenAPI runtime document verified.")
+PY
+
 # The hosted Workbench must expose the first-party Razor Class Library assets that its
 # Blazor shell imports. A successful build/publish alone is not enough proof: these URLs
 # must resolve from the running server with executable/stylesheet content types.
@@ -253,4 +269,4 @@ test "$delete_replay_status" = "204"
 missing_status="$(curl --silent --output /tmp/core-crud-missing.json --write-out '%{http_code}' "$base_url/api/core-crud/$crud_id")"
 test "$missing_status" = "404"
 
-echo "Workbench SQL workflow plus hosted FoundationKit.Blazor assets, durable replay-safe idempotency/module composition/API Engine proof passed."
+echo "Workbench SQL workflow plus native OpenAPI, hosted FoundationKit.Blazor assets, durable replay-safe idempotency/module composition/API Engine proof passed."

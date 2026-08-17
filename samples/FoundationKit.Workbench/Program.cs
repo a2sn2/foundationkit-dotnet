@@ -8,6 +8,7 @@ using FoundationKit.Caching;
 using FoundationKit.FeatureManagement;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
+using FoundationKit.Infrastructure.Http;
 using FoundationKit.Infrastructure.Idempotency;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Infrastructure.Platform;
@@ -27,13 +28,15 @@ using FoundationKit.Workbench.Domain;
 using FoundationKit.Workbench.Endpoints;
 using FoundationKit.Workbench.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
 builder.Services.AddFoundationProject("foundationkit-workbench");
+builder.Services.AddFoundationHybridCache();
+builder.Services.AddFoundationResilientHttpClient();
 builder.Services.AddSingleton<ISettingSource>(_ => new InMemorySettingSource(
 [
     new SettingEntry(SettingScope.Global, WorkbenchPlatformReference.DefaultCultureSetting, "ar-YE"),
@@ -147,6 +150,7 @@ app.UseStaticFiles();
 
 await DatabaseBootstrapper.MigrateAsync(app.Services, app.Logger, app.Lifetime.ApplicationStopping);
 
+app.MapOpenApi();
 app.MapSystemEndpoints();
 app.MapComposerStudioEndpoints();
 app.MapUserPortalEndpoints();
