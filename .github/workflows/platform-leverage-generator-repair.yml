@@ -1,0 +1,58 @@
+name: Platform leverage generator repair
+
+on:
+  push:
+    branches:
+      - platform/dotnet-abp-leverage
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Restore and migrate generator deterministically
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/main:tools/FoundationKit.Composer/ComposerExecutableResourceGenerator.cs > /tmp/ComposerExecutableResourceGenerator.cs
+          cp /tmp/ComposerExecutableResourceGenerator.cs tools/FoundationKit.Composer/ComposerExecutableResourceGenerator.cs
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("tools/FoundationKit.Composer/ComposerExecutableResourceGenerator.cs")
+          text = path.read_text(encoding="utf-8")
+          assert text.count("using Microsoft.OpenApi.Models;") == 2
+          text = text.replace("using Microsoft.OpenApi.Models;", "using Microsoft.OpenApi;")
+
+          start_marker = "                    operation.Security ??= new List<OpenApiSecurityRequirement>();"
+          end_marker = "                    });"
+          start = text.index(start_marker)
+          end = text.index(end_marker, start) + len(end_marker)
+          i20 = " " * 20
+          i24 = " " * 24
+          replacement = "\n".join([
+              i20 + "operation.Security ??= [];",
+              i20 + "operation.Security.Add(new OpenApiSecurityRequirement",
+              i20 + "{",
+              i24 + "[new OpenApiSecuritySchemeReference(\"FoundationGeneratedUser\", context.Document)] = [],",
+              i24 + "[new OpenApiSecuritySchemeReference(\"FoundationGeneratedRoles\", context.Document)] = []",
+              i20 + "});",
+          ])
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding="utf-8")
+          PY
+          rm .github/workflows/platform-leverage-generator-repair.yml
+      - name: Commit repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Repair Composer OpenAPI.NET 2.x generation"
+          git push origin HEAD:platform/dotnet-abp-leverage
