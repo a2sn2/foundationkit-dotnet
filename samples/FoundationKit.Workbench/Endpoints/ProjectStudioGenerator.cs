@@ -48,6 +48,7 @@ public static class ProjectStudioGenerator
                 foundationRoot,
                 force: false,
                 cancellationToken).ConfigureAwait(false);
+            await PersistStudioMetadataAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
 
             var consumerFiles = ComposerStudioWorkspace.ListConsumerOwnedFiles(target);
             var consumerSet = consumerFiles.ToHashSet(StringComparer.Ordinal);
@@ -130,18 +131,7 @@ public static class ProjectStudioGenerator
                 foundationRoot,
                 force: hadExistingGeneratedProject,
                 cancellationToken).ConfigureAwait(false);
-
-            await ComposerStudioWorkspace.WriteStudioBlueprintAsync(
-                output,
-                blueprint,
-                cancellationToken).ConfigureAwait(false);
-            await ComposerStudioWorkspace.RefreshGeneratedOwnershipAsync(
-                output,
-                blueprint.Name,
-                Path.GetFileNameWithoutExtension(generated.SolutionPath),
-                generated.ReferenceMode,
-                $"studio-{ComposerProjectModelGenerator.GeneratorContractVersion}",
-                cancellationToken).ConfigureAwait(false);
+            await PersistStudioMetadataAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
 
             ComposerStudioWorkspace.RestoreConsumerOwnedFiles(output, backup);
             var preserved = backup.ConsumerOwnedFiles.Count;
@@ -171,8 +161,7 @@ public static class ProjectStudioGenerator
                 }
                 catch
                 {
-                    // Preserve the original generation failure. The backup directory is retained below only
-                    // until this request ends; generation writes never intentionally overwrite consumer files.
+                    // Preserve the original generation failure; never replace it with a cleanup exception.
                 }
             }
 
@@ -216,7 +205,26 @@ public static class ProjectStudioGenerator
         await ComposerStudioIntegrityOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
         await ComposerStudioPlatformOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
         await ComposerStudioBusinessUiOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
+        await ComposerStudioGeneratedUiFinalizer.ApplyAsync(generated, cancellationToken).ConfigureAwait(false);
         return generated;
+    }
+
+    private static async Task PersistStudioMetadataAsync(
+        StudioBlueprintCompilation compilation,
+        GeneratedProjectResult generated,
+        CancellationToken cancellationToken)
+    {
+        await ComposerStudioWorkspace.WriteStudioBlueprintAsync(
+            generated.OutputDirectory,
+            compilation.Blueprint,
+            cancellationToken).ConfigureAwait(false);
+        await ComposerStudioWorkspace.RefreshGeneratedOwnershipAsync(
+            generated.OutputDirectory,
+            compilation.Blueprint.Name,
+            Path.GetFileNameWithoutExtension(generated.SolutionPath),
+            generated.ReferenceMode,
+            $"studio-{ComposerProjectModelGenerator.GeneratorContractVersion}",
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static StudioProjectBlueprint ToBlueprint(StudioProjectRequest request)
