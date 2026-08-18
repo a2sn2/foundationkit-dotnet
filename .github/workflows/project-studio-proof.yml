@@ -132,7 +132,7 @@ jobs:
           ConnectionStrings__Generated="$connection" \
           dotnet run \
             --project artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj \
-            --configuration Release --no-build --no-restore \
+            --configuration Release --no-build --no-restore --no-launch-profile \
             > artifacts/project-studio-runtime/api.log 2>&1 &
           echo $! > /tmp/foundationkit-project-studio-api.pid
 
