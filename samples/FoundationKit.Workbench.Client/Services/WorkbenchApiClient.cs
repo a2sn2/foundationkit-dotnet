@@ -6,6 +6,13 @@ using FoundationKit.Workbench.Contracts.User;
 
 namespace FoundationKit.Workbench.Client.Services;
 
+public sealed record StudioClientError(string Message);
+
+public sealed record StudioClientResult<T>(
+    bool IsSuccess,
+    T? Value,
+    StudioClientError? Error);
+
 public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(httpClient)
 {
     public Task<ApiResult<RuntimeResponse>> GetRuntimeAsync(
@@ -41,36 +48,36 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             new HttpRequestMessage(HttpMethod.Get, "/api/platform-reference"),
             cancellationToken);
 
-    public Task<ApiResult<StudioCatalogResponse>> GetProjectStudioCatalogAsync(
+    public async Task<StudioClientResult<StudioCatalogResponse>> GetProjectStudioCatalogAsync(
         CancellationToken cancellationToken = default) =>
-        SendAsync<StudioCatalogResponse>(
+        ToStudioResult(await SendAsync<StudioCatalogResponse>(
             new HttpRequestMessage(HttpMethod.Get, "/api/studio/catalog"),
-            cancellationToken);
+            cancellationToken));
 
-    public Task<ApiResult<StudioPreviewResponse>> PreviewProjectStudioAsync(
+    public async Task<StudioClientResult<StudioPreviewResponse>> PreviewProjectStudioAsync(
         StudioProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return SendAsync<StudioPreviewResponse>(
+        return ToStudioResult(await SendAsync<StudioPreviewResponse>(
             new HttpRequestMessage(HttpMethod.Post, "/api/studio/preview")
             {
                 Content = JsonContent.Create(request)
             },
-            cancellationToken);
+            cancellationToken));
     }
 
-    public Task<ApiResult<StudioProjectGenerationResponse>> GenerateProjectStudioAsync(
+    public async Task<StudioClientResult<StudioProjectGenerationResponse>> GenerateProjectStudioAsync(
         StudioProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return SendAsync<StudioProjectGenerationResponse>(
+        return ToStudioResult(await SendAsync<StudioProjectGenerationResponse>(
             new HttpRequestMessage(HttpMethod.Post, "/api/studio/generate")
             {
                 Content = JsonContent.Create(request)
             },
-            cancellationToken);
+            cancellationToken));
     }
 
     public Task<ApiResult<ComposerValidationResponse>> ValidateComposerManifestAsync(
@@ -108,8 +115,6 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             new HttpRequestMessage(HttpMethod.Get, ApiRoutes.Health),
             cancellationToken);
 
-    // The original user/admin workflow remains as backend Workbench evidence.
-    // Project Studio does not treat these sample routes as product-owned frontend contracts.
     public Task<ApiResult<UserRequestResponse>> CreateUserRequestAsync(
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
@@ -153,5 +158,16 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
                 Content = JsonContent.Create(request)
             },
             cancellationToken);
+    }
+
+    private static StudioClientResult<T> ToStudioResult<T>(ApiResult<T> result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return new StudioClientResult<T>(
+            result.IsSuccess,
+            result.Value,
+            result.IsSuccess || string.IsNullOrWhiteSpace(result.Error)
+                ? null
+                : new StudioClientError(result.Error));
     }
 }
