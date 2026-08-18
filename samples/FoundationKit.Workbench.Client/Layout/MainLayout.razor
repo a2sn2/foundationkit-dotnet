@@ -8,15 +8,15 @@
 <FkAppShell Direction="auto"
             Language="@_language"
             LanguageChanged="SetLanguage"
-            NavigationLabel="@T("التنقل في Core Studio", "Core Studio navigation")"
+            NavigationLabel="@T("التنقل في FoundationKit", "FoundationKit navigation")"
             DarkModeLabel="@T("التبديل إلى الوضع الداكن", "Switch to dark mode")"
             LightModeLabel="@T("التبديل إلى الوضع الفاتح", "Switch to light mode")"
             Class="workbench-shell">
     <Brand>
         <FkBrandMark Name="FoundationKit"
-                     Tagline="Core Studio · Soft Orbit"
+                     Tagline="Project Studio · Soft Orbit"
                      Href="/"
-                     AriaLabel="FoundationKit Core Studio" />
+                     AriaLabel="FoundationKit Project Studio" />
     </Brand>
     <Navigation>
         <FkNavItem Href="/" Match="NavLinkMatch.All">
@@ -24,12 +24,12 @@
             <ChildContent>@T("الرئيسية", "Overview")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="studio">
-            <Icon><MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Small" /></Icon>
-            <ChildContent>@T("استكشاف الكور", "Studio")</ChildContent>
+            <Icon><MudIcon Icon="@Icons.Material.Filled.AutoAwesomeMosaic" Size="Size.Small" /></Icon>
+            <ChildContent>@T("استوديو المشاريع", "Project Studio")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="compose">
             <Icon><MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" /></Icon>
-            <ChildContent>@T("التركيب", "Compose")</ChildContent>
+            <ChildContent>@T("الكمبوزر المتقدم", "Advanced Composer")</ChildContent>
         </FkNavItem>
         <FkNavItem Href="design">
             <Icon><MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" /></Icon>

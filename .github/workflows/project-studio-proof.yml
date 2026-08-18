@@ -1,0 +1,215 @@
+name: FoundationKit Project Studio Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-project-studio-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  project-studio:
+    name: Generate, build, and run full visual Studio project
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Generate temporary SQL credential
+        shell: bash
+        run: |
+          password="Fkit!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Validate runtime proof tooling
+        run: python3 -m py_compile scripts/smoke-project-studio.py
+
+      - name: Restore Workbench tests with vulnerability audit
+        run: dotnet restore tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj -p:NuGetAudit=true -p:NuGetAuditMode=all
+
+      - name: Generate full standalone Project Studio proof
+        env:
+          FOUNDATIONKIT_PROJECT_STUDIO_PROOF_ROOT: ${{ github.workspace }}/artifacts/project-studio-proof
+        run: >-
+          dotnet test tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj
+          --configuration Release
+          --no-restore
+          --filter "FullyQualifiedName~ProjectStudioGeneratorTests.Generate_builds_typed_full_stack_project_with_abp_platform_and_business_ui"
+
+      - name: Verify Studio composition artifacts
+        shell: bash
+        run: |
+          root="artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof"
+          test -f "$root/foundationkit.studio.json"
+          test -f "$root/STUDIO-COMPOSITION.md"
+          test -f "$root/STUDIO-DATA-MODEL.md"
+          test -f "$root/CUSTOMIZATION.md"
+          test -f "$root/src/StudioFactoryProof.Api/GeneratedPlatform/GeneratedAbpPlatformModule.cs"
+          test -f "$root/src/StudioFactoryProof.Client/Pages/Generated/PeopleEmployee.razor"
+          grep -Fq 'Volo.Abp.MultiTenancy' "$root/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj"
+          grep -Fq 'Volo.Abp.BackgroundJobs' "$root/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj"
+          grep -Fq 'AddApplicationAsync' "$root/src/StudioFactoryProof.Api/Program.cs"
+          grep -Fq 'AddForeignKey' "$root/src/StudioFactoryProof.Infrastructure/GeneratedPlatform/Migrations/20260811001000_StudioRelations.cs"
+          grep -Fq 'If-Match' "$root/src/StudioFactoryProof.Client/Pages/Generated/PeopleEmployee.razor"
+
+      - name: Restore generated Studio solution with vulnerability audit
+        run: >-
+          dotnet restore
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+
+      - name: Build generated Studio solution
+        run: >-
+          dotnet build
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test generated Studio solution
+        run: >-
+          dotnet test
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          --configuration Release
+          --no-build
+
+      - name: Start SQL Server
+        shell: bash
+        run: |
+          docker run --detach \
+            --name foundationkit-project-studio-sql \
+            --publish 127.0.0.1:14335:1433 \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+            mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server
+        shell: bash
+        run: |
+          sqlcmd_path=""
+          for attempt in {1..120}; do
+            if [ -z "$sqlcmd_path" ]; then
+              sqlcmd_path="$(docker exec foundationkit-project-studio-sql sh -lc 'if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then echo /opt/mssql-tools18/bin/sqlcmd; elif [ -x /opt/mssql-tools/bin/sqlcmd ]; then echo /opt/mssql-tools/bin/sqlcmd; fi' 2>/dev/null || true)"
+            fi
+            if [ -n "$sqlcmd_path" ] && docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-project-studio-sql \
+              "$sqlcmd_path" -S localhost -U sa -C -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "FOUNDATIONKIT_SQLCMD_PATH=$sqlcmd_path" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs foundationkit-project-studio-sql --tail 300
+          exit 1
+
+      - name: Start generated Project Studio API
+        shell: bash
+        run: |
+          mkdir -p artifacts/project-studio-runtime
+          connection="Server=127.0.0.1,14335;Database=FoundationKitProjectStudioProof;User Id=sa;Password=$FOUNDATIONKIT_SQL_PASSWORD;TrustServerCertificate=True;Encrypt=False"
+          echo "::add-mask::$connection"
+          ASPNETCORE_URLS="http://127.0.0.1:8301" \
+          ConnectionStrings__Generated="$connection" \
+          dotnet run \
+            --project artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj \
+            --configuration Release --no-build --no-restore --no-launch-profile \
+            > artifacts/project-studio-runtime/api.log 2>&1 &
+          echo $! > /tmp/foundationkit-project-studio-api.pid
+
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8301/api/foundationkit/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/foundationkit-project-studio-api.pid)" 2>/dev/null; then
+              cat artifacts/project-studio-runtime/api.log
+              exit 1
+            fi
+            sleep 2
+          done
+          cat artifacts/project-studio-runtime/api.log
+          exit 1
+
+      - name: Prove generated Studio runtime behavior
+        run: >-
+          python3 scripts/smoke-project-studio.py
+          --url http://127.0.0.1:8301
+          --evidence artifacts/project-studio-runtime/runtime-proof.json
+
+      - name: Prove generated relationship directly in SQL
+        shell: bash
+        run: |
+          namespace="$(python3 -c 'import json; print(json.load(open("artifacts/project-studio-runtime/runtime-proof.json"))["databaseNamespace"])')"
+          case "$namespace" in *[!a-z0-9_]*) echo "Unsafe generated SQL namespace"; exit 1;; esac
+          employees="${namespace}_employees"
+          departments="${namespace}_departments"
+
+          sql_scalar() {
+            docker exec \
+              --env SQLCMDPASSWORD="$FOUNDATIONKIT_SQL_PASSWORD" \
+              foundationkit-project-studio-sql \
+              "$FOUNDATIONKIT_SQLCMD_PATH" \
+              -S localhost -U sa -C -d FoundationKitProjectStudioProof -h -1 -W \
+              -Q "SET NOCOUNT ON; $1" \
+              | tr -d '\r' | sed '/^[[:space:]]*$/d' | tail -n 1 | xargs
+          }
+
+          test "$(sql_scalar "SELECT COUNT(*) FROM sys.tables WHERE name = N'$departments';")" = "1"
+          test "$(sql_scalar "SELECT COUNT(*) FROM sys.tables WHERE name = N'$employees';")" = "1"
+          test "$(sql_scalar "SELECT COUNT(*) FROM sys.foreign_keys fk JOIN sys.tables t ON fk.parent_object_id=t.object_id WHERE t.name=N'$employees';")" -ge "1"
+          test "$(sql_scalar "SELECT COUNT(*) FROM [$departments];")" = "1"
+          test "$(sql_scalar "SELECT COUNT(*) FROM [$employees];")" = "1"
+
+          cat > artifacts/project-studio-runtime/sql-proof.txt <<EOF
+          Database: FoundationKitProjectStudioProof
+          Namespace: $namespace
+          Departments table: $departments
+          Employees table: $employees
+          Department → Employee foreign key: verified
+          Runtime rows: verified
+          EOF
+
+      - name: Upload Project Studio runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: project-studio-runtime-proof
+          path: artifacts/project-studio-runtime
+          if-no-files-found: warn
+
+      - name: Print runtime logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "--- Generated Project Studio API ---"
+          cat artifacts/project-studio-runtime/api.log 2>/dev/null || true
+          echo "--- SQL Server ---"
+          docker logs foundationkit-project-studio-sql --tail 300 2>/dev/null || true
+
+      - name: Stop generated API and SQL Server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/foundationkit-project-studio-api.pid ]; then
+            kill "$(cat /tmp/foundationkit-project-studio-api.pid)" 2>/dev/null || true
+          fi
+          docker rm -f foundationkit-project-studio-sql >/dev/null 2>&1 || true

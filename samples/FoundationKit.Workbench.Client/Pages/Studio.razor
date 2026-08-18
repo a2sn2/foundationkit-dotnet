@@ -1,35 +1,37 @@
 @page "/studio"
+@using System.Text.Json
 @inject WorkbenchApiClient Api
 
-<PageTitle>Core Studio — FoundationKit</PageTitle>
+<PageTitle>Project Studio — FoundationKit</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="studio-v2-page py-8">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-6 flex-wrap">
-        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">نظرة عامة</MudButton>
-        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">CORE STUDIO</MudChip>
+        <MudButton Variant="Variant.Text" Href="/" StartIcon="@Icons.Material.Filled.ArrowBack">Overview</MudButton>
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">PROJECT STUDIO</MudChip>
+        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">.NET 10 + ABP OSS + FoundationKit</MudChip>
         <MudSpacer />
-        <MudButton Variant="Variant.Outlined" OnClick="LoadAsync" StartIcon="@Icons.Material.Filled.Refresh">تحديث الأدلة</MudButton>
+        <MudButton Variant="Variant.Outlined" Href="/compose" StartIcon="@Icons.Material.Filled.Code">Advanced Composer</MudButton>
     </MudStack>
 
-    <section class="portal-hero studio-hero">
+    <section class="portal-hero studio-v2-hero">
         <div>
-            <div class="eyebrow">CAPABILITY + MODULE EXPLORER</div>
-            <MudText Typo="Typo.h2">افهم ما يعلنه الكور، وما يصبح فعالًا، وما يصل إلى الـAPI.</MudText>
+            <div class="eyebrow">DESIGN → RESOLVE → PREVIEW → GENERATE → CUSTOMIZE</div>
+            <MudText Typo="Typo.h2">ابنِ مشروعًا كاملًا من المميزات والبيانات بدل البدء من مشروع فارغ.</MudText>
             <MudText Typo="Typo.h6" Class="muted-text mt-3">
-                الصفحة تقرأ الكتالوج وتركيب الموديولات من Workbench. لا تنشئ صلاحيات ولا تخزن أسرارًا ولا تحول metadata العرض إلى business rules.
+                اختر مميزات المنصة، مزوداتها، الموديولات والحقول. Studio يحولها إلى Composer canonical contract ثم يولد Backend + SQL + Blazor UI مع حدود تخصيص آمنة.
             </MudText>
         </div>
-        <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" Color="Color.Primary" />
+        <MudIcon Icon="@Icons.Material.Filled.AutoAwesomeMosaic" Size="Size.Large" Color="Color.Primary" />
     </section>
 
     @if (_loading)
     {
         <div class="loading-panel" role="status" aria-live="polite">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-            <MudText>جاري تحميل تركيب الكور...</MudText>
+            <MudText>Loading Project Studio catalog…</MudText>
         </div>
     }
-    else if (_error is not null)
+    else if (_catalog is null)
     {
         <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-6">
             @_error
@@ -37,176 +39,634 @@
     }
     else
     {
-        <MudGrid Class="mt-8">
-            <MudItem xs="12" lg="7">
-                <MudPaper Class="studio-panel" Elevation="0">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-5 flex-wrap">
-                        <div>
-                            <MudText Typo="Typo.h4">Live Module Composition</MudText>
-                            <MudText Class="muted-text">Declared مقابل Effective مع عقد الـAPI لكل Module.</MudText>
-                        </div>
-                        <MudSpacer />
-                        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">@_modules.Count module(s)</MudChip>
-                    </MudStack>
+        <div class="studio-v2-steps">
+            <span class="active">01 Project</span>
+            <span>02 Platform</span>
+            <span>03 Data</span>
+            <span>04 Preview</span>
+            <span>05 Generate</span>
+        </div>
 
-                    @if (_modules.Count == 0)
-                    {
-                        <div class="empty-state" role="status">
-                            <MudIcon Icon="@Icons.Material.Filled.ExtensionOff" Size="Size.Large" />
-                            <MudText Typo="Typo.h6">لا توجد module composition حية في هذا الوضع.</MudText>
-                        </div>
-                    }
-                    else
-                    {
-                        @foreach (var module in _modules)
+        <section class="studio-v2-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">01 · PROJECT FOUNDATION</div>
+                    <MudText Typo="Typo.h3">هوية المشروع وطريقة ربط FoundationKit</MudText>
+                </div>
+            </div>
+
+            <MudPaper Class="studio-panel" Elevation="0">
+                <MudGrid>
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="_projectName" Label="Project name" Variant="Variant.Outlined" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudSelect T="string" @bind-Value="_profile" Label="Profile preset" Variant="Variant.Outlined">
+                            @foreach (var profile in _catalog.Profiles)
+                            {
+                                <MudSelectItem T="string" Value="@profile">@profile</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudSelect T="string" @bind-Value="_foundationMode" Label="Foundation mode" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("standalone")">Standalone · source copy</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("linked")">Linked · local FoundationKit</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                    Standalone ينسخ dependency closure المطلوبة داخل المشروع. Linked يبقي المشروع مرتبطًا بمصدر FoundationKit المحلي. في الحالتين يبقى <code>foundationkit.studio.json</code> هو Blueprint القابل لإعادة الفتح والتوليد.
+                </MudAlert>
+            </MudPaper>
+        </section>
+
+        <section class="studio-v2-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">02 · PLATFORM FEATURES</div>
+                    <MudText Typo="Typo.h3">اختر البناء العام الذي يحتاجه المشروع</MudText>
+                    <MudText Class="muted-text mt-2">Dependencies تُحل تلقائيًا. كل ميزة توضح درجة جاهزيتها والمزود المستخدم بدل اعتبار كل الكتالوج Production-ready.</MudText>
+                </div>
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary">@SelectedFeatureCount selected</MudChip>
+            </div>
+
+            @foreach (var category in _features.GroupBy(item => item.Contract.Category).OrderBy(group => group.Key))
+            {
+                <MudPaper Class="studio-panel feature-category" Elevation="0">
+                    <MudText Typo="Typo.h5">@category.Key</MudText>
+                    <div class="studio-feature-grid">
+                        @foreach (var feature in category.OrderBy(item => item.Contract.DisplayName))
                         {
-                            <article class="module-card">
-                                <div class="module-card-head">
-                                    <div>
-                                        <MudText Typo="Typo.h5">@module.Name</MudText>
-                                        <code>@module.ApiRoute</code>
+                            <article class="studio-feature-card @(feature.Selected ? "selected" : string.Empty)">
+                                <div class="studio-feature-head">
+                                    <label class="studio-feature-toggle">
+                                        <input type="checkbox"
+                                               checked="@feature.Selected"
+                                               disabled="@IsLockedCore(feature.Contract.Id)"
+                                               @onchange="args => SetFeature(feature, args.Value)" />
+                                        <span></span>
+                                    </label>
+                                    <div class="studio-feature-title">
+                                        <strong>@feature.Contract.DisplayName</strong>
+                                        <code>@feature.Contract.Id</code>
                                     </div>
-                                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Text">@module.Route</MudChip>
+                                    <span class="status-pill @ReadinessClass(feature.Contract.Readiness)">@feature.Contract.Readiness</span>
                                 </div>
+                                <p>@feature.Contract.Description</p>
 
-                                <div class="module-capability-section">
-                                    <span>Declared</span>
-                                    <div class="chip-line">
-                                        @foreach (var capability in module.DeclaredCapabilities)
+                                @if (feature.Contract.Dependencies.Count > 0)
+                                {
+                                    <div class="studio-feature-deps">
+                                        <span>Requires</span>
+                                        @foreach (var dependency in feature.Contract.Dependencies)
                                         {
-                                            <span class="core-chip">@capability</span>
+                                            <code>@dependency</code>
                                         }
                                     </div>
-                                </div>
-                                <div class="module-capability-section">
-                                    <span>Effective</span>
-                                    <div class="chip-line">
-                                        @foreach (var capability in module.EffectiveCapabilities)
-                                        {
-                                            <span class="core-chip effective">@capability</span>
-                                        }
-                                    </div>
-                                </div>
+                                }
 
-                                <div class="api-contract-grid">
-                                    <div><span>Idempotency</span><strong>@module.Api.Idempotency</strong></div>
-                                    <div><span>Concurrency</span><strong>@module.Api.Concurrency</strong></div>
-                                    <div><span>Filters</span><strong>@module.Api.MaximumFilters</strong></div>
-                                    <div><span>Sorts</span><strong>@module.Api.MaximumSorts</strong></div>
-                                </div>
-                            </article>
-                        }
-                    }
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" lg="5">
-                <MudPaper Class="studio-panel sticky-panel" Elevation="0">
-                    <MudText Typo="Typo.h4">Capability Catalog</MudText>
-                    <MudText Class="muted-text mt-2">ابحث في القدرات المنشورة دون تغيير العقود.</MudText>
-                    <MudTextField T="string"
-                                  @bind-Value="_search"
-                                  Placeholder="ابحث بالاسم أو المعرّف..."
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  Immediate="true"
-                                  Class="mt-4" />
-
-                    <div class="capability-list mt-4">
-                        @foreach (var capability in FilteredCapabilities)
-                        {
-                            <article class="capability-row">
-                                <div>
-                                    <strong>@capability.TitleEn</strong>
-                                    <code>@capability.Id</code>
-                                </div>
-                                <span class="status-pill neutral">@capability.Status</span>
-                                <p>@capability.DescriptionAr</p>
+                                @if (feature.Contract.Providers.Count > 1)
+                                {
+                                    <label class="studio-provider-select">
+                                        <span>Provider</span>
+                                        <select value="@feature.Provider" @onchange="args => SetProvider(feature, args.Value)">
+                                            @foreach (var provider in feature.Contract.Providers)
+                                            {
+                                                <option value="@provider.Id">@provider.DisplayName</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                                else if (feature.Contract.Providers.Count == 1)
+                                {
+                                    <small class="muted-text">Provider: @feature.Contract.Providers[0].DisplayName</small>
+                                }
                             </article>
                         }
                     </div>
                 </MudPaper>
-            </MudItem>
-        </MudGrid>
+            }
+        </section>
 
-        <section class="section-block">
+        <section class="studio-v2-section">
             <div class="section-heading">
                 <div>
-                    <div class="eyebrow">PLATFORM REFERENCE</div>
-                    <MudText Typo="Typo.h3">إعدادات العرض التي يثبتها Workbench</MudText>
+                    <div class="eyebrow">03 · DATA + BUSINESS RESOURCES</div>
+                    <MudText Typo="Typo.h3">صمم الموديولات والموارد والحقول</MudText>
+                    <MudText Class="muted-text mt-2">كل Resource يولد Entity + contracts + EF mapping + migration + CRUD API + Blazor CRUD screen.</MudText>
                 </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AddModule" StartIcon="@Icons.Material.Filled.Add">Add module</MudButton>
             </div>
 
-            @if (_platform is null)
+            @foreach (var module in _modules)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                    لم يتم التحقق من Settings/Feature Management/Localization في هذا الوضع.
-                </MudAlert>
+                <MudPaper Class="studio-panel studio-module" Elevation="0">
+                    <div class="studio-module-head">
+                        <MudTextField T="string" @bind-Value="module.Name" Label="Module" Variant="Variant.Outlined" Immediate="true" />
+                        <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(_modules.Count == 1)" OnClick="() => RemoveModule(module)" StartIcon="@Icons.Material.Filled.DeleteOutline">Remove module</MudButton>
+                    </div>
+
+                    @foreach (var resource in module.Resources)
+                    {
+                        <article class="studio-resource">
+                            <div class="studio-resource-head">
+                                <div class="studio-resource-identity">
+                                    <MudTextField T="string" @bind-Value="resource.Name" Label="Resource" Variant="Variant.Outlined" Immediate="true" />
+                                    <MudTextField T="string" @bind-Value="resource.Route" Label="Route" Variant="Variant.Outlined" Immediate="true" />
+                                </div>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(module.Resources.Count == 1)" OnClick="() => RemoveResource(module, resource)" StartIcon="@Icons.Material.Filled.DeleteOutline">Remove</MudButton>
+                            </div>
+
+                            <div class="studio-resource-options">
+                                <label><input type="checkbox" @bind="resource.Auditing" /> Audit</label>
+                                <label><input type="checkbox" @bind="resource.Authorization" /> Authorization</label>
+                                <label><input type="checkbox" @bind="resource.Idempotency" /> Idempotency</label>
+                                <label><input type="checkbox" @bind="resource.Concurrency" /> ETag / concurrency</label>
+                            </div>
+
+                            <div class="studio-field-table-wrap">
+                                <table class="studio-field-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Required</th>
+                                            <th>Length</th>
+                                            <th>Index</th>
+                                            <th>Unique</th>
+                                            <th>Filter</th>
+                                            <th>Sort</th>
+                                            <th>Reference</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var field in resource.Fields)
+                                        {
+                                            <tr>
+                                                <td><input class="studio-input" @bind="field.Name" @bind:event="oninput" /></td>
+                                                <td>
+                                                    <select class="studio-select" @bind="field.Type">
+                                                        @foreach (var type in _catalog.FieldTypes)
+                                                        {
+                                                            <option value="@type">@type</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td><input type="checkbox" @bind="field.Required" /></td>
+                                                <td><input class="studio-number" type="number" min="1" max="4000" disabled="@(field.Type != "Text")" @bind="field.MaximumLength" /></td>
+                                                <td><input type="checkbox" @bind="field.Indexed" /></td>
+                                                <td><input type="checkbox" @bind="field.Unique" /></td>
+                                                <td><input type="checkbox" disabled="@(field.Type != "Text")" @bind="field.Filterable" /></td>
+                                                <td><input type="checkbox" disabled="@(field.Type != "Text")" @bind="field.Sortable" /></td>
+                                                <td>
+                                                    @if (field.Type == "Reference")
+                                                    {
+                                                        <select class="studio-select" @bind="field.ReferenceResource">
+                                                            <option value="">Select…</option>
+                                                            @foreach (var target in ResourceNames.Where(name => !string.Equals(name, resource.Name, StringComparison.OrdinalIgnoreCase)))
+                                                            {
+                                                                <option value="@target">@target</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="muted-text">—</span>
+                                                    }
+                                                </td>
+                                                <td><button class="studio-icon-button" type="button" disabled="@(resource.Fields.Count == 1)" @onclick="() => RemoveField(resource, field)" title="Remove field">×</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => AddField(resource)" StartIcon="@Icons.Material.Filled.Add">Add field</MudButton>
+                        </article>
+                    }
+
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="() => AddResource(module)" StartIcon="@Icons.Material.Filled.AddBox">Add resource</MudButton>
+                </MudPaper>
             }
-            else
-            {
-                <div class="platform-grid">
-                    <div><span>Culture</span><strong>@_platform.DefaultCulture</strong><small>@_platform.CultureResolutionSource</small></div>
-                    <div><span>Direction</span><strong>@_platform.TextDirection</strong><small>presentation metadata</small></div>
-                    <div><span>Time Zone</span><strong>@_platform.DefaultTimeZone</strong><small>@_platform.TimeZoneSettingScope</small></div>
-                    <div><span>Catalog Preview</span><strong>@(_platform.CatalogPreviewEnabled ? "enabled" : "disabled")</strong><small>@_platform.FeatureDecisionSource</small></div>
+        </section>
+
+        <section class="studio-v2-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">04 · SAFE GENERATION PREVIEW</div>
+                    <MudText Typo="Typo.h3">شاهد ماذا سيتغير قبل الكتابة</MudText>
                 </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="PreviewAsync" Disabled="@_busy" StartIcon="@Icons.Material.Filled.Preview">
+                    @(_previewing ? "Building preview…" : "Preview changes")
+                </MudButton>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@_error</MudAlert>
+            }
+
+            @if (_preview is not null)
+            {
+                @if (!_preview.Valid)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_preview.Error</MudAlert>
+                }
+                else
+                {
+                    <div class="platform-grid studio-preview-metrics">
+                        <div><span>Create</span><strong>@_preview.FilesToCreate</strong><small>generated files</small></div>
+                        <div><span>Update</span><strong>@_preview.FilesToUpdate</strong><small>generated files</small></div>
+                        <div><span>Delete</span><strong>@_preview.FilesToDelete</strong><small>obsolete generated files</small></div>
+                        <div><span>Preserve</span><strong>@_preview.ConsumerFilesPreserved</strong><small>consumer-owned files</small></div>
+                    </div>
+
+                    <MudGrid Class="mt-4">
+                        <MudItem xs="12" lg="7">
+                            <MudPaper Class="studio-panel" Elevation="0">
+                                <MudText Typo="Typo.h5">Resolved platform</MudText>
+                                <div class="studio-resolved-list mt-3">
+                                    @foreach (var feature in _preview.Features)
+                                    {
+                                        <div class="studio-resolved-row">
+                                            <div>
+                                                <strong>@feature.DisplayName</strong>
+                                                <code>@feature.Id</code>
+                                            </div>
+                                            <span>@(feature.WasSelected ? "selected" : "dependency")</span>
+                                            <code>@feature.Provider</code>
+                                            <span class="status-pill @ReadinessClass(feature.Readiness)">@feature.Readiness</span>
+                                        </div>
+                                    }
+                                </div>
+                                @if (_preview.AbpPackages.Count > 0)
+                                {
+                                    <MudDivider Class="my-4" />
+                                    <MudText Typo="Typo.subtitle1">ABP OSS packages generated</MudText>
+                                    <div class="chip-line mt-2">
+                                        @foreach (var package in _preview.AbpPackages)
+                                        {
+                                            <span class="core-chip">@package</span>
+                                        }
+                                    </div>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" lg="5">
+                            <MudPaper Class="studio-panel" Elevation="0">
+                                <MudText Typo="Typo.h5">File plan</MudText>
+                                <pre class="studio-diff">@string.Join("\n", _preview.SampleChanges)</pre>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (_preview.Warnings.Count > 0)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">
+                            <ul class="studio-warning-list">
+                                @foreach (var warning in _preview.Warnings)
+                                {
+                                    <li>@warning</li>
+                                }
+                            </ul>
+                        </MudAlert>
+                    }
+                }
+            }
+        </section>
+
+        <section class="studio-v2-section studio-generate-section">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">05 · GENERATE / REGENERATE</div>
+                    <MudText Typo="Typo.h3">أنشئ المشروع القابل للتخصيص</MudText>
+                    <MudText Class="muted-text mt-2">Generate لا يتفعل إلا إذا كان Preview الحالي يطابق التصميم الحالي حرفيًا.</MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="GenerateAsync" Disabled="@(!CanGenerate)" StartIcon="@Icons.Material.Filled.RocketLaunch">
+                    @(_generating ? "Generating…" : "Generate project")
+                </MudButton>
+            </div>
+
+            <MudPaper Class="studio-panel" Elevation="0">
+                <div class="studio-ownership-grid">
+                    <div>
+                        <span class="fk-caption">GENERATED-OWNED</span>
+                        <strong>Composer + Studio output</strong>
+                        <p>يمكن إعادة بنائه. التعديل المباشر على ملف مولد يجعل regeneration يفشل بأمان بدل مسح التعديل.</p>
+                    </div>
+                    <div>
+                        <span class="fk-caption">CONSUMER-OWNED</span>
+                        <strong>Custom code / hard coding</strong>
+                        <p>أي ملفات غير مملوكة للمولد تُحفظ، و<code>Custom</code> هو المكان الموصى به للـpartial hooks والخدمات والواجهات الخاصة.</p>
+                    </div>
+                    <div>
+                        <span class="fk-caption">BLUEPRINT-OWNED</span>
+                        <strong>foundationkit.studio.json</strong>
+                        <p>يبقى وصف المشروع القابل للفتح والتعديل ثم Preview/Regenerate لاحقًا.</p>
+                    </div>
+                </div>
+            </MudPaper>
+
+            @if (_generation is not null)
+            {
+                @if (_generation.Generated)
+                {
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">
+                        <strong>@_generation.ProjectName generated successfully.</strong><br />
+                        Target: <code>@_generation.RelativeOutputPath</code> · Solution: <code>@_generation.SolutionFileName</code> · Mode: <code>@_generation.ReferenceMode</code><br />
+                        @_generation.GeneratedFileCount files · @_generation.ConsumerFilesPreserved consumer files preserved · @_generation.ResolvedFeatureCount resolved platform features.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">@_generation.Error</MudAlert>
+                }
             }
         </section>
     }
 </MudContainer>
 
 @code {
-    private IReadOnlyList<ModuleCompositionResponse> _modules = Array.Empty<ModuleCompositionResponse>();
-    private CatalogResponse? _catalog;
-    private PlatformReferenceResponse? _platform;
-    private string _search = string.Empty;
+    private StudioCatalogResponse? _catalog;
+    private readonly List<FeatureState> _features = [];
+    private readonly List<ModuleState> _modules = [];
+    private string _projectName = "StudioGenerated";
+    private string _profile = "standard";
+    private string _foundationMode = "standalone";
     private string? _error;
     private bool _loading = true;
+    private bool _previewing;
+    private bool _generating;
+    private StudioPreviewResponse? _preview;
+    private StudioProjectGenerationResponse? _generation;
+    private string? _previewFingerprint;
 
-    private IEnumerable<CapabilityContract> FilteredCapabilities
+    private bool _busy => _previewing || _generating;
+    private int SelectedFeatureCount => _features.Count(item => item.Selected);
+    private IEnumerable<string> ResourceNames => _modules.SelectMany(module => module.Resources).Select(resource => resource.Name).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase);
+    private bool CanGenerate => !_busy && _preview?.Valid == true && string.Equals(_previewFingerprint, Fingerprint(BuildRequest()), StringComparison.Ordinal);
+
+    protected override async Task OnInitializedAsync()
     {
-        get
+        var catalogResult = await Api.GetProjectStudioCatalogAsync();
+        if (!catalogResult.IsSuccess || catalogResult.Value is null)
         {
-            var capabilities = (_catalog?.Packages ?? [])
-                .SelectMany(package => package.Capabilities)
-                .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.First())
-                .OrderBy(item => item.TitleEn, StringComparer.OrdinalIgnoreCase);
+            _error = catalogResult.Error?.Message ?? "Could not load Project Studio catalog.";
+            _loading = false;
+            return;
+        }
 
-            if (string.IsNullOrWhiteSpace(_search))
-                return capabilities;
+        _catalog = catalogResult.Value;
+        _profile = _catalog.Profiles.Contains("standard", StringComparer.OrdinalIgnoreCase)
+            ? "standard"
+            : _catalog.Profiles.FirstOrDefault() ?? "minimal";
+        _foundationMode = _catalog.DefaultFoundationMode;
 
-            var term = _search.Trim();
-            return capabilities.Where(item =>
-                item.Id.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                item.TitleEn.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                item.TitleAr.Contains(term, StringComparison.OrdinalIgnoreCase));
+        var defaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "validation", "web-api", "blazor", "security", "identity", "authorization", "auditing",
+            "settings", "feature-management", "localization", "caching", "observability", "http-resilience"
+        };
+        foreach (var contract in _catalog.Features)
+        {
+            _features.Add(new FeatureState
+            {
+                Contract = contract,
+                Selected = defaults.Contains(contract.Id),
+                Provider = contract.DefaultProvider
+            });
+        }
+
+        _modules.Add(CreateStarterModule());
+        _loading = false;
+    }
+
+    private void SetFeature(FeatureState feature, object? value)
+    {
+        if (IsLockedCore(feature.Contract.Id))
+            return;
+        feature.Selected = value is bool selected && selected;
+        InvalidatePreview();
+    }
+
+    private void SetProvider(FeatureState feature, object? value)
+    {
+        var provider = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(provider))
+            feature.Provider = provider;
+        InvalidatePreview();
+    }
+
+    private static bool IsLockedCore(string id) => id is "validation" or "web-api" or "blazor";
+
+    private static string ReadinessClass(string readiness) => readiness switch
+    {
+        "Generated" => "success",
+        "ProviderReady" => "neutral",
+        "Reference" => "warning",
+        "Planned" => "warning",
+        _ => "neutral"
+    };
+
+    private void AddModule()
+    {
+        var number = _modules.Count + 1;
+        _modules.Add(new ModuleState
+        {
+            Name = $"Module{number}",
+            Resources = [CreateStarterResource($"Resource{number}", $"resources-{number}")]
+        });
+        InvalidatePreview();
+    }
+
+    private void RemoveModule(ModuleState module)
+    {
+        if (_modules.Count <= 1)
+            return;
+        _modules.Remove(module);
+        InvalidatePreview();
+    }
+
+    private void AddResource(ModuleState module)
+    {
+        var number = _modules.Sum(item => item.Resources.Count) + 1;
+        module.Resources.Add(CreateStarterResource($"Resource{number}", $"resources-{number}"));
+        InvalidatePreview();
+    }
+
+    private void RemoveResource(ModuleState module, ResourceState resource)
+    {
+        if (module.Resources.Count <= 1)
+            return;
+        module.Resources.Remove(resource);
+        InvalidatePreview();
+    }
+
+    private void AddField(ResourceState resource)
+    {
+        resource.Fields.Add(new FieldState { Name = $"Field{resource.Fields.Count + 1}", Type = "Text", MaximumLength = 200 });
+        InvalidatePreview();
+    }
+
+    private void RemoveField(ResourceState resource, FieldState field)
+    {
+        if (resource.Fields.Count <= 1)
+            return;
+        resource.Fields.Remove(field);
+        InvalidatePreview();
+    }
+
+    private async Task PreviewAsync()
+    {
+        _previewing = true;
+        _error = null;
+        _generation = null;
+        try
+        {
+            var request = BuildRequest();
+            var result = await Api.PreviewProjectStudioAsync(request);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                _error = result.Error?.Message ?? "Project Studio preview failed.";
+                _preview = null;
+                _previewFingerprint = null;
+                return;
+            }
+            _preview = result.Value;
+            _previewFingerprint = _preview.Valid ? Fingerprint(request) : null;
+        }
+        finally
+        {
+            _previewing = false;
         }
     }
 
-    protected override Task OnInitializedAsync() => LoadAsync();
-
-    private async Task LoadAsync()
+    private async Task GenerateAsync()
     {
-        _loading = true;
+        if (!CanGenerate)
+            return;
+        _generating = true;
         _error = null;
+        try
+        {
+            var request = BuildRequest();
+            var result = await Api.GenerateProjectStudioAsync(request);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                _error = result.Error?.Message ?? "Project Studio generation failed.";
+                _generation = null;
+                return;
+            }
+            _generation = result.Value;
+        }
+        finally
+        {
+            _generating = false;
+        }
+    }
 
-        var catalog = await Api.GetCatalogAsync();
-        _catalog = catalog.IsSuccess ? catalog.Value : null;
+    private StudioProjectRequest BuildRequest()
+    {
+        var selected = _features
+            .Where(feature => feature.Selected || IsLockedCore(feature.Contract.Id))
+            .Select(feature => feature.Contract.Id)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var selectedSet = selected.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var providers = _features
+            .Where(feature => selectedSet.Contains(feature.Contract.Id) && feature.Contract.Providers.Count > 0)
+            .ToDictionary(feature => feature.Contract.Id, feature => feature.Provider, StringComparer.OrdinalIgnoreCase);
+        var modules = _modules.Select(module => new StudioModuleContract(
+            module.Name,
+            module.Resources.Select(resource => new StudioResourceContract(
+                resource.Name,
+                resource.Route,
+                resource.Fields.Select(field => new StudioFieldContract(
+                    field.Name,
+                    field.Type,
+                    field.Required,
+                    field.MaximumLength,
+                    field.Indexed,
+                    field.Unique,
+                    field.Filterable,
+                    field.Sortable,
+                    field.Type == "Reference" ? field.ReferenceResource : null)).ToArray(),
+                resource.Auditing,
+                resource.Authorization,
+                resource.Idempotency,
+                resource.Concurrency)).ToArray())).ToArray();
 
-        var modules = await Api.GetModulesAsync();
-        _modules = modules.IsSuccess && modules.Value is not null
-            ? modules.Value
-            : Array.Empty<ModuleCompositionResponse>();
+        return new StudioProjectRequest(
+            1,
+            _projectName.Trim(),
+            _profile,
+            _foundationMode,
+            selected,
+            modules,
+            providers);
+    }
 
-        var platform = await Api.GetPlatformReferenceAsync();
-        _platform = platform.IsSuccess ? platform.Value : null;
+    private static string Fingerprint(StudioProjectRequest request) => JsonSerializer.Serialize(request);
 
-        if (_catalog is null && _modules.Count == 0)
-            _error = "تعذر تحميل الكتالوج وتركيب الموديولات. شغّل Workbench API أو تحقق من الكتالوج الثابت.";
+    private void InvalidatePreview()
+    {
+        _previewFingerprint = null;
+        _generation = null;
+    }
 
-        _loading = false;
+    private static ModuleState CreateStarterModule() => new()
+    {
+        Name = "Core",
+        Resources = [CreateStarterResource("Record", "records")]
+    };
+
+    private static ResourceState CreateStarterResource(string name, string route) => new()
+    {
+        Name = name,
+        Route = route,
+        Fields =
+        [
+            new FieldState { Name = "Name", Type = "Text", Required = true, MaximumLength = 200, Indexed = true, Filterable = true, Sortable = true },
+            new FieldState { Name = "IsActive", Type = "Boolean", Required = true, MaximumLength = 200 }
+        ]
+    };
+
+    private sealed class FeatureState
+    {
+        public required StudioFeatureContract Contract { get; init; }
+        public bool Selected { get; set; }
+        public string Provider { get; set; } = string.Empty;
+    }
+
+    private sealed class ModuleState
+    {
+        public string Name { get; set; } = string.Empty;
+        public List<ResourceState> Resources { get; set; } = [];
+    }
+
+    private sealed class ResourceState
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Route { get; set; } = string.Empty;
+        public List<FieldState> Fields { get; set; } = [];
+        public bool Auditing { get; set; } = true;
+        public bool Authorization { get; set; } = true;
+        public bool Idempotency { get; set; } = true;
+        public bool Concurrency { get; set; } = true;
+    }
+
+    private sealed class FieldState
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = "Text";
+        public bool Required { get; set; }
+        public int MaximumLength { get; set; } = 200;
+        public bool Indexed { get; set; }
+        public bool Unique { get; set; }
+        public bool Filterable { get; set; }
+        public bool Sortable { get; set; }
+        public string? ReferenceResource { get; set; }
     }
 }

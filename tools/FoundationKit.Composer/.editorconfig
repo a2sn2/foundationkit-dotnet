@@ -1,0 +1,22 @@
+# Project Studio uses conventional schema/type vocabulary and source-generation helpers.
+# These exceptions are intentionally scoped to the named files; the repository-wide analyzer policy remains unchanged.
+
+[ComposerStudioBlueprint.cs]
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1869.severity = none
+
+[ComposerStudioPlatformOverlay.cs]
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1869.severity = none
+
+[ComposerStudioTypedResourceOverlay.cs]
+dotnet_diagnostic.CA1834.severity = none
+dotnet_diagnostic.CA1859.severity = none
+
+[ComposerStudioIntegrityOverlay.cs]
+# Interpolated values are validated SQL identifiers/names serialized as strings; no culture-sensitive numeric tokens are emitted here.
+dotnet_diagnostic.CA1305.severity = none
+
+[ComposerStudioBusinessUiOverlay.cs]
+# Interpolated AppendLine call sites emit validated route/field/resource identifiers and markup strings.
+dotnet_diagnostic.CA1305.severity = none

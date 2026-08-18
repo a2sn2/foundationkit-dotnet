@@ -335,6 +335,91 @@
               }
             }
           }
+        },
+        {
+          "name": "GetFoundationKitProjectStudioCatalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/studio/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "studio",
+                "catalog"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GetFoundationKitProjectStudioCatalog`. Do not edit this request manually."
+          }
+        },
+        {
+          "name": "GenerateFoundationKitProjectStudioComposition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/studio/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "studio",
+                "generate"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `GenerateFoundationKitProjectStudioComposition`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foundationMode\": \"value\",\n  \"modules\": [\n    {\n      \"name\": \"value\",\n      \"resources\": [\n        {\n          \"auditing\": true,\n          \"authorization\": true,\n          \"concurrency\": true,\n          \"fields\": [\n            {\n              \"filterable\": true,\n              \"indexed\": true,\n              \"maximumLength\": 1,\n              \"name\": \"value\",\n              \"referenceResource\": \"value\",\n              \"required\": true,\n              \"sortable\": true,\n              \"type\": \"value\",\n              \"unique\": true\n            }\n          ],\n          \"idempotency\": true,\n          \"name\": \"value\",\n          \"route\": \"value\"\n        }\n      ]\n    }\n  ],\n  \"name\": \"value\",\n  \"profile\": \"value\",\n  \"providerChoices\": {},\n  \"schemaVersion\": 1,\n  \"selectedFeatures\": [\n    \"value\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PreviewFoundationKitProjectStudioComposition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/studio/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "studio",
+                "preview"
+              ]
+            },
+            "description": "Generated from OpenAPI operation `PreviewFoundationKitProjectStudioComposition`. Do not edit this request manually.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foundationMode\": \"value\",\n  \"modules\": [\n    {\n      \"name\": \"value\",\n      \"resources\": [\n        {\n          \"auditing\": true,\n          \"authorization\": true,\n          \"concurrency\": true,\n          \"fields\": [\n            {\n              \"filterable\": true,\n              \"indexed\": true,\n              \"maximumLength\": 1,\n              \"name\": \"value\",\n              \"referenceResource\": \"value\",\n              \"required\": true,\n              \"sortable\": true,\n              \"type\": \"value\",\n              \"unique\": true\n            }\n          ],\n          \"idempotency\": true,\n          \"name\": \"value\",\n          \"route\": \"value\"\n        }\n      ]\n    }\n  ],\n  \"name\": \"value\",\n  \"profile\": \"value\",\n  \"providerChoices\": {},\n  \"schemaVersion\": 1,\n  \"selectedFeatures\": [\n    \"value\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     },
