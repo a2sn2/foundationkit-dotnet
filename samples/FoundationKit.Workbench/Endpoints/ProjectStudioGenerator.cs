@@ -60,8 +60,7 @@ public static class ProjectStudioGenerator
             var deleted = currentFiles.Keys.Except(candidateFiles.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
             var updated = candidateFiles.Keys.Intersect(currentFiles.Keys, StringComparer.Ordinal)
                 .Where(path => !string.Equals(candidateFiles[path], currentFiles[path], StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal)
-                .ToArray();
+                .Order(StringComparer.Ordinal).ToArray();
 
             var samples = created.Select(path => $"+ {path}")
                 .Concat(updated.Select(path => $"~ {path}"))
@@ -203,6 +202,7 @@ public static class ProjectStudioGenerator
             ParseFoundationMode(compilation.Blueprint.FoundationMode));
 
         await ComposerStudioTypedResourceOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
+        await ComposerStudioGeneratedModelFinalizer.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
         await ComposerStudioIntegrityOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
         await ComposerStudioPlatformOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
         await ComposerStudioBusinessUiOverlay.ApplyAsync(compilation, generated, cancellationToken).ConfigureAwait(false);
