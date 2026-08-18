@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace FoundationKit.Composer;
 
@@ -35,6 +36,7 @@ public static class ComposerStudioWorkspace
         if (!Directory.Exists(fullOutput))
             return new StudioWorkspaceBackup(backupDirectory, [], false);
 
+        var generated = ReadGeneratedFileSet(fullOutput);
         var files = Directory
             .EnumerateFiles(fullOutput, "*", SearchOption.AllDirectories)
             .Select(path => new
@@ -42,8 +44,10 @@ public static class ComposerStudioWorkspace
                 FullPath = path,
                 RelativePath = NormalizePath(Path.GetRelativePath(fullOutput, path))
             })
-            .Where(item => IsConsumerOwned(item.RelativePath) ||
-                           item.RelativePath.Equals(StudioBlueprintFile, StringComparison.OrdinalIgnoreCase))
+            .Where(item => !IsTransient(item.RelativePath))
+            .Where(item => item.RelativePath.Equals(StudioBlueprintFile, StringComparison.OrdinalIgnoreCase) ||
+                           IsConsumerOwned(item.RelativePath) ||
+                           generated is not null && !generated.Contains(item.RelativePath))
             .OrderBy(item => item.RelativePath, StringComparer.Ordinal)
             .ToArray();
 
@@ -84,7 +88,7 @@ public static class ComposerStudioWorkspace
             var destination = Path.Combine(outputDirectory, ToPlatformPath(relativePath));
             if (File.Exists(destination))
                 throw new ComposerGenerationException(
-                    $"Studio regeneration would overwrite consumer-owned file '{relativePath}'.");
+                    $"Studio regeneration would overwrite consumer-owned file '{relativePath}'. Move/rename that customization or disable the conflicting generated feature before regenerating.");
             var parent = Path.GetDirectoryName(destination);
             if (!string.IsNullOrWhiteSpace(parent))
                 Directory.CreateDirectory(parent);
@@ -129,6 +133,7 @@ public static class ComposerStudioWorkspace
         ArgumentException.ThrowIfNullOrWhiteSpace(projectPrefix);
         ArgumentException.ThrowIfNullOrWhiteSpace(referenceMode);
 
+        var priorGenerated = ReadGeneratedFileSet(outputDirectory);
         var files = Directory
             .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
             .Select(path => new
@@ -140,6 +145,9 @@ public static class ComposerStudioWorkspace
                            !item.RelativePath.Equals(StudioBlueprintFile, StringComparison.OrdinalIgnoreCase) &&
                            !IsConsumerOwned(item.RelativePath) &&
                            !IsTransient(item.RelativePath))
+            .Where(item => priorGenerated is null ||
+                           priorGenerated.Contains(item.RelativePath) ||
+                           IsKnownStudioGeneratedPath(item.RelativePath))
             .OrderBy(item => item.RelativePath, StringComparer.Ordinal)
             .ToDictionary(
                 item => item.RelativePath,
@@ -163,10 +171,13 @@ public static class ComposerStudioWorkspace
     {
         if (!Directory.Exists(outputDirectory))
             return [];
+        var generated = ReadGeneratedFileSet(outputDirectory);
         return Directory
             .EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories)
             .Select(path => NormalizePath(Path.GetRelativePath(outputDirectory, path)))
-            .Where(IsConsumerOwned)
+            .Where(path => !IsTransient(path))
+            .Where(path => !path.Equals(StudioBlueprintFile, StringComparison.OrdinalIgnoreCase))
+            .Where(path => IsConsumerOwned(path) || generated is not null && !generated.Contains(path))
             .Order(StringComparer.Ordinal)
             .ToArray();
     }
@@ -178,6 +189,41 @@ public static class ComposerStudioWorkspace
         var segments = NormalizePath(relativePath)
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return segments.Any(segment => segment.Equals("Custom", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static HashSet<string>? ReadGeneratedFileSet(string outputDirectory)
+    {
+        var markerPath = Path.Combine(outputDirectory, MarkerFile);
+        if (!File.Exists(markerPath))
+            return null;
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(markerPath));
+            if (!document.RootElement.TryGetProperty("generatedFiles", out var generatedFiles) ||
+                generatedFiles.ValueKind != JsonValueKind.Array)
+                return null;
+            return generatedFiles
+                .EnumerateArray()
+                .Select(item => item.GetString())
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => NormalizePath(path!))
+                .ToHashSet(StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsKnownStudioGeneratedPath(string path)
+    {
+        var normalized = NormalizePath(path);
+        return normalized is "CUSTOMIZATION.md" or "STUDIO-COMPOSITION.md" or "STUDIO-DATA-MODEL.md" ||
+               normalized.Contains("/GeneratedModules/", StringComparison.Ordinal) ||
+               normalized.Contains("/GeneratedPlatform/", StringComparison.Ordinal) ||
+               normalized.Contains("/Pages/Generated/", StringComparison.Ordinal) ||
+               normalized.EndsWith("/Layout/MainLayout.razor", StringComparison.Ordinal) ||
+               normalized.EndsWith("/wwwroot/css/app.css", StringComparison.Ordinal);
     }
 
     private static bool IsTransient(string relativePath)
