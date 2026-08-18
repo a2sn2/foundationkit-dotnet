@@ -41,6 +41,38 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             new HttpRequestMessage(HttpMethod.Get, "/api/platform-reference"),
             cancellationToken);
 
+    public Task<ApiResult<StudioCatalogResponse>> GetProjectStudioCatalogAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<StudioCatalogResponse>(
+            new HttpRequestMessage(HttpMethod.Get, "/api/studio/catalog"),
+            cancellationToken);
+
+    public Task<ApiResult<StudioPreviewResponse>> PreviewProjectStudioAsync(
+        StudioProjectRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return SendAsync<StudioPreviewResponse>(
+            new HttpRequestMessage(HttpMethod.Post, "/api/studio/preview")
+            {
+                Content = JsonContent.Create(request)
+            },
+            cancellationToken);
+    }
+
+    public Task<ApiResult<StudioProjectGenerationResponse>> GenerateProjectStudioAsync(
+        StudioProjectRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return SendAsync<StudioProjectGenerationResponse>(
+            new HttpRequestMessage(HttpMethod.Post, "/api/studio/generate")
+            {
+                Content = JsonContent.Create(request)
+            },
+            cancellationToken);
+    }
+
     public Task<ApiResult<ComposerValidationResponse>> ValidateComposerManifestAsync(
         string manifestJson,
         CancellationToken cancellationToken = default)
@@ -77,7 +109,7 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             cancellationToken);
 
     // The original user/admin workflow remains as backend Workbench evidence.
-    // Core Studio does not treat these sample routes as product-owned frontend contracts.
+    // Project Studio does not treat these sample routes as product-owned frontend contracts.
     public Task<ApiResult<UserRequestResponse>> CreateUserRequestAsync(
         CreateUserRequest request,
         CancellationToken cancellationToken = default)
