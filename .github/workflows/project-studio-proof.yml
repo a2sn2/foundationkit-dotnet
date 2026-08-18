@@ -1,0 +1,81 @@
+name: FoundationKit Project Studio Proof
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-project-studio-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  project-studio:
+    name: Generate and build full visual Studio project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Restore Workbench tests with vulnerability audit
+        run: dotnet restore tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj -p:NuGetAudit=true -p:NuGetAuditMode=all
+
+      - name: Generate full standalone Project Studio proof
+        env:
+          FOUNDATIONKIT_PROJECT_STUDIO_PROOF_ROOT: ${{ github.workspace }}/artifacts/project-studio-proof
+        run: >-
+          dotnet test tests/FoundationKit.Workbench.Tests/FoundationKit.Workbench.Tests.csproj
+          --configuration Release
+          --no-restore
+          --filter "FullyQualifiedName~ProjectStudioGeneratorTests.Generate_builds_typed_full_stack_project_with_abp_platform_and_business_ui"
+
+      - name: Verify Studio composition artifacts
+        shell: bash
+        run: |
+          root="artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof"
+          test -f "$root/foundationkit.studio.json"
+          test -f "$root/STUDIO-COMPOSITION.md"
+          test -f "$root/STUDIO-DATA-MODEL.md"
+          test -f "$root/CUSTOMIZATION.md"
+          test -f "$root/src/StudioFactoryProof.Api/GeneratedPlatform/GeneratedAbpPlatformModule.cs"
+          test -f "$root/src/StudioFactoryProof.Client/Pages/Generated/PeopleEmployee.razor"
+          grep -Fq 'Volo.Abp.MultiTenancy' "$root/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj"
+          grep -Fq 'Volo.Abp.BackgroundJobs' "$root/src/StudioFactoryProof.Api/StudioFactoryProof.Api.csproj"
+          grep -Fq 'AddApplicationAsync' "$root/src/StudioFactoryProof.Api/Program.cs"
+          grep -Fq 'AddForeignKey' "$root/src/StudioFactoryProof.Infrastructure/GeneratedPlatform/Migrations/20260811001000_StudioRelations.cs"
+          grep -Fq 'If-Match' "$root/src/StudioFactoryProof.Client/Pages/Generated/PeopleEmployee.razor"
+
+      - name: Restore generated Studio solution with vulnerability audit
+        run: >-
+          dotnet restore
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+
+      - name: Build generated Studio solution
+        run: >-
+          dotnet build
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          --configuration Release
+          --no-restore
+
+      - name: Test generated Studio solution
+        run: >-
+          dotnet test
+          artifacts/project-studio-proof/full-stack/generated/StudioFactoryProof/StudioFactoryProof.sln
+          --configuration Release
+          --no-build
