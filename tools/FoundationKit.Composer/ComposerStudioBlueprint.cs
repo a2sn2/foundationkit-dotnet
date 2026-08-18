@@ -54,6 +54,7 @@ public sealed record StudioProjectBlueprint(
         FoundationCapabilityProfiles.Standard,
         "standalone",
         [
+            StudioFeatureIds.Security,
             StudioFeatureIds.Identity,
             StudioFeatureIds.Authorization,
             StudioFeatureIds.Auditing,
@@ -73,7 +74,7 @@ public sealed record StudioProjectBlueprint(
                         "records",
                         [
                             new StudioFieldBlueprint("Name", StudioFieldType.Text, Required: true, MaximumLength: 200, Indexed: true, Filterable: true, Sortable: true),
-                            new StudioFieldBlueprint("IsActive", StudioFieldType.Boolean, Required: true, Filterable: false, Sortable: false)
+                            new StudioFieldBlueprint("IsActive", StudioFieldType.Boolean, Required: true)
                         ])
                 ])
         ]);
@@ -100,7 +101,9 @@ public static class StudioFeatureIds
     public const string Files = "files";
     public const string Documents = "documents";
     public const string Jobs = "jobs";
+    public const string BackgroundWorkers = "background-workers";
     public const string Messaging = "messaging";
+    public const string DistributedEventBus = "distributed-event-bus";
     public const string Webhooks = "webhooks";
     public const string Realtime = "realtime";
     public const string Caching = "caching";
@@ -113,8 +116,6 @@ public static class StudioFeatureIds
     public const string Ai = "ai";
     public const string Observability = "observability";
     public const string Resilience = "http-resilience";
-    public const string BackgroundWorkers = "background-workers";
-    public const string DistributedEventBus = "distributed-event-bus";
     public const string BlobStorage = "blob-storage";
     public const string DistributedLocking = "distributed-locking";
 }
@@ -147,81 +148,82 @@ public sealed record StudioFeatureDescriptor(
 
 public static class ComposerStudioFeatureCatalog
 {
-    private const string Native = "native";
-    private const string Foundation = "foundationkit";
-    private const string Abp = "abp-oss";
-    private const string Consumer = "consumer";
+    public const string NativeProviderId = "native";
+    public const string FoundationProviderId = "foundationkit";
+    public const string AbpProviderId = "abp-oss";
+    public const string ConsumerProviderId = "consumer";
 
     private static readonly StudioProviderOption NativeProvider = new(
-        Native,
+        NativeProviderId,
         ".NET / ASP.NET Core",
         "native",
         []);
 
     private static readonly StudioProviderOption FoundationProvider = new(
-        Foundation,
+        FoundationProviderId,
         "FoundationKit",
         "foundationkit",
         []);
 
     private static readonly StudioProviderOption AbpCoreProvider = new(
-        Abp,
+        AbpProviderId,
         "ABP OSS 10.6",
         "abp",
         ["Volo.Abp.AspNetCore"],
-        "Optional provider integration. ABP Commercial is not selected or required.");
+        "ABP open-source framework provider. No ABP Commercial module is selected by Studio.");
 
     private static readonly StudioProviderOption ConsumerProvider = new(
-        Consumer,
+        ConsumerProviderId,
         "Consumer implementation",
         "consumer",
-        []);
+        [],
+        "The generated project exposes the boundary but the concrete implementation remains product-owned.");
 
-    private static StudioProviderOption Abp(params string[] packages) => new(
-        Abp,
+    private static StudioProviderOption CreateAbpProvider(params string[] packages) => new(
+        AbpProviderId,
         "ABP OSS 10.6",
         "abp",
         ["Volo.Abp.AspNetCore", .. packages],
-        "Generated as an optional ABP application module/provider surface; environment-specific persistence and infrastructure remain consumer-owned unless a concrete provider is selected.");
+        "ABP OSS provider surface. Durable stores, external transports, secrets and production topology remain explicit product/environment choices.");
 
     private static readonly StudioFeatureDescriptor[] Features =
     [
-        F(StudioFeatureIds.Validation, "Validation", "Foundation", "Request and business-rule validation boundaries.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Validation, [], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.WebApi, "Web API", "Experience", "ASP.NET Core API, Problem Details, OpenAPI and FoundationKit API conventions.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.WebApi, [StudioFeatureIds.Validation], [NativeProvider, FoundationProvider], Foundation),
-        F(StudioFeatureIds.Blazor, "Blazor application", "Experience", "Generated Blazor WebAssembly application using FoundationKit.Blazor and Soft Orbit.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Blazor, [StudioFeatureIds.WebApi], [NativeProvider, FoundationProvider], Foundation),
-        F(StudioFeatureIds.Security, "Security baseline", "Security", "Authentication/authorization pipeline, security headers and provider integration points.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Security, [StudioFeatureIds.WebApi], [NativeProvider, FoundationProvider, AbpCoreProvider], Native),
-        F(StudioFeatureIds.Identity, "Identity", "Identity", "Current user, account/authentication integration and user-management provider surface.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Identity, [StudioFeatureIds.Security], [NativeProvider, FoundationProvider, Abp("Volo.Abp.Security")], Abp),
-        F(StudioFeatureIds.Authorization, "Permissions & Authorization", "Identity", "Permission and ownership policies with provider-backed permission checks.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Authorization, [StudioFeatureIds.Identity], [NativeProvider, FoundationProvider, Abp("Volo.Abp.Authorization.Abstractions")], Abp),
-        F(StudioFeatureIds.Auditing, "Audit logging", "Governance", "Audit events and product audit integration.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Auditing, [], [FoundationProvider, Abp("Volo.Abp.Auditing")], Foundation),
-        F(StudioFeatureIds.Settings, "Settings", "Platform", "Hierarchical application settings with optional ABP setting provider.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Settings, [], [FoundationProvider, Abp("Volo.Abp.Settings")], Abp),
-        F(StudioFeatureIds.FeatureManagement, "Feature management", "Platform", "Feature flags and current-context feature checks.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.FeatureManagement, [StudioFeatureIds.Settings], [FoundationProvider, Abp("Volo.Abp.Features")], Abp),
-        F(StudioFeatureIds.Localization, "Localization", "Experience", "Culture, fallback and RTL/LTR foundations.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Localization, [], [NativeProvider, FoundationProvider, AbpCoreProvider], Native),
-        F(StudioFeatureIds.Organization, "Organization / Branches", "Business", "Organizations, branches, departments and hierarchy vocabulary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Organization, [StudioFeatureIds.Authorization], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.MultiTenancy, "Multi-Tenancy", "Platform", "Tenant context/isolation with optional ABP multi-tenancy infrastructure.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.MultiTenancy, [StudioFeatureIds.Authorization], [Abp("Volo.Abp.MultiTenancy"), ConsumerProvider], Abp),
-        F(StudioFeatureIds.Workflow, "Workflow", "Process", "State/trigger workflow definitions and execution boundaries.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Workflow, [StudioFeatureIds.Auditing], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.Approvals, "Approvals", "Process", "Maker-checker and approval/rejection processes.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Approvals, [StudioFeatureIds.Workflow, StudioFeatureIds.Authorization, StudioFeatureIds.Auditing], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.Tasks, "Tasks", "Process", "Assignable work items and task lifecycle.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Tasks, [StudioFeatureIds.Identity], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Notifications, "Notifications", "Communication", "Channel-neutral notifications and provider transport seams.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Notifications, [], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.Files, "Files", "Content", "File metadata/access foundation.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Files, [StudioFeatureIds.Authorization, StudioFeatureIds.BlobStorage], [FoundationProvider, Abp("Volo.Abp.BlobStoring")], Abp),
-        F(StudioFeatureIds.Documents, "Documents", "Content", "Document metadata/versioning/entity linkage.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Documents, [StudioFeatureIds.Files, StudioFeatureIds.Auditing], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Jobs, "Background Jobs", "Operations", "Immediate/delayed/scheduled work with ABP default background-job infrastructure available.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Jobs, [], [NativeProvider, Abp("Volo.Abp.BackgroundJobs")], Abp),
-        F(StudioFeatureIds.BackgroundWorkers, "Background Workers", "Operations", "Long-running/periodic hosted work.", StudioFeatureReadiness.ProviderReady, null, [], [NativeProvider, AbpCoreProvider], Native),
-        F(StudioFeatureIds.Messaging, "Messaging", "Integration", "Integration-event/outbox/inbox vocabulary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Messaging, [], [FoundationProvider, Abp("Volo.Abp.EventBus")], Abp),
-        F(StudioFeatureIds.DistributedEventBus, "Distributed Event Bus", "Integration", "Provider-ready distributed event bus; transport is selected by the consumer environment.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Messaging, [StudioFeatureIds.Messaging], [Abp("Volo.Abp.EventBus")], Abp),
-        F(StudioFeatureIds.Webhooks, "Webhooks", "Integration", "Inbound/outbound webhook signing, replay and delivery history.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Webhooks, [StudioFeatureIds.Messaging, StudioFeatureIds.Security], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Realtime, "Realtime", "Communication", "Provider-neutral realtime delivery.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Realtime, [StudioFeatureIds.Authorization], [NativeProvider, ConsumerProvider], Native),
-        F(StudioFeatureIds.Caching, "Caching", "Data", "Native HybridCache path with provider-neutral compatibility surface.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Caching, [], [NativeProvider, FoundationProvider], Native),
-        F(StudioFeatureIds.Search, "Search", "Data", "Search boundary for relational/full-text/external engines.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Search, [StudioFeatureIds.Authorization], [ConsumerProvider], Consumer),
-        F(StudioFeatureIds.Reporting, "Reporting", "Business", "Read-model/report filtering/grouping/export boundary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Reporting, [StudioFeatureIds.Authorization], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Money, "Money", "Finance", "Currency-aware monetary values and explicit conversion boundaries.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Money, [], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.Numbering, "Business Numbering", "Business", "Human-friendly scoped sequences.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Numbering, [], [FoundationProvider], Foundation),
-        F(StudioFeatureIds.Privacy, "Privacy", "Governance", "PII classification, masking/redaction/consent hooks.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Privacy, [StudioFeatureIds.Auditing, StudioFeatureIds.Security], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Retention, "Retention", "Governance", "Retention/archive/deletion scheduling vocabulary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Retention, [StudioFeatureIds.Jobs, StudioFeatureIds.Auditing], [FoundationProvider, ConsumerProvider], Foundation),
-        F(StudioFeatureIds.Ai, "AI", "Intelligence", "Provider-neutral chat/embeddings/RAG/tool/agent boundaries.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.ArtificialIntelligence, [StudioFeatureIds.Observability], [ConsumerProvider], Consumer),
-        F(StudioFeatureIds.Observability, "Observability", "Operations", "Health/log/trace/metric conventions.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Observability, [], [NativeProvider, FoundationProvider], Native),
-        F(StudioFeatureIds.Resilience, "HTTP Resilience", "Operations", "Standard Microsoft.Extensions.Http.Resilience pipeline.", StudioFeatureReadiness.Generated, null, [], [NativeProvider], Native),
-        F(StudioFeatureIds.BlobStorage, "BLOB Storage", "Content", "BLOB abstraction with provider selected by the generated product/environment.", StudioFeatureReadiness.ProviderReady, null, [], [Abp("Volo.Abp.BlobStoring"), ConsumerProvider], Abp),
-        F(StudioFeatureIds.DistributedLocking, "Distributed Locking", "Operations", "Distributed-lock abstraction/provider surface for clustered workloads.", StudioFeatureReadiness.ProviderReady, null, [], [Abp("Volo.Abp.DistributedLocking"), ConsumerProvider], Abp)
+        F(StudioFeatureIds.Validation, "Validation", "Foundation", "Request and business-rule validation boundaries.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Validation, [], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.WebApi, "Web API", "Experience", "ASP.NET Core API, Problem Details, OpenAPI and FoundationKit API conventions.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.WebApi, [StudioFeatureIds.Validation], [NativeProvider, FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Blazor, "Blazor application", "Experience", "Generated Blazor WebAssembly application using FoundationKit.Blazor and Soft Orbit.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Blazor, [StudioFeatureIds.WebApi], [NativeProvider, FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Security, "Security baseline", "Security", "ASP.NET Core authentication/authorization pipeline, response security and provider seams.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Security, [StudioFeatureIds.WebApi], [NativeProvider, FoundationProvider, AbpCoreProvider], NativeProviderId),
+        F(StudioFeatureIds.Identity, "Identity", "Identity", "Current user and account/authentication provider surface.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Identity, [StudioFeatureIds.Security], [NativeProvider, FoundationProvider, CreateAbpProvider("Volo.Abp.Security")], AbpProviderId),
+        F(StudioFeatureIds.Authorization, "Permissions & Authorization", "Identity", "Role/permission/ownership authorization with optional ABP permission infrastructure.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Authorization, [StudioFeatureIds.Identity], [NativeProvider, FoundationProvider, CreateAbpProvider("Volo.Abp.Authorization.Abstractions")], AbpProviderId),
+        F(StudioFeatureIds.Auditing, "Audit logging", "Governance", "Audit events, context and sink integration.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Auditing, [], [FoundationProvider, CreateAbpProvider("Volo.Abp.Auditing")], FoundationProviderId),
+        F(StudioFeatureIds.Settings, "Settings", "Platform", "Hierarchical application settings with optional ABP setting infrastructure.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Settings, [], [FoundationProvider, CreateAbpProvider("Volo.Abp.Settings")], AbpProviderId),
+        F(StudioFeatureIds.FeatureManagement, "Feature management", "Platform", "Runtime feature checks and feature configuration.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.FeatureManagement, [StudioFeatureIds.Settings], [FoundationProvider, CreateAbpProvider("Volo.Abp.Features")], AbpProviderId),
+        F(StudioFeatureIds.Localization, "Localization", "Experience", "Culture, fallback and RTL/LTR foundations.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Localization, [], [NativeProvider, FoundationProvider, AbpCoreProvider], NativeProviderId),
+        F(StudioFeatureIds.Organization, "Organization / Branches", "Business", "Organizations, branches, departments, teams and hierarchy vocabulary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Organization, [StudioFeatureIds.Authorization], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.MultiTenancy, "Multi-Tenancy", "Platform", "Tenant context and isolation with optional ABP multi-tenancy infrastructure.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.MultiTenancy, [StudioFeatureIds.Authorization], [CreateAbpProvider("Volo.Abp.MultiTenancy"), ConsumerProvider], AbpProviderId),
+        F(StudioFeatureIds.Workflow, "Workflow", "Process", "State/trigger workflow definitions and execution boundaries.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Workflow, [StudioFeatureIds.Auditing], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Approvals, "Approvals", "Process", "Maker-checker and approval/rejection processes.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Approvals, [StudioFeatureIds.Workflow, StudioFeatureIds.Authorization, StudioFeatureIds.Auditing], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Tasks, "Tasks", "Process", "Assignable work items, priorities and lifecycle.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Tasks, [StudioFeatureIds.Identity], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Notifications, "Notifications", "Communication", "Channel-neutral notifications and transport provider seams.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Notifications, [], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.BlobStorage, "BLOB Storage", "Content", "BLOB abstraction with the concrete store selected by the product/environment.", StudioFeatureReadiness.ProviderReady, null, [], [CreateAbpProvider("Volo.Abp.BlobStoring"), ConsumerProvider], AbpProviderId),
+        F(StudioFeatureIds.Files, "Files", "Content", "File metadata/access foundation backed by a selected BLOB provider.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Files, [StudioFeatureIds.Authorization, StudioFeatureIds.BlobStorage], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Documents, "Documents", "Content", "Document metadata, classification, versioning and entity linkage.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Documents, [StudioFeatureIds.Files, StudioFeatureIds.Auditing], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Jobs, "Background Jobs", "Operations", "Immediate/delayed/scheduled work with ABP default background-job infrastructure available.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Jobs, [], [NativeProvider, CreateAbpProvider("Volo.Abp.BackgroundJobs")], AbpProviderId),
+        F(StudioFeatureIds.BackgroundWorkers, "Background Workers", "Operations", "Long-running and periodic hosted work.", StudioFeatureReadiness.ProviderReady, null, [], [NativeProvider, AbpCoreProvider], NativeProviderId),
+        F(StudioFeatureIds.Messaging, "Messaging", "Integration", "Integration events plus outbox/inbox/retry/dead-letter vocabulary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Messaging, [], [FoundationProvider, CreateAbpProvider("Volo.Abp.EventBus")], AbpProviderId),
+        F(StudioFeatureIds.DistributedEventBus, "Distributed Event Bus", "Integration", "ABP event-bus abstraction with transport selected separately by the product.", StudioFeatureReadiness.ProviderReady, FoundationCapabilityIds.Messaging, [StudioFeatureIds.Messaging], [CreateAbpProvider("Volo.Abp.EventBus")], AbpProviderId),
+        F(StudioFeatureIds.Webhooks, "Webhooks", "Integration", "Inbound/outbound webhook signing, replay and delivery history.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Webhooks, [StudioFeatureIds.Messaging, StudioFeatureIds.Security], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Realtime, "Realtime", "Communication", "Provider-neutral realtime delivery surface.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Realtime, [StudioFeatureIds.Authorization], [NativeProvider, ConsumerProvider], NativeProviderId),
+        F(StudioFeatureIds.Caching, "Caching", "Data", "Native HybridCache with FoundationKit compatibility boundaries.", StudioFeatureReadiness.Generated, FoundationCapabilityIds.Caching, [], [NativeProvider, FoundationProvider], NativeProviderId),
+        F(StudioFeatureIds.Search, "Search", "Data", "Search boundary for relational, full-text or external engines.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Search, [StudioFeatureIds.Authorization], [ConsumerProvider], ConsumerProviderId),
+        F(StudioFeatureIds.Reporting, "Reporting", "Business", "Read-model/report filtering, grouping and export boundary.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Reporting, [StudioFeatureIds.Authorization], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Money, "Money", "Finance", "Currency-aware monetary values and explicit conversion boundaries.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Money, [], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Numbering, "Business Numbering", "Business", "Human-friendly scoped sequences.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Numbering, [], [FoundationProvider], FoundationProviderId),
+        F(StudioFeatureIds.Privacy, "Privacy", "Governance", "PII classification, masking, redaction, consent and anonymization hooks.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Privacy, [StudioFeatureIds.Auditing, StudioFeatureIds.Security], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Retention, "Retention", "Governance", "Retention, archive, deletion and anonymization scheduling.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.Retention, [StudioFeatureIds.Jobs, StudioFeatureIds.Auditing], [FoundationProvider, ConsumerProvider], FoundationProviderId),
+        F(StudioFeatureIds.Ai, "AI", "Intelligence", "Provider-neutral chat, embeddings, retrieval, tool and agent boundaries.", StudioFeatureReadiness.Planned, FoundationCapabilityIds.ArtificialIntelligence, [StudioFeatureIds.Observability], [ConsumerProvider], ConsumerProviderId),
+        F(StudioFeatureIds.Observability, "Observability", "Operations", "Health, log, trace and metric conventions.", StudioFeatureReadiness.Reference, FoundationCapabilityIds.Observability, [], [NativeProvider, FoundationProvider], NativeProviderId),
+        F(StudioFeatureIds.Resilience, "HTTP Resilience", "Operations", "Standard Microsoft.Extensions.Http.Resilience pipeline.", StudioFeatureReadiness.Generated, null, [], [NativeProvider], NativeProviderId),
+        F(StudioFeatureIds.DistributedLocking, "Distributed Locking", "Operations", "Distributed-lock abstraction/provider surface for clustered workloads.", StudioFeatureReadiness.ProviderReady, null, [], [CreateAbpProvider("Volo.Abp.DistributedLocking"), ConsumerProvider], AbpProviderId)
     ];
 
     public static IReadOnlyList<StudioFeatureDescriptor> All => Features;
@@ -266,7 +268,7 @@ public static class ComposerStudioFeatureCatalog
         IReadOnlyDictionary<string, string>? providerChoices)
     {
         if (providerChoices is not null && providerChoices.TryGetValue(feature.Id, out var selected) && !string.IsNullOrWhiteSpace(selected))
-            return selected;
+            return selected.Trim();
         return feature.DefaultProvider;
     }
 
@@ -297,7 +299,7 @@ public static class ComposerStudioFeatureCatalog
         foreach (var choice in providerChoices)
         {
             if (!featureMap.TryGetValue(choice.Key, out var feature))
-                throw new ComposerGenerationException($"Provider choice targets unselected Studio feature '{choice.Key}'.");
+                throw new ComposerGenerationException($"Provider choice targets unresolved Studio feature '{choice.Key}'.");
             if (!feature.Providers.Any(provider => string.Equals(provider.Id, choice.Value, StringComparison.OrdinalIgnoreCase)))
                 throw new ComposerGenerationException($"Provider '{choice.Value}' is not supported by Studio feature '{choice.Key}'.");
         }
@@ -357,6 +359,12 @@ public static class ComposerStudioBlueprintCompiler
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id!)
             .Concat([FoundationCapabilityIds.Kernel, FoundationCapabilityIds.Validation, FoundationCapabilityIds.WebApi, FoundationCapabilityIds.Blazor])
+            .Concat(blueprint.Modules.SelectMany(module => module.Resources).Any(resource => resource.Idempotency)
+                ? [FoundationCapabilityIds.Idempotency]
+                : Array.Empty<string>())
+            .Concat(blueprint.Modules.SelectMany(module => module.Resources).Any(resource => resource.Concurrency)
+                ? [FoundationCapabilityIds.Concurrency]
+                : Array.Empty<string>())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -395,7 +403,7 @@ public static class ComposerStudioBlueprintCompiler
         var manifestJson = JsonSerializer.Serialize(new
         {
             schemaVersion = 2,
-            name = blueprint.Name,
+            name = blueprint.Name.Trim(),
             profile = NormalizeProfile(blueprint.Profile),
             includeCapabilities = capabilities,
             excludeCapabilities = Array.Empty<string>(),
@@ -415,30 +423,18 @@ public static class ComposerStudioBlueprintCompiler
     {
         var selected = features.Select(feature => feature.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var behaviors = new List<string> { "crud" };
-        if (resource.Auditing && selected.Contains(StudioFeatureIds.Auditing))
-            behaviors.Add("auditing");
-        if (resource.Authorization && selected.Contains(StudioFeatureIds.Authorization))
-            behaviors.Add("authorization");
-        if (resource.Concurrency)
-            behaviors.Add("concurrency");
-        if (selected.Contains(StudioFeatureIds.Caching))
-            behaviors.Add("caching");
-        if (selected.Contains(StudioFeatureIds.Security))
-            behaviors.Add("security");
-        if (selected.Contains(StudioFeatureIds.Identity))
-            behaviors.Add("identity");
-        if (selected.Contains(StudioFeatureIds.Workflow))
-            behaviors.Add("workflow");
-        if (selected.Contains(StudioFeatureIds.Approvals))
-            behaviors.Add("approvals");
-        if (selected.Contains(StudioFeatureIds.Notifications))
-            behaviors.Add("notifications");
-        if (selected.Contains(StudioFeatureIds.Settings))
-            behaviors.Add("settings");
-        if (selected.Contains(StudioFeatureIds.FeatureManagement))
-            behaviors.Add("feature-management");
-        if (selected.Contains(StudioFeatureIds.Localization))
-            behaviors.Add("localization");
+        if (resource.Auditing && selected.Contains(StudioFeatureIds.Auditing)) behaviors.Add("auditing");
+        if (resource.Authorization && selected.Contains(StudioFeatureIds.Authorization)) behaviors.Add("authorization");
+        if (resource.Concurrency) behaviors.Add("concurrency");
+        if (selected.Contains(StudioFeatureIds.Caching)) behaviors.Add("caching");
+        if (selected.Contains(StudioFeatureIds.Security)) behaviors.Add("security");
+        if (selected.Contains(StudioFeatureIds.Identity)) behaviors.Add("identity");
+        if (selected.Contains(StudioFeatureIds.Workflow)) behaviors.Add("workflow");
+        if (selected.Contains(StudioFeatureIds.Approvals)) behaviors.Add("approvals");
+        if (selected.Contains(StudioFeatureIds.Notifications)) behaviors.Add("notifications");
+        if (selected.Contains(StudioFeatureIds.Settings)) behaviors.Add("settings");
+        if (selected.Contains(StudioFeatureIds.FeatureManagement)) behaviors.Add("feature-management");
+        if (selected.Contains(StudioFeatureIds.Localization)) behaviors.Add("localization");
         return behaviors.ToArray();
     }
 
