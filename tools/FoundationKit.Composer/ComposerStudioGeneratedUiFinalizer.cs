@@ -1,15 +1,29 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace FoundationKit.Composer;
 
 public static class ComposerStudioGeneratedUiFinalizer
 {
+    private static readonly Regex DateInputPattern = new(
+        "<input class=\\\"fk-input\\\" type=\\\"date\\\" @bind=\\\"(?<state>_[A-Za-z][A-Za-z0-9_]*)\\\" />",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex DateTimeInputPattern = new(
+        "<input class=\\\"fk-input\\\" type=\\\"datetime-local\\\" @bind=\\\"(?<state>_[A-Za-z][A-Za-z0-9_]*)\\\" />",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static async Task ApplyAsync(
         GeneratedProjectResult generated,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(generated);
+
+        // Platform overlays run before this finalizer. Normalize generated provider source before
+        // the exact generated-solution build proof so warnings-as-errors remain deterministic.
+        await ComposerStudioGeneratedPlatformFinalizer.ApplyAsync(generated, cancellationToken).ConfigureAwait(false);
+
         var prefix = Path.GetFileNameWithoutExtension(generated.SolutionPath);
         var pagesRoot = Path.Combine(
             generated.OutputDirectory,
@@ -23,19 +37,36 @@ public static class ComposerStudioGeneratedUiFinalizer
         foreach (var pagePath in Directory.EnumerateFiles(pagesRoot, "*.razor", SearchOption.TopDirectoryOnly))
         {
             var source = await File.ReadAllTextAsync(pagePath, cancellationToken).ConfigureAwait(false);
-            const string marker = "    private void Prepare(HttpRequestMessage request)";
-            if (!source.Contains(marker, StringComparison.Ordinal))
-                continue;
-            if (source.Contains("private static string RequireText", StringComparison.Ordinal))
-                continue;
+            source = NormalizeDateInputs(source);
 
-            source = source.Replace(marker, BuildHelpers() + "\n\n" + marker, StringComparison.Ordinal);
+            const string marker = "    private void Prepare(HttpRequestMessage request)";
+            if (source.Contains(marker, StringComparison.Ordinal) &&
+                !source.Contains("private static string RequireText", StringComparison.Ordinal))
+            {
+                source = source.Replace(marker, BuildHelpers() + "\n\n" + marker, StringComparison.Ordinal);
+            }
+
             await File.WriteAllTextAsync(
                 pagePath,
                 Normalize(source),
                 new UTF8Encoding(false),
                 cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static string NormalizeDateInputs(string source)
+    {
+        source = DateInputPattern.Replace(source, match =>
+        {
+            var state = match.Groups["state"].Value;
+            return $"<input class=\"fk-input\" type=\"date\" value=\"@{state}\" @onchange=\"args => {state} = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty\" />";
+        });
+
+        return DateTimeInputPattern.Replace(source, match =>
+        {
+            var state = match.Groups["state"].Value;
+            return $"<input class=\"fk-input\" type=\"datetime-local\" value=\"@{state}\" @onchange=\"args => {state} = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty\" />";
+        });
     }
 
     private static string BuildHelpers() => """
