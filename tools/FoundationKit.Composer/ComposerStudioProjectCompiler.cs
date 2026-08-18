@@ -55,16 +55,22 @@ public static class ComposerStudioProjectCompiler
                 behaviors = BuildExecutableBehaviors(resource, features),
                 fields = resource.Fields.Select(field => new
                 {
-                    // The canonical Phase-12 executable parser remains text-only. Typed Studio overlays
-                    // specialize generated CLR/SQL/UI output after this safe canonical generation pass.
+                    // Composer's proven executable schema remains text-based. Studio emits a valid
+                    // canonical placeholder contract first, then specializes CLR/SQL/UI types after generation.
                     name = field.Name,
                     type = "text",
                     required = field.Required,
                     maximumLength = field.Type == StudioFieldType.Text ? Math.Clamp(field.MaximumLength, 1, 4000) : 128,
-                    indexed = field.Indexed,
-                    unique = field.Unique,
-                    filter = field.Type == StudioFieldType.Text && field.Filterable ? "exact" : "none",
-                    sortable = field.Type == StudioFieldType.Text && field.Sortable
+                    index = new
+                    {
+                        enabled = field.Indexed || field.Unique || field.Filterable || field.Sortable || field.Type == StudioFieldType.Reference,
+                        unique = field.Unique
+                    },
+                    query = new
+                    {
+                        filter = field.Type == StudioFieldType.Text && field.Filterable ? "exact" : "none",
+                        sortable = field.Type == StudioFieldType.Text && field.Sortable
+                    }
                 }).ToArray(),
                 api = new
                 {
@@ -72,11 +78,11 @@ public static class ComposerStudioProjectCompiler
                     idempotency = resource.Idempotency ? "required" : "disabled",
                     concurrency = resource.Concurrency ? "require-if-match" : "application-policy",
                     maximumFilters = resource.Fields.Any(field => field.Type == StudioFieldType.Text && field.Filterable)
-                        ? Math.Max(1, resource.Fields.Count(field => field.Type == StudioFieldType.Text && field.Filterable))
+                        ? Math.Min(25, resource.Fields.Count(field => field.Type == StudioFieldType.Text && field.Filterable))
                         : 0,
-                    maximumSorts = resource.Fields.Any(field => field.Type == StudioFieldType.Text && field.Sortable)
-                        ? Math.Max(1, resource.Fields.Count(field => field.Type == StudioFieldType.Text && field.Sortable))
-                        : 0
+                    // The current CrudQueryPlan accepts one order selector per request even when multiple
+                    // fields are declared sortable. Keep the API request bound at one sort expression.
+                    maximumSorts = resource.Fields.Any(field => field.Type == StudioFieldType.Text && field.Sortable) ? 1 : 0
                 }
             }).ToArray()
         }).ToArray();
