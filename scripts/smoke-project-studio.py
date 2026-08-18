@@ -171,7 +171,7 @@ def main() -> int:
     status, _, body = request(
         url,
         "GET",
-        "/api/employees?page=1&pageSize=25&filter=Name:eq:Amina%20Senior%20Engineer",
+        "/api/employees?page=1&pageSize=25&filter=Name%7Ceq%7CAmina%20Senior%20Engineer",
         headers=ADMIN_HEADERS,
     )
     require(status, 200, "employee filtered list", body)
