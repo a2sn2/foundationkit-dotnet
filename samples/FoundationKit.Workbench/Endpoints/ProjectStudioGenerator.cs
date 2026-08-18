@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using FoundationKit.Application.Capabilities;
 using FoundationKit.Composer;
 using FoundationKit.Workbench.Contracts;
 
@@ -279,7 +280,7 @@ public static class ProjectStudioGenerator
             _ => throw new ComposerGenerationException("Studio foundation mode must be 'linked' or 'standalone'.")
         };
 
-    private static IReadOnlyList<StudioResolvedFeatureContract> BuildResolvedFeatures(
+    private static StudioResolvedFeatureContract[] BuildResolvedFeatures(
         StudioBlueprintCompilation compilation,
         HashSet<string> selected) =>
         compilation.Features.Select(feature => new StudioResolvedFeatureContract(
@@ -291,7 +292,7 @@ public static class ProjectStudioGenerator
             selected.Contains(feature.Id),
             feature.Dependencies)).ToArray();
 
-    private static IReadOnlyList<string> BuildWarnings(StudioBlueprintCompilation compilation)
+    private static string[] BuildWarnings(StudioBlueprintCompilation compilation)
     {
         var warnings = compilation.Analysis.Warnings.ToList();
         warnings.AddRange(compilation.Features
