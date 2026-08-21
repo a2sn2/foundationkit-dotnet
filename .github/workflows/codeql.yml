@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c2fd8f54d19fa46c94ed79cb92e6dd6606d61762 # immutable current supported CodeQL Action
+        uses: github/codeql-action/init@9ee088e13615f8d1eaef4766f9dde95d3356a8f6 # immutable current supported CodeQL Action
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build_mode }}
