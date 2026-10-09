@@ -52,6 +52,6 @@ jobs:
         run: dotnet build FoundationKit.sln --configuration Release --no-restore
 
       - name: Analyze
-        uses: github/codeql-action/analyze@c2fd8f54d19fa46c94ed79cb92e6dd6606d61762 # immutable current supported CodeQL Action
+        uses: github/codeql-action/analyze@5aa5056e2d064690968faa15e019d7d823ef6d7b # immutable current supported CodeQL Action
         with:
           category: "/language:${{ matrix.language }}"
