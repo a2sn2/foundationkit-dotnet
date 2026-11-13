@@ -31,7 +31,7 @@
     <PackageVersion Include="MudBlazor" Version="7.15.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <PackageVersion Include="Volo.Abp.Authorization.Abstractions" Version="10.6.0" />
-    <PackageVersion Include="Volo.Abp.Features" Version="10.6.0" />
+    <PackageVersion Include="Volo.Abp.Features" Version="10.7.1" />
     <PackageVersion Include="Volo.Abp.Security" Version="10.6.0" />
     <PackageVersion Include="Volo.Abp.Settings" Version="10.6.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
